@@ -13,7 +13,7 @@ const emailSchema = z.string().trim().toLowerCase().email("Enter a valid email a
 const ip = async () => (await headers()).get("x-forwarded-for")?.split(",")[0].trim() || "local";
 
 /** Only allow relative paths inside the site after sign-in. */
-const safeNext = (n: unknown) => (typeof n === "string" && n.startsWith("/") && !n.startsWith("//") ? n : "/account");
+const safeNext = (n: unknown) => (typeof n === "string" && n.startsWith("/") && !n.startsWith("//") ? n : "/me");
 
 export async function requestCustomerCode(rawEmail: string): Promise<CodeResult> {
   const e = emailSchema.safeParse(rawEmail);

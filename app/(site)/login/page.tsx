@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Sign in", robots: { index: false } }
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string; email?: string }> }) {
   const sp = await searchParams;
-  if (await currentCustomer()) redirect(sp.next?.startsWith("/") ? sp.next : "/account");
+  if (await currentCustomer()) redirect(sp.next?.startsWith("/") ? sp.next : "/me");
   return (
     <div className="wrap narrow auth-wrap">
       <div className="page-head">

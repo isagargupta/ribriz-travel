@@ -77,7 +77,7 @@ export default function Header({ index }: { index: TripIndexItem[] }) {
             {ready && saved.length > 0 && <span className="badge-count" key={saved.length}>{saved.length}</span>}
           </Link>
           {me === undefined ? <span className="acct-slot" aria-hidden="true" />
-            : me ? <Link className="acct" href="/account" aria-label="My trips" title={me.email}>{(me.name || me.email)[0].toUpperCase()}</Link>
+            : me ? <Link className="acct" href="/me" aria-label="Your travel HQ" title={me.email}>{(me.name || me.email)[0].toUpperCase()}</Link>
             : <Link className="pill-btn signin" href="/login">Sign in</Link>}
           <button className="pill-btn menu-btn" aria-expanded={open} aria-label="Menu" onClick={() => setOpen(!open)}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">{open ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}</svg>

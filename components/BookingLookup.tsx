@@ -70,7 +70,7 @@ export default function BookingLookup({ initialRef }: { initialRef: string }) {
       <label className="full">Email you used<input name="email" type="email" required autoComplete="email" /></label>
       {state?.error && <div className="notice err full" role="alert">{state.error}</div>}
       <button className="btn hot full" disabled={pending}>{pending ? <span className="spinner" aria-label="Searching" /> : "Find my booking"}</button>
-      <p className="full fine center">Booked with us before? <a href="/login?next=/account">Sign in with your email</a> to see all your trips.</p>
+      <p className="full fine center">Booked with us before? <a href="/login?next=/me">Sign in with your email</a> to see all your trips.</p>
     </form>
   );
 }

@@ -424,3 +424,4 @@ footer.site .logo img { height: 48px }
 .cp-act { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px }
 .cp-ok { color: #0a7a4b; font-weight: 600; font-size: 14px }
 .inbox-card { text-decoration: none; color: inherit; background: linear-gradient(135deg, #fff4ee, #fff) }
+@media (max-width: 420px) { header .logo .word { display: none } }

@@ -186,7 +186,7 @@ export default function CheckoutSheet() {
             </ol>
             <div className="co-btns" style={{ justifyContent: "center", flexWrap: "wrap" }}>
               <button className="btn" onClick={downloadIcs}>Add to calendar</button>
-              <Link className="btn blue" href={me ? "/account" : `/booking?ref=${done.ref}`} onClick={close}>{me ? "See my trips" : "View my booking"}</Link>
+              <Link className="btn blue" href={me ? "/me" : `/booking?ref=${done.ref}`} onClick={close}>{me ? "See my trips" : "View my booking"}</Link>
             </div>
           </div>
         )}

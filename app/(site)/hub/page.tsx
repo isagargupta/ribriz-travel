@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { StartMission } from "@/components/hub/HubClient";
 import { listMissions } from "@/lib/missions";
 import { getOwner } from "@/lib/owner";
@@ -15,6 +16,7 @@ export const dynamic = "force-dynamic";
 
 export default async function HubPage() {
   const owner = await getOwner();
+  if (owner.customerId) redirect("/me"); // signed-in travellers have everything on their dashboard
   const [missions, notices, watches, trips] = await Promise.all([listMissions(owner), noticesFor(owner, { take: 5, sinceDays: 30 }), watchesFor(owner), getPublishedTrips()]);
   const watching = watches.map((w) => ({ w, t: trips.find((t) => t.id === w.tripId) })).filter((x) => x.t);
   return (
