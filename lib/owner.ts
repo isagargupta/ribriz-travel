@@ -53,4 +53,6 @@ export async function claimBrowserMissions(customerId: string) {
     prisma.mission.updateMany({ where: { anonId, customerId: null }, data: { customerId } }),
     prisma.approval.updateMany({ where: { anonId, customerId: null }, data: { customerId } }),
   ]);
+  const { claimBrowserProfile } = await import("./profile");
+  await claimBrowserProfile(customerId, anonId);
 }

@@ -22,7 +22,7 @@ export default async function HubPage() {
       <div className="page-head">
         <span className="kicker">Trip hub</span>
         <h1>Your trips</h1>
-        <p>Everything Riya is handling for you, from choosing the trip to visa, insurance and forex. Anything that needs your OK shows up here.</p>
+        <p>Everything Riya is handling for you, from choosing the trip to visa, insurance and forex. Anything that needs your OK shows up here. <Link href="/you">See what Riya knows about you</Link>.</p>
       </div>
       {(notices.length > 0 || watching.length > 0) && (
         <div className="hub-updates">

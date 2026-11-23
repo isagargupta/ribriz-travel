@@ -5,6 +5,8 @@ import { runTool, TOOLS, TOOL_STATUS, type VisitorContext } from "@/lib/assistan
 import { missionsForContext } from "@/lib/missions";
 import { noticesFor } from "@/lib/notifications";
 import { watchesFor } from "@/lib/watches";
+import { getProfile } from "@/lib/profile";
+import { describePrefs } from "@/lib/profile-rules";
 import { getOwner } from "@/lib/owner";
 import { clientIp, fail, rateLimited } from "@/lib/http";
 import { FROM_CITIES, RATES, isoDate, type Currency } from "@/lib/pricing";
@@ -53,7 +55,7 @@ export async function POST(req: Request) {
   // gives first-time visitors a browser id so their missions persist without sign-up
   const owner = await getOwner(true);
   const ctx: VisitorContext = { ...body.context, name: owner.name, owner };
-  const [missions, alerts, watches] = await Promise.all([missionsForContext(owner), noticesFor(owner, { take: 5, sinceDays: 7 }), watchesFor(owner)]);
+  const [missions, alerts, watches, profile] = await Promise.all([missionsForContext(owner), noticesFor(owner, { take: 5, sinceDays: 7 }), watchesFor(owner), getProfile(owner)]);
 
   // Earlier turns go back as plain text (no thinking blocks), which the API accepts;
   // inside this reply the tool loop appends the model's content unchanged.
@@ -64,6 +66,7 @@ export async function POST(req: Request) {
       from: ctx.from, passport: ctx.passport, passportName: countryName(ctx.passport), adults: ctx.adults, childAges: ctx.childAges,
       currency: ctx.currency, rate: RATES[ctx.currency as Currency], name: ctx.name, today: isoDate(new Date()),
       signedIn: !!owner.customerId, missions, alerts: alerts.map((a) => ({ title: a.title, at: a.at })), watches: watches.length,
+      memory: [...describePrefs(profile.prefs), ...profile.notes.map((n) => `Note: ${n.text}`)],
     }),
   });
 

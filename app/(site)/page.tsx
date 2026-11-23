@@ -4,6 +4,7 @@ import SearchConsole from "@/components/home/SearchConsole";
 import { Bento, Deals, Newsletter, PriceCalendar, RecentlyViewed, Ticker } from "@/components/home/HomeSections";
 import Reveal from "@/components/ui/Reveal";
 import AskRiyaBand from "@/components/assistant/AskRiyaBand";
+import ForYou from "@/components/home/ForYou";
 import { getCalendar, getPublishedTrips } from "@/lib/trips";
 import { THEMES, RATES } from "@/lib/pricing";
 
@@ -19,6 +20,7 @@ export default async function Home() {
       <Hero />
       <SearchConsole destinations={destinations} />
       <Ticker trips={trips} />
+      <ForYou trips={trips} />
       <RecentlyViewed trips={trips} />
 
       <section className="band" style={{ paddingBottom: 0 }}>

@@ -369,3 +369,18 @@ model ServiceOffer {
   @@index([enquiryId])
   @@index([missionId])
 }
+
+/// What Riya has learned about a traveller: lasting preferences and short notes.
+/// One per account or browser; merged into the account on sign-in. The
+/// traveller can see, edit and erase all of it at /you.
+model TravellerProfile {
+  id         String   @id @default(cuid())
+  customerId String?  @unique
+  anonId     String?  @unique
+  /// JSON: { likes, avoid, regions, budgetPerAdult, months, pace, travelsWith, dietary }
+  prefs      String   @default("{}")
+  /// JSON array of { id, text, at }
+  notes      String   @default("[]")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}

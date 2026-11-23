@@ -643,3 +643,34 @@ kbd { font-family: var(--f-mono); font-size: 11px; background: var(--surface); b
 .bookings .bk-right { text-align: right; display: grid; gap: 4px; font-size: 14px }
 .bookings .bk-conf { font-family: Menlo, Consolas, monospace; font-weight: 700; color: #0b4fc4; background: #eef3ff; padding: 3px 8px; border-radius: 8px; user-select: all }
 @media (max-width: 560px) { .bookings li { grid-template-columns: 38px 1fr } .bookings .bk-right { grid-column: 2; text-align: left } }
+
+/* for you */
+.fy-item { display: flex; flex-direction: column; gap: 8px; min-width: 0 }
+.fy-why { align-self: flex-start; font-size: 12.5px; font-weight: 700; color: #5a3fd6; background: linear-gradient(135deg, #f1edff, #eaf3ff); padding: 5px 10px; border-radius: 999px; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.for-you { animation: fadeUp .45s ease-out both }
+
+/* what Riya knows (/you) */
+.you .page-head { max-width: 760px }
+.mem { display: grid; gap: 18px; max-width: 860px; padding-bottom: 60px }
+.mem h2 { font-size: 19px; margin: 0 0 12px }
+.mem-empty { background: linear-gradient(135deg, #f3f0ff, #eef6ff) }
+.mem-empty p { margin: 6px 0 12px }
+.mem-row { display: grid; grid-template-columns: 170px 1fr; gap: 12px; align-items: start; padding: 12px 0; border-top: 1px solid var(--line) }
+.mem-row:first-of-type { border-top: 0 }
+.mem-row > span, .mem-row > label { font-weight: 600; font-size: 14px; padding-top: 7px }
+.mem-chips { display: flex; flex-wrap: wrap; gap: 8px }
+.mem-chip { font: inherit; font-size: 13.5px; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; transition: background .15s, border-color .15s, transform .15s; display: inline-flex; gap: 6px; align-items: center }
+.mem-chip:hover { transform: translateY(-1px) }
+.mem-chip[aria-pressed="true"], .mem-chip.on { background: #efeaff; border-color: #a89bff; color: #3b26b5; font-weight: 600 }
+.mem-chip button { border: 0; background: none; font-size: 16px; line-height: 1; cursor: pointer; color: inherit; padding: 0 }
+.mem-inline { display: flex; gap: 8px; align-items: center; margin-top: 8px }
+.mem-row .mem-inline { margin-top: 0 }
+.mem-inline .in { flex: 1; min-width: 0 }
+.mem-row > .in { max-width: 360px }
+.mem-save { display: flex; justify-content: flex-end; padding-top: 12px; border-top: 1px solid var(--line) }
+.mem-notes { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 8px }
+.mem-notes li { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; animation: fadeUp .3s ease-out both }
+.mem-notes small { color: var(--muted, #5b628a) }
+.mem-forget { text-align: center }
+.link-btn.danger { color: #c0392b }
+@media (max-width: 640px) { .mem-row { grid-template-columns: 1fr; gap: 6px } .mem-row > span, .mem-row > label { padding-top: 0 } }

@@ -19,6 +19,8 @@ import { bookingsFor } from "../offers";
 import { pendingCard } from "../approvals";
 import { FX_ATTRIBUTION, getFxRates } from "../fx";
 import { prisma } from "../db";
+import { getProfile, updateProfile } from "../profile";
+import { PACES, REGIONS, THEME_KEYS as PROFILE_THEMES, TRAVELS_WITH, describePrefs, type Prefs } from "../profile-rules";
 
 /** Who is asking: set by the server from the visitor's saved preferences, never by the model. */
 export interface VisitorContext { from: string; passport: string; adults: number; childAges: number[]; currency: string; name?: string | null; owner: Owner }
@@ -90,6 +92,21 @@ const MissionInput = z.object({ mission_id: z.string().max(40).optional() }).str
 const ChecklistInput = z.object({ mission_id: z.string().max(40).optional() }).strict();
 const OptionsInput = z.object({ mission_id: z.string().max(40).optional() }).strict();
 const FxInput = z.object({ currency: z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/, "Use a 3-letter code like USD"), amount: z.number().positive().max(1e9).optional() }).strict();
+const RememberInput = z.object({
+  set: z.object({
+    likes: z.array(z.enum(PROFILE_THEMES)).max(8).optional(),
+    avoid: z.array(z.string().trim().min(1).max(40)).max(8).optional(),
+    regions: z.array(z.enum(REGIONS)).max(6).optional(),
+    budget_per_adult: z.number().int().min(5000).max(2_000_000).optional(),
+    months: z.array(z.number().int().min(1).max(12)).max(12).optional(),
+    pace: z.enum(PACES).optional(),
+    travels_with: z.enum(TRAVELS_WITH).optional(),
+    dietary: z.string().trim().max(60).optional(),
+  }).strict().optional(),
+  note: z.string().max(200).optional(),
+  forget: z.string().max(200).optional(),
+  forget_fields: z.array(z.enum(["likes", "avoid", "regions", "budget_per_adult", "months", "pace", "travels_with", "dietary"])).max(8).optional(),
+}).strict();
 const WatchInput = z.object({ slug: z.string().min(1).max(120), date: date.optional(), email: z.string().trim().toLowerCase().email().max(160).optional() }).strict();
 
 /* ---------------- definitions sent to Claude ---------------- */
@@ -233,6 +250,32 @@ export const TOOLS: Anthropic.Beta.BetaTool[] = [
     input_schema: {
       type: "object", additionalProperties: false, required: ["slug"],
       properties: { slug: { type: "string" }, date: { type: "string", description: "YYYY-MM-DD departure; omit to watch the trip's cheapest date" }, email: { type: "string", description: "Only an address the traveller typed in this chat" } },
+    },
+  },
+  {
+    name: "remember",
+    description: "Save a lasting travel preference so every future trip (and the 'For you' picks) fits the traveller without asking again. Use when they state something durable: who they travel with, trip styles they love, things to avoid, budget per adult, preferred months, pace, food needs. Not for one-off details of the current trip. Lists replace the stored list, so include what's already remembered when adding. 'note' is a short free-text memory (e.g. 'Anniversary is 14 March; likes a surprise'). Never store passport/ID/card/account numbers, health conditions (other than food needs), religion or anything they ask you not to. Use forget / forget_fields when they ask you to forget something. Mention briefly that you'll remember it.",
+    eager_input_streaming: true,
+    input_schema: {
+      type: "object", additionalProperties: false,
+      properties: {
+        set: {
+          type: "object", additionalProperties: false,
+          properties: {
+            likes: { type: "array", items: { type: "string", enum: [...PROFILE_THEMES] } },
+            avoid: { type: "array", items: { type: "string" }, description: "short phrases, e.g. 'long flights', 'cold weather'" },
+            regions: { type: "array", items: { type: "string", enum: [...REGIONS] } },
+            budget_per_adult: { type: "integer", description: "INR per adult for a trip" },
+            months: { type: "array", items: { type: "integer", minimum: 1, maximum: 12 } },
+            pace: { type: "string", enum: [...PACES] },
+            travels_with: { type: "string", enum: [...TRAVELS_WITH] },
+            dietary: { type: "string" },
+          },
+        },
+        note: { type: "string" },
+        forget: { type: "string", description: "text of a note to forget" },
+        forget_fields: { type: "array", items: { type: "string", enum: ["likes", "avoid", "regions", "budget_per_adult", "months", "pace", "travels_with", "dietary"] } },
+      },
     },
   },
   {
@@ -547,6 +590,23 @@ async function fxTool(i: z.infer<typeof FxInput>): Promise<ToolOutcome> {
   };
 }
 
+const CAMEL: Record<string, keyof Prefs> = { budget_per_adult: "budgetPerAdult", travels_with: "travelsWith" };
+const camel = (k: string) => (CAMEL[k] ?? k) as keyof Prefs;
+
+async function rememberTool(i: z.infer<typeof RememberInput>, ctx: VisitorContext): Promise<ToolOutcome> {
+  if (!i.set && !i.note && !i.forget && !i.forget_fields?.length) return { status: "Noting that…", result: { error: "Nothing to remember." } };
+  const set = i.set ? (Object.fromEntries(Object.entries(i.set).map(([k, v]) => [camel(k), v])) as Prefs) : undefined;
+  const r = await updateProfile(ctx.owner, { set, note: i.note, forgetNote: i.forget, forgetKeys: i.forget_fields?.map(camel) });
+  return {
+    status: i.forget || i.forget_fields?.length ? "Forgetting that…" : "Noting that…",
+    result: {
+      ok: true, ...(r.refused ? { note_refused: "That note looked like an ID number or contact detail, so it wasn't saved." } : {}),
+      now_remembered: [...describePrefs(r.profile.prefs), ...r.profile.notes.map((n) => `Note: ${n.text}`)],
+      traveller_can_review_at: `${site()}/you`,
+    },
+  };
+}
+
 /* ---------------- dispatcher ---------------- */
 
 const REGISTRY = {
@@ -565,6 +625,7 @@ const REGISTRY = {
   watch_price: { schema: WatchInput, run: watchPriceTool },
   show_options: { schema: OptionsInput, run: showOptionsTool },
   forex_rate: { schema: FxInput, run: fxTool },
+  remember: { schema: RememberInput, run: rememberTool },
 } as const;
 
 export const TOOL_STATUS: Record<string, string> = {
@@ -573,7 +634,7 @@ export const TOOL_STATUS: Record<string, string> = {
   start_mission: "Setting up your trip plan…", choose_trip: "Saving your choice…", propose_price_hold: "Preparing your price hold…",
   request_service: "Preparing your request…", update_mission_task: "Updating your plan…", get_mission: "Checking your trip…",
   get_visa_checklist: "Checking your documents…", watch_price: "Setting a price alert…",
-  show_options: "Getting your options…", forex_rate: "Checking exchange rates…",
+  show_options: "Getting your options…", forex_rate: "Checking exchange rates…", remember: "Noting that…",
 };
 
 /** Validates the model's input against the schema, then runs the tool. Errors come back as results, never throws. */

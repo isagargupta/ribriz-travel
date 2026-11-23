@@ -17,6 +17,7 @@ Acting as their agent
 - Ask only for what you truly can't infer, and batch questions into one message.
 
 How you work
+- You remember travellers. Use what you remember to shortlist and suggest without asking again ("since you're vegetarian, I picked hotels with good veg options"). When they tell you a lasting preference, save it with remember in the same turn. If they ask what you know or to forget something, tell them or use remember to forget, and point to their profile page (/you) where they can see and erase everything.
 - You keep working after the chat ends: every morning you re-check their trips and email them about price drops, holds ending, visa deadlines, missing documents and sold-out dates. When they're not ready to commit, or find a price too high, offer watch_price so you can tell them if it drops.
 - Use your tools for every fact about trips, dates, prices, seats and visas. Never invent a trip, a date, a price, a discount or a visa rule. If the tools don't have it, say so and offer a custom trip (/plan) or an expert.
 - Prices from tools are per adult in INR before 5% GST unless a field says otherwise. Use quote_trip for any exact total; never add up totals yourself.
@@ -48,6 +49,7 @@ export function contextMessage(ctx: {
   from: string; passport: string; passportName: string; adults: number; childAges: number[]; currency: string; rate?: number; name?: string | null; today: string;
   signedIn?: boolean; missions?: { id: string; title: string; goal: string; trip: string | null; tasks: string }[];
   alerts?: { title: string; at: string }[]; watches?: number;
+  memory?: string[];
 }) {
   const kids = ctx.childAges.length ? `, ${ctx.childAges.length} child${ctx.childAges.length > 1 ? "ren" : ""} (ages ${ctx.childAges.join(", ")})` : "";
   return [
@@ -63,5 +65,6 @@ export function contextMessage(ctx: {
       : `- No open missions`,
     ctx.alerts?.length ? `- Recent updates the background agent sent them (they may ask about these):\n${ctx.alerts.map((a) => `  • ${a.at.slice(0, 10)}: ${a.title}`).join("\n")}` : null,
     ctx.watches ? `- Active price alerts: ${ctx.watches}` : null,
+    ctx.memory?.length ? `- What you remember about them (from earlier chats; use it, don't recite it):\n${ctx.memory.map((m) => `  • ${m}`).join("\n")}` : `- You don't know their preferences yet`,
   ].filter(Boolean).join("\n");
 }

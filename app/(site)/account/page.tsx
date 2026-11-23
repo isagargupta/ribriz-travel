@@ -63,7 +63,10 @@ export default async function AccountPage() {
           <h1>Hi {me.name?.split(" ")[0] ?? "there"}</h1>
           <p>Signed in as <b>{me.email}</b></p>
         </div>
-        <form action="/api/logout" method="post"><button className="btn">Sign out</button></form>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Link className="btn" href="/you">What Riya knows about me</Link>
+          <form action="/api/logout" method="post"><button className="btn">Sign out</button></form>
+        </div>
       </div>
 
       <div className="acc-grid">
