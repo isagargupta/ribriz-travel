@@ -6,6 +6,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { fmtDate } from "@/lib/pricing";
 import { usePrefs } from "../Prefs";
 import ApprovalCard, { type ApprovalCardData } from "./ApprovalCard";
+import { uploadToMission } from "@/lib/client/compress";
 
 interface Card { slug: string; title: string; image: string; dest: string; country: string; nights: number; price: number; date?: string | null; seats?: number | null; visa?: string }
 interface Msg { role: "user" | "assistant"; content: string; cards?: Card[]; approvals?: ApprovalCardData[]; mission?: { id: string; title: string }; error?: boolean; note?: boolean }
@@ -67,6 +68,8 @@ export default function Assistant() {
   const abort = useRef<AbortController | null>(null);
   const list = useRef<HTMLDivElement>(null);
   const box = useRef<HTMLTextAreaElement>(null);
+  const fileIn = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
 
   // remember the chat for this browser tab
   useEffect(() => { try { const s = sessionStorage.getItem(KEY); if (s) setMsgs(JSON.parse(s)); } catch {} }, []);
@@ -124,6 +127,27 @@ export default function Assistant() {
       setBusy(false); setStatus(""); abort.current = null;
     }
   }, [busy, msgs, from, passport, adults, childAges, currency]);
+
+  /** A document dropped into the chat goes to the current trip, is checked, and Riya is told the result. */
+  async function attach(f: File | undefined) {
+    if (!f) return;
+    setUploading(true);
+    try {
+      const fromChat = [...msgs].reverse().find((m) => m.mission)?.mission?.id;
+      const id = fromChat ?? (await fetch("/api/missions/current", { cache: "no-store" }).then((r) => r.json()).catch(() => null))?.id;
+      if (!id) {
+        setMsgs((all) => [...all, { role: "assistant", note: true, content: "Tell me about your trip first, and I'll set up a plan to keep your documents in." }]);
+        return;
+      }
+      const { doc } = await uploadToMission(id, f);
+      await send(`📎 I've uploaded my ${doc.label.toLowerCase()}. Automatic check: ${doc.status === "ok" ? "looks good" : doc.status === "unreadable" ? "couldn't be read" : "needs attention"}. ${doc.findings.join(" ")}`);
+    } catch (e) {
+      setMsgs((all) => [...all, { role: "assistant", note: true, error: true, content: (e as Error).message }]);
+    } finally {
+      setUploading(false);
+      if (fileIn.current) fileIn.current.value = "";
+    }
+  }
 
   // other parts of the site can open the chat with a question
   useEffect(() => {
@@ -200,6 +224,10 @@ export default function Assistant() {
           </div>
 
           <form className="ai-input" onSubmit={(e) => { e.preventDefault(); send(input); }}>
+            <input ref={fileIn} type="file" accept="image/*,application/pdf" hidden onChange={(e) => attach(e.target.files?.[0])} />
+            <button type="button" className="ai-attach" onClick={() => fileIn.current?.click()} disabled={busy || uploading} aria-label="Upload a document (passport, photo, statement)" title="Upload a document">
+              {uploading ? <span className="spinner dark" aria-label="Uploading" /> : "📎"}
+            </button>
             <textarea ref={box} rows={1} value={input} maxLength={2000} placeholder="Ask about trips, prices or visas…" aria-label="Message"
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); } }} />

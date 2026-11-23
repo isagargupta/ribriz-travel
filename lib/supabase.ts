@@ -31,3 +31,28 @@ export async function uploadPhoto(name: string, body: Buffer, contentType: strin
   if (error) throw new Error(`Upload failed: ${error.message}`);
   return sb.storage.from(PHOTO_BUCKET).getPublicUrl(name).data.publicUrl;
 }
+
+/* ---------- private files (visa documents) ---------- */
+export const DOC_BUCKET = "visa-docs";
+
+export async function uploadPrivate(key: string, body: Buffer, contentType: string) {
+  const sb = supabaseAdmin();
+  if (!sb) throw new Error("Document storage needs SUPABASE_SECRET_KEY.");
+  const { error } = await sb.storage.from(DOC_BUCKET).upload(key, body, { contentType, upsert: false });
+  if (error) throw new Error(`Upload failed: ${error.message}`);
+}
+
+/** Short-lived link to a private file. */
+export async function signedUrl(key: string, seconds = 120) {
+  const sb = supabaseAdmin();
+  if (!sb) throw new Error("Document storage needs SUPABASE_SECRET_KEY.");
+  const { data, error } = await sb.storage.from(DOC_BUCKET).createSignedUrl(key, seconds);
+  if (error || !data) throw new Error("Couldn't open the document.");
+  return data.signedUrl;
+}
+
+export async function removePrivate(keys: string[]) {
+  const sb = supabaseAdmin();
+  if (!sb || !keys.length) return;
+  await sb.storage.from(DOC_BUCKET).remove(keys);
+}

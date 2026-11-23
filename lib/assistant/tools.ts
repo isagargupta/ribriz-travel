@@ -11,6 +11,7 @@ import type { DepartureDTO, TripDTO } from "../types";
 import type { Owner } from "../owner";
 import { chooseTrip, createMission, getOwnedMission, logEvent, missionView, setTask, type TaskKind } from "../missions";
 import { proposePriceHold, proposeService, SERVICES, type ApprovalCard, type Service } from "../approvals";
+import { visaChecklist } from "../documents";
 
 /** Who is asking: set by the server from the visitor's saved preferences, never by the model. */
 export interface VisitorContext { from: string; passport: string; adults: number; childAges: number[]; currency: string; name?: string | null; owner: Owner }
@@ -79,6 +80,7 @@ const TaskInput = z.object({
   note: z.string().max(240),
 }).strict();
 const MissionInput = z.object({ mission_id: z.string().max(40).optional() }).strict();
+const ChecklistInput = z.object({ mission_id: z.string().max(40).optional() }).strict();
 
 /* ---------------- definitions sent to Claude ---------------- */
 
@@ -207,6 +209,12 @@ export const TOOLS: Anthropic.Beta.BetaTool[] = [
       type: "object", additionalProperties: false, required: ["task", "status", "note"],
       properties: { mission_id: { type: "string" }, task: { type: "string", enum: ["choose_trip", "visa", "insurance", "forex", "flights", "hotels", "prep"] }, status: { type: "string", enum: ["todo", "in_progress", "done", "skipped"] }, note: { type: "string" } },
     },
+  },
+  {
+    name: "get_visa_checklist",
+    description: "The visa document checklist for a mission: which documents are needed for the traveller's passport and destinations, which are uploaded and checked, what problems the automatic check found, and which Ribriz provides itself. Use whenever visas or documents come up on a trip in progress.",
+    eager_input_streaming: true,
+    input_schema: { type: "object", additionalProperties: false, properties: { mission_id: { type: "string" } } },
   },
   {
     name: "get_mission",
@@ -441,6 +449,21 @@ async function updateTaskTool(i: z.infer<typeof TaskInput>, ctx: VisitorContext)
   return { status: "Updating your plan…", result: { ok: true } };
 }
 
+async function visaChecklistTool(i: z.infer<typeof ChecklistInput>, ctx: VisitorContext): Promise<ToolOutcome> {
+  const m = await resolveMission(ctx, i.mission_id);
+  if (!m) return { status: "Checking your documents…", result: { error: "No mission yet." } };
+  const c = await visaChecklist(ctx.owner, m.id);
+  if (!c) return { status: "Checking your documents…", result: { error: "Not found." } };
+  return {
+    status: "Checking your documents…",
+    result: {
+      mission_id: m.id, visas: c.countries, no_visa_work_needed: c.noVisaWork, ready: c.ready, needed: c.needed, all_ready: c.allReady,
+      documents: c.items.map((x) => ({ document: x.label, required: x.required, why: x.why, state: x.state, findings: x.doc?.findings ?? [] })),
+      how_to_upload: `Tap the 📎 button in this chat, or open ${site()}/hub/${m.id}#visa`,
+    },
+  };
+}
+
 async function getMissionTool(i: z.infer<typeof MissionInput>, ctx: VisitorContext): Promise<ToolOutcome> {
   const m = await resolveMission(ctx, i.mission_id);
   if (!m) return { status: "Checking your trip…", result: { mission: null, note: "The traveller has no open mission." } };
@@ -462,6 +485,7 @@ const REGISTRY = {
   request_service: { schema: ServiceInput, run: requestServiceTool },
   update_mission_task: { schema: TaskInput, run: updateTaskTool },
   get_mission: { schema: MissionInput, run: getMissionTool },
+  get_visa_checklist: { schema: ChecklistInput, run: visaChecklistTool },
 } as const;
 
 export const TOOL_STATUS: Record<string, string> = {
@@ -469,6 +493,7 @@ export const TOOL_STATUS: Record<string, string> = {
   check_visa: "Checking visa rules…", quote_trip: "Working out your price…",
   start_mission: "Setting up your trip plan…", choose_trip: "Saving your choice…", propose_price_hold: "Preparing your price hold…",
   request_service: "Preparing your request…", update_mission_task: "Updating your plan…", get_mission: "Checking your trip…",
+  get_visa_checklist: "Checking your documents…",
 };
 
 /** Validates the model's input against the schema, then runs the tool. Errors come back as results, never throws. */

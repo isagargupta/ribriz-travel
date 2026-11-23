@@ -157,6 +157,12 @@ export function addDays(s: string, n: number) {
   d.setDate(d.getDate() + n);
   return isoDate(d);
 }
+/** Same day N calendar months later (clamped to month end), e.g. passport "6 months after return". */
+export function addMonths(s: string, n: number) {
+  const [y, m, d] = s.split("-").map(Number);
+  const last = new Date(y, m - 1 + n + 1, 0).getDate();
+  return isoDate(new Date(y, m - 1 + n, Math.min(d, last)));
+}
 export function daysBetween(a: string, b: string) {
   return Math.round((parseISO(b).getTime() - parseISO(a).getTime()) / 864e5);
 }

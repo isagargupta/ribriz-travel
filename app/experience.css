@@ -581,3 +581,31 @@ kbd { font-family: var(--f-mono); font-size: 11px; background: var(--surface); b
 .hub-timeline li { border-left: 3px solid var(--line); padding-left: 12px }
 .hub-timeline small { color: var(--muted); font-weight: 700; font-size: 11px }
 .hub-timeline p { margin: 2px 0 0; font-size: 13px }
+
+/* ---------- visa documents ---------- */
+.visa-ok { background: var(--good-bg); border-radius: 16px; padding: 14px 16px }
+.visa-ok ul { margin: 6px 0; padding-left: 18px }
+.vpanel { display: grid; gap: 12px }
+.vp-head { display: flex; justify-content: space-between; align-items: center; gap: 12px }
+.vp-head > div:first-child { display: flex; gap: 6px; flex-wrap: wrap }
+.vp-progress { display: grid; justify-items: center; background: var(--fg); color: #fff; border-radius: 14px; padding: 6px 14px; line-height: 1.1 }
+.vp-progress b { font-family: var(--f-display); font-size: 20px }
+.vp-progress small { font-size: 11px; opacity: .8 }
+.vp-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px }
+.vp-list > li { display: flex; justify-content: space-between; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; transition: border-color var(--t-med) }
+.vp-list > li.vp-ok, .vp-list > li.vp-by_ribriz { border-color: #9fe1c8; background: color-mix(in srgb, var(--good-bg) 45%, var(--surface)) }
+.vp-list > li.vp-issue { border-color: #f5c98a }
+.vp-main { display: grid; gap: 3px; min-width: 0 }
+.vp-main b { font-size: 14px }
+.vp-main small { font-size: 12px }
+.vp-find { margin: 4px 0 0; padding-left: 16px; font-size: 13px; display: grid; gap: 2px }
+.vp-issue .vp-find { color: var(--warn) }
+.vp-ok .vp-find { color: var(--good) }
+.vp-file { font-size: 12px }
+.vp-side { display: grid; gap: 6px; justify-items: end; align-content: start; flex: none }
+.vp-foot { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap }
+@media (max-width: 520px) { .vp-list > li { flex-direction: column } .vp-side { justify-items: start; grid-auto-flow: column; align-items: center } }
+.ai-attach { width: 42px; height: 42px; flex: none; border-radius: 50%; border: 1px solid var(--line); background: var(--surface-2); font-size: 18px; cursor: pointer; display: grid; place-items: center }
+.ai-attach:disabled { opacity: .5; cursor: default }
+.admin-docs { margin-top: 10px; padding: 12px 14px; border: 1px dashed var(--line); border-radius: 12px; display: grid; gap: 6px; font-size: 14px }
+.admin-docs ul { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 6px }

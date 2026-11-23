@@ -194,6 +194,7 @@ model Mission {
   approvals     Approval[]
   events        MissionEvent[]
   requests      Enquiry[]
+  documents     TravelDoc[]
 
   @@index([customerId, updatedAt])
   @@index([anonId, updatedAt])
@@ -254,4 +255,29 @@ model MissionEvent {
   createdAt DateTime @default(now())
 
   @@index([missionId, createdAt])
+}
+
+/// A document a traveller uploaded for their visa. The file lives in the private
+/// Supabase Storage bucket "visa-docs"; only signed, short-lived links are ever issued.
+model TravelDoc {
+  id          String    @id @default(cuid())
+  missionId   String
+  mission     Mission   @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  /// passport | photo | bank_statement | itr | employment_proof | cover_letter | insurance | flight_booking | hotel_booking | other
+  kind        String
+  fileKey     String    @unique
+  fileName    String
+  mime        String
+  size        Int
+  /// checking | ok | issue | unreadable
+  status      String    @default("checking")
+  /// JSON array of traveller-facing findings
+  findings    String?
+  /// JSON with the few fields we keep (e.g. passport expiry, holder name); never the full passport number
+  extracted   String?
+  createdAt   DateTime  @default(now())
+  /// removed automatically after this date (30 days after the trip)
+  deleteAfter DateTime?
+
+  @@index([missionId, kind])
 }

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AskAboutMission, HubApprovals } from "@/components/hub/HubClient";
 import { pendingCard } from "@/lib/approvals";
+import { visaChecklist } from "@/lib/documents";
+import VisaPanel from "@/components/visa/VisaPanel";
 import { missionView } from "@/lib/missions";
 import { getOwner } from "@/lib/owner";
 import { addDays, daysBetween, fmtDate, isoDate } from "@/lib/pricing";
@@ -25,6 +27,7 @@ export default async function MissionPage({ params }: { params: Promise<{ id: st
   if (!m) notFound();
   const pending = (await Promise.all(m.approvals.filter((a) => a.status === "pending").map((a) => pendingCard(owner, a.id)))).filter((c) => c !== null);
   const days = m.date ? daysBetween(isoDate(new Date()), m.date) : null;
+  const visa = m.trip ? await visaChecklist(owner, m.id) : null;
 
   return (
     <div className="wrap hub">
@@ -49,6 +52,12 @@ export default async function MissionPage({ params }: { params: Promise<{ id: st
             <section className="panel">
               <h2>Waiting for your OK</h2>
               <HubApprovals cards={pending} />
+            </section>
+          )}
+          {visa && (
+            <section className="panel" id="visa">
+              <div className="hub-sec-head"><h2>Visa</h2></div>
+              <VisaPanel missionId={m.id} initial={visa} />
             </section>
           )}
           <section className="panel">

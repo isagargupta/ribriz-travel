@@ -73,6 +73,12 @@ export async function proposePriceHold(owner: Owner, i: { missionId?: string | n
 
 export async function proposeService(owner: Owner, i: { missionId?: string | null; service: Service; details: Record<string, string | number | string[]> }) {
   const s = SERVICES[i.service];
+  if (i.service === "visa" && i.missionId) {
+    // the visa team gets the checked document list with the request
+    const { visaChecklist } = await import("./documents");
+    const c = await visaChecklist(owner, i.missionId);
+    if (c && !c.noVisaWork) i.details = { ...i.details, documents: c.items.filter((x) => !x.byRibriz).map((x) => `${x.label}: ${x.state === "ok" ? "checked ✓" : x.state === "missing" ? "not uploaded" : x.state}`) };
+  }
   const a = await prisma.approval.create({
     data: {
       missionId: i.missionId ?? null, customerId: owner.customerId, anonId: owner.anonId, action: "service_request",

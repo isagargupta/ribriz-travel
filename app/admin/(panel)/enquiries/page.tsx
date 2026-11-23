@@ -9,7 +9,10 @@ const TYPE_LABELS: Record<string, string> = { hold: "48-hour price hold", enquir
 export default async function Enquiries({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const { status = "all" } = await searchParams;
   const where = FILTERS.includes(status) && status !== "all" ? { status } : {};
-  const list = await prisma.enquiry.findMany({ where, orderBy: { createdAt: "desc" }, take: 200 });
+  const list = await prisma.enquiry.findMany({
+    where, orderBy: { createdAt: "desc" }, take: 200,
+    include: { mission: { select: { id: true, documents: { orderBy: { createdAt: "desc" }, select: { id: true, kind: true, fileName: true, status: true, findings: true } } } } },
+  });
   const wa = (phone: string) => phone.replace(/[^\d]/g, "");
 
   return (
@@ -41,6 +44,23 @@ export default async function Enquiries({ searchParams }: { searchParams: Promis
               {e.travellers && <p style={{ fontSize: 14, margin: "8px 0 0" }}><b>Also travelling:</b> {(JSON.parse(e.travellers) as string[]).join(", ")}</p>}
               {e.childAges && e.children > 0 && <p style={{ fontSize: 14, margin: "4px 0 0" }}><b>Child ages:</b> {(JSON.parse(e.childAges) as number[]).join(", ")}</p>}
               {e.message && <p style={{ whiteSpace: "pre-wrap", background: "var(--surface-2)", padding: 12, borderRadius: 12, fontSize: 14 }}>{e.message}</p>}
+              {e.type === "visa" && e.mission && (
+                <div className="admin-docs">
+                  <b>Traveller&apos;s documents ({e.mission.documents.length})</b>
+                  {e.mission.documents.length === 0 ? <p className="muted" style={{ margin: 0 }}>None uploaded yet.</p> : (
+                    <ul>
+                      {e.mission.documents.map((d) => (
+                        <li key={d.id}>
+                          <span className={`vt ${d.status === "ok" ? "good" : d.status === "checking" ? "ok" : "warn"}`}>{d.status === "ok" ? "Checked" : d.status}</span>{" "}
+                          <b>{d.kind.replace("_", " ")}</b> · <a href={`/api/docs/${d.id}`} target="_blank" rel="noopener noreferrer">Open {d.fileName}</a>
+                          {d.findings && <small className="muted" style={{ display: "block" }}>{(JSON.parse(d.findings) as string[]).join(" ")}</small>}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <small className="muted">Links open for 2 minutes. Documents are deleted automatically 30 days after the trip.</small>
+                </div>
+              )}
               <form action={updateEnquiry} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "end", marginTop: 10 }}>
                 <input type="hidden" name="id" value={e.id} />
                 <label className="lab" title="Marking as booked takes seats from the departure">Status

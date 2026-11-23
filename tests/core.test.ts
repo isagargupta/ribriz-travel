@@ -77,3 +77,10 @@ test("schedule: stays inside window, spaced, seats only for group tours", () => 
   const avg = (a: { priceDelta: number }[]) => a.reduce((s, x) => s + x.priceDelta, 0) / a.length;
   assert.ok(avg(peak) > avg(low));
 });
+
+import { addMonths } from "../lib/pricing.ts";
+test("addMonths uses calendar months and clamps month ends", () => {
+  assert.equal(addMonths("2027-04-08", 6), "2027-10-08");
+  assert.equal(addMonths("2026-08-31", 6), "2027-02-28");
+  assert.equal(addMonths("2026-12-15", 1), "2027-01-15");
+});
