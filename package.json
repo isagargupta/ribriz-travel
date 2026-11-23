@@ -7,14 +7,15 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
-    "db:push": "prisma db push",
+    "db:push": "prisma db push && prisma db execute --file prisma/rls.sql --schema prisma/schema.prisma",
     "db:seed": "node --experimental-strip-types --no-warnings prisma/seed.ts",
-    "setup": "prisma db push && node --experimental-strip-types --no-warnings prisma/seed.ts",
+    "setup": "npm run db:push && npm run db:seed",
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --no-warnings --test \"tests/**/*.test.ts\""
   },
   "dependencies": {
     "@prisma/client": "^6.16.2",
+    "@supabase/supabase-js": "^2.119.2",
     "next": "^15.5.4",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",

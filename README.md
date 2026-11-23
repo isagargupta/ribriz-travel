@@ -3,8 +3,8 @@
 The Ribriz Travel website and admin panel: holiday packages, escorted group tours,
 beach hotels and cruises, with a 48-hour price hold, enquiries and a newsletter.
 
-Built with **Next.js 15** (App Router), **React 19**, **Prisma** and **SQLite** (switch to
-Postgres for production hosting without a disk, see below).
+Built with **Next.js 15** (App Router), **React 19**, **Prisma** and **Supabase** (Postgres database
+and Storage for admin photo uploads).
 
 ## What's inside
 
@@ -54,13 +54,14 @@ total from the database and asks them to confirm if it changed.
 
 ## Run it on your computer
 
-Requires Node.js 22.6 or newer.
+Requires Node.js 22.6 or newer and a Supabase project.
 
 ```bash
 npm install
-cp .env.example .env        # then edit .env: set ADMIN_PASSWORD and SESSION_SECRET
-npm run setup               # creates the database, 16 starter trips and 6 months of dates
-npm run dev                 # http://localhost:3000
+cp .env.example .env          # then fill it in (see "Settings" below)
+node scripts/set-secrets.mjs  # optional: types the DB password + secret key in, hidden
+npm run setup                 # creates tables, locks them, adds 16 trips and 6 months of dates
+npm run dev                   # http://localhost:3000
 ```
 
 Admin panel: http://localhost:3000/admin (sign in with `ADMIN_PASSWORD` from `.env`).
@@ -75,44 +76,51 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 | Variable | What it does |
 |---|---|
-| `DATABASE_URL` | Database location. `file:./ribriz.db` for SQLite, or a Postgres URL |
+| `DATABASE_URL` | Supabase pooled connection (port 6543), from Supabase → Connect → ORMs → Prisma |
+| `DIRECT_URL` | Supabase direct connection (port 5432), used to create and change tables |
+| `NEXT_PUBLIC_SUPABASE_URL` | Your project URL, e.g. `https://abcd.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Public key (safe to expose; the tables are locked against it) |
+| `SUPABASE_SECRET_KEY` | **Server-only** secret key (`sb_secret_…`), used to store admin photo uploads |
 | `ADMIN_PASSWORD` | Password for `/admin` |
 | `SESSION_SECRET` | Random string (64 hex characters) that signs the admin login cookie |
-| `NEXT_PUBLIC_PHONE` | Phone number shown in the footer |
-| `NEXT_PUBLIC_EMAIL` | Email shown in the footer |
-| `NEXT_PUBLIC_WHATSAPP` | WhatsApp number with country code, digits only (e.g. `919800000000`); shows a "Chat on WhatsApp" button on trip pages |
-| `NEXT_PUBLIC_SITE_URL` | Your live address, e.g. `https://ribriztravel.com` (used in the sitemap and link previews) |
+| `NEXT_PUBLIC_PHONE` / `NEXT_PUBLIC_EMAIL` | Contact details in the footer |
+| `NEXT_PUBLIC_WHATSAPP` | WhatsApp number with country code, digits only (e.g. `919800000000`) |
+| `NEXT_PUBLIC_SITE_URL` | Your live address, e.g. `https://ribriztravel.com` |
 
 `NEXT_PUBLIC_*` values are baked in at build time: rebuild after changing them.
+Never commit `.env` or share `SUPABASE_SECRET_KEY` / the database password.
+
+## How Supabase is used
+
+- **Database:** all reads and writes go through Prisma on the server, connected as the database
+  owner. `prisma/rls.sql` turns on row-level security with no policies and revokes table access
+  from Supabase's public API roles, so the publishable key can't read customer data.
+  `npm run db:push` re-applies it every time. If you add a table, add it to `rls.sql` too.
+- **Storage:** admin photo uploads go to a public `trip-photos` bucket (created automatically on
+  the first upload). Bundled photos stay in `public/img/`.
+- **Region:** put the app's hosting in the same region as the database. Each page talks to the
+  database several times, so distance adds delay.
 
 ## Publish it
 
-### Option A: a server with a disk (simplest, keeps SQLite and uploads)
-Works on any VPS (DigitalOcean, Hostinger VPS, AWS Lightsail), Render with a persistent disk,
-or Railway with a volume.
+### Option A: Vercel (simplest)
+1. Import the GitHub repository at vercel.com.
+2. Add every `.env` value in Project → Settings → Environment Variables.
+3. Set the function region (Project → Settings → Functions) to the one closest to your
+   Supabase project.
+4. Deploy. The database is already set up, so there's nothing else to run.
 
+### Option B: your own server (VPS, Render, Railway)
 ```bash
 npm ci
 cp .env.example .env         # fill in real values, NEXT_PUBLIC_SITE_URL = your domain
-npm run setup                # first time only
 npm run build
-npm start                    # serves on port 3000; put Nginx or Caddy in front for HTTPS
+npm start                    # port 3000; put Nginx or Caddy in front for HTTPS
 ```
-
 Keep it running with `pm2 start npm --name ribriz -- start`.
-Back up `prisma/ribriz.db` and the `uploads/` folder regularly.
 
-### Option B: Vercel + Postgres
-Vercel has no permanent disk, so use a hosted Postgres (Neon, Supabase or Vercel Postgres).
-
-1. In `prisma/schema.prisma` change `provider = "sqlite"` to `provider = "postgresql"`.
-2. Set `DATABASE_URL` to your Postgres connection string (locally and in Vercel).
-3. Run `npm run setup` once against that database.
-4. Push to GitHub, import the repo in Vercel, add all `.env` values in Project → Settings →
-   Environment Variables, and deploy.
-5. Photo uploads from the admin panel are saved to disk, which does not persist on Vercel.
-   Put new photos in `public/img/` and redeploy, or add a storage service (e.g. Vercel Blob,
-   Cloudinary) before relying on uploads.
+For production, use Supabase's paid plan: free projects pause after a week without traffic and
+have no daily backups.
 
 ## Before going live: checklist
 
@@ -122,6 +130,7 @@ Vercel has no permanent disk, so use a hosted Postgres (Neon, Supabase or Vercel
       (`app/(site)/page.tsx`); they are examples.
 - [ ] Set your real phone, email and WhatsApp in `.env`.
 - [ ] Use a long, unique `ADMIN_PASSWORD` and a fresh `SESSION_SECRET`.
+- [ ] Move to Supabase's paid plan (no pausing, daily backups).
 - [ ] Check the exchange rates in `lib/pricing.ts` (`RATES`) and the city flight
       supplements (`FROM_CITIES`).
 - [ ] Review each trip's departure dates, prices and seats (Admin → Trips → a trip →
@@ -140,7 +149,8 @@ app/
   api/               enquiries, newsletter, uploaded photos
 components/          UI pieces (cards, search, booking box, admin trip form…)
 lib/                 price engine, search, schedules, data access, bookings, auth, validation
-prisma/              schema.prisma and seed.ts (starter trips + departures)
+prisma/              schema.prisma, rls.sql (table lockdown), seed.ts (starter trips + departures)
+scripts/             set-secrets.mjs (adds DB password + secret key to .env, hidden)
 tests/               unit tests (npm test)
 public/img/          logo and destination photos (Unsplash)
 prototype/           the original single-file design prototype, for reference

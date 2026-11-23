@@ -6,6 +6,8 @@ const nextConfig = {
     formats: ["image/avif", "image/webp"],
     deviceSizes: [400, 640, 828, 1080, 1280, 1600, 1920],
     minimumCacheTTL: 60 * 60 * 24 * 30,
+    // photos uploaded from the admin live in Supabase Storage
+    remotePatterns: [{ protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/**" }],
   },
   experimental: {
     serverActions: { bodySizeLimit: "6mb" },

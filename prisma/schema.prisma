@@ -2,11 +2,12 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// SQLite for local development. To use Postgres in production change
-// provider to "postgresql" and point DATABASE_URL at your database.
+// Supabase Postgres. DATABASE_URL goes through the connection pooler (app traffic);
+// DIRECT_URL is a direct connection used when creating or changing tables.
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Trip {

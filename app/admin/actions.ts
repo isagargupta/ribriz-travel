@@ -1,13 +1,12 @@
 "use server";
 import { randomBytes } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { endSession, passwordMatches, requireAdmin, startSession } from "@/lib/auth";
 import { BOARDS, KINDS, isoDate } from "@/lib/pricing";
 import { setEnquiryStatus } from "@/lib/bookings";
+import { uploadPhoto } from "@/lib/supabase";
 import { buildSchedule } from "@/lib/schedule";
 import { TRIPS_TAG } from "@/lib/trips";
 
@@ -61,11 +60,8 @@ async function saveUpload(file: File) {
   const ext = IMG_TYPES[file.type];
   if (!ext) throw new Error("Upload a JPG, PNG or WebP image.");
   if (file.size > 5 * 1024 * 1024) throw new Error("Image must be under 5 MB.");
-  const dir = path.join(process.cwd(), "uploads");
-  await mkdir(dir, { recursive: true });
-  const name = randomBytes(8).toString("hex") + ext;
-  await writeFile(path.join(dir, name), Buffer.from(await file.arrayBuffer()));
-  return `/api/uploads/${name}`;
+  const name = `${new Date().toISOString().slice(0, 7)}/${randomBytes(8).toString("hex")}${ext}`;
+  return uploadPhoto(name, Buffer.from(await file.arrayBuffer()), file.type);
 }
 
 export type TripFormState = { error?: string } | undefined;
