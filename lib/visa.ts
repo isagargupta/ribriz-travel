@@ -47,3 +47,16 @@ export function flag(code: string) {
 }
 
 export const DEFAULT_PASSPORT = "IN";
+
+/**
+ * Typical days needed before you can travel, by visa type. Conservative planning
+ * figures, not guarantees: e-visas often arrive faster, embassy visas can take longer.
+ */
+export const PROCESSING_DAYS: Record<VisaCategory, number> = {
+  visa_free: 0, voa: 0, own: 0, eta: 2, evisa: 5, required: 21, no_entry: 9999,
+};
+
+/** Can every country on a trip be sorted within `days`? */
+export function visaReadyWithin(categories: VisaCategory[], days: number) {
+  return categories.every((c) => PROCESSING_DAYS[c] <= days);
+}

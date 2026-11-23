@@ -1,4 +1,4 @@
-// Puts the Supabase database password and secret key into .env without showing them.
+// Puts secrets (Supabase database password and secret key, Claude API key) into .env without showing them.
 // Run:  node scripts/set-secrets.mjs
 import { readFileSync, writeFileSync } from "node:fs";
 import { stdin, stdout } from "node:process";
@@ -43,6 +43,17 @@ if (!cur.startsWith("sb_secret_") && !cur.startsWith("eyJ")) {
 } else {
   console.log("✓ Secret key already set");
 }
+
+// Claude API key for the AI travel assistant (console.anthropic.com -> API Keys)
+const ak = (env.match(/^ANTHROPIC_API_KEY="?([^"\n]*)"?$/m) || [])[1] || "";
+if (!ak.startsWith("sk-ant-")) {
+  const key = await ask("Claude API key for the assistant, starts with sk-ant- (hidden, Enter to skip): ");
+  if (key && !key.startsWith("sk-ant-")) console.log("That doesn't look like a Claude API key (it should start with sk-ant-). Skipped.");
+  else if (key) {
+    env = /^ANTHROPIC_API_KEY=/m.test(env) ? env.replace(/^ANTHROPIC_API_KEY=.*$/m, `ANTHROPIC_API_KEY="${key}"`) : env + `\n# Claude API key for the AI travel assistant\nANTHROPIC_API_KEY="${key}"\n`;
+    console.log("✓ Claude API key added");
+  }
+} else console.log("✓ Claude API key already set");
 
 writeFileSync(".env", env);
 console.log("Saved .env. Go back to Claude and say done.");

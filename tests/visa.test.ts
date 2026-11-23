@@ -25,3 +25,12 @@ test("labels, names and flags", () => {
   assert.equal(countryName("TH"), "Thailand");
   assert.equal(flag("IN"), "🇮🇳");
 });
+
+import { PROCESSING_DAYS, visaReadyWithin } from "../lib/visa.ts";
+test("visa ready in time", () => {
+  assert.ok(visaReadyWithin(["visa_free", "voa"], 0));
+  assert.ok(visaReadyWithin(["eta"], 2) && !visaReadyWithin(["eta"], 1));
+  assert.ok(!visaReadyWithin(["evisa", "voa"], 3) && visaReadyWithin(["evisa"], 5));
+  assert.ok(!visaReadyWithin(["required"], 7));
+  assert.equal(PROCESSING_DAYS.own, 0);
+});
