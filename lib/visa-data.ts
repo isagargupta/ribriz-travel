@@ -1,7 +1,7 @@
 import "server-only";
 import { revalidateTag, unstable_cache } from "next/cache";
 import { prisma } from "./db";
-import { TRIPS_TAG } from "./trips";
+import { DATA_VERSION, TRIPS_TAG } from "./trips";
 import { DEFAULT_PASSPORT, isEasy, parseRequirement, type VisaCategory, type VisaRuleDTO } from "./visa";
 
 export const VISA_TAG = "visa";
@@ -14,19 +14,19 @@ export const getVisaRules = unstable_cache(
     const rows = await prisma.visaRule.findMany({ where: { passport }, orderBy: { destination: "asc" } });
     return rows.map((r) => ({ d: r.destination, c: r.category as VisaCategory, days: r.days }));
   },
-  ["visa-rules"],
+  [`visa-rules-v${DATA_VERSION}`],
   { tags: [VISA_TAG], revalidate: 86400 },
 );
 
 export const getPassports = unstable_cache(
   async (): Promise<string[]> => (await prisma.visaRule.findMany({ distinct: ["passport"], select: { passport: true }, orderBy: { passport: "asc" } })).map((r) => r.passport),
-  ["visa-passports"],
+  [`visa-passports-v${DATA_VERSION}`],
   { tags: [VISA_TAG], revalidate: 86400 },
 );
 
 export const getVisaSync = unstable_cache(
   async () => prisma.visaSync.findUnique({ where: { id: 1 } }),
-  ["visa-sync"],
+  [`visa-sync-v${DATA_VERSION}`],
   { tags: [VISA_TAG], revalidate: 86400 },
 );
 

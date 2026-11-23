@@ -7,6 +7,11 @@ import type { DepartureDTO, Kind, TripDTO, TripIndexItem } from "./types";
 
 /** Cache tag cleared whenever trips or departures change in the admin. */
 export const TRIPS_TAG = "trips";
+/**
+ * Bump when the shape of cached data changes (new fields). Vercel keeps cached
+ * results across deploys, so old entries would otherwise be served to new code.
+ */
+export const DATA_VERSION = "3";
 
 const lines = (s: string) => s.split("\n").map((x) => x.trim()).filter(Boolean);
 const today = () => isoDate(new Date());
@@ -44,7 +49,7 @@ export const getPublishedTrips = unstable_cache(
     });
     return rows.map(toDTO);
   },
-  ["published-trips"],
+  [`published-trips-v${DATA_VERSION}`],
   { tags: [TRIPS_TAG], revalidate: 3600 },
 );
 
@@ -61,7 +66,7 @@ export const getDepartures = unstable_cache(
     const rows = await prisma.departure.findMany({ where: { tripId, ...upcoming().where }, orderBy: { date: "asc" } });
     return rows.map((d) => ({ id: d.id, date: d.date, priceDelta: d.priceDelta, seatsLeft: d.seatsLeft }));
   },
-  ["trip-departures"],
+  [`trip-departures-v${DATA_VERSION}`],
   { tags: [TRIPS_TAG], revalidate: 3600 },
 );
 
@@ -84,7 +89,7 @@ export const getCalendar = unstable_cache(
     for (const r of rows) map.get(r.date)?.options.push({ base: r.trip.price + r.priceDelta, flight: r.trip.flight });
     return [...map.values()];
   },
-  ["calendar"],
+  [`calendar-v${DATA_VERSION}`],
   { tags: [TRIPS_TAG], revalidate: 3600 },
 );
 
