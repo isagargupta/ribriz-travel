@@ -24,6 +24,8 @@ function toDTO(t: Trip & { departures: Departure[] }): TripDTO {
     flight: t.flight, freeCancel: t.freeCancel, tourManager: t.tourManager, easyVisa: t.easyVisa,
     lastMinute: t.lastMinute, earlyBird: t.earlyBird, featured: t.featured,
     image: t.image, highlights: lines(t.highlights), days: lines(t.days),
+    countryCodes: t.countryCodes.split(",").map((c) => c.trim().toUpperCase()).filter((c) => /^[A-Z]{2}$/.test(c)),
+    visaNote: t.visaNote,
     minDelta: cheapest?.priceDelta ?? 0,
     cheapestDate: cheapest?.date ?? null,
     depDates: deps.map((d) => d.date),

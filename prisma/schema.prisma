@@ -41,6 +41,10 @@ model Trip {
   featured    Boolean   @default(false)
   published   Boolean   @default(true)
   image       String
+  /// ISO 3166 two-letter codes of the countries visited, comma-separated (e.g. "CH,FR,IT")
+  countryCodes String     @default("")
+  /// team note shown above the automatic visa info (overrides it when set)
+  visaNote    String?
   /// one highlight per line
   highlights  String
   /// one itinerary day per line
@@ -135,4 +139,29 @@ model LoginCode {
   createdAt DateTime  @default(now())
 
   @@index([email, purpose, createdAt])
+}
+
+/// Visa rule for holders of `passport` travelling to `destination` (ISO 3166 two-letter codes).
+/// Source: Passport Index dataset (github.com/ilyankou/passport-index-dataset), synced weekly.
+model VisaRule {
+  passport    String
+  destination String
+  /// visa_free | voa | eta | evisa | required | own | no_entry
+  category    String
+  /// visa-free stay in days, when the source gives one
+  days        Int?
+  /// value exactly as published in the source
+  raw         String
+
+  @@id([passport, destination])
+  @@index([passport, category])
+}
+
+/// When the visa data was last refreshed (single row, id = 1).
+model VisaSync {
+  id         Int      @id @default(1)
+  /// date of the newest change in the source dataset
+  sourceDate DateTime
+  syncedAt   DateTime
+  rows       Int
 }

@@ -12,6 +12,7 @@ import { setEnquiryStatus } from "@/lib/bookings";
 import { uploadPhoto } from "@/lib/supabase";
 import { buildSchedule } from "@/lib/schedule";
 import { TRIPS_TAG } from "@/lib/trips";
+import { refreshEasyVisaFlags } from "@/lib/visa-data";
 
 /** Clear cached trip data so the public site shows changes immediately. */
 function refreshSite() {
@@ -122,9 +123,11 @@ export async function saveTrip(_: TripFormState, fd: FormData): Promise<TripForm
     nights: Math.round(n("nights")), stars: Math.min(5, Math.max(1, Math.round(n("stars")) || 4)), board: s("board"),
     price: Math.round(n("price")), was: optInt("was"), rating: Math.min(10, Math.max(0, n("rating") || 9)), reviews: Math.max(0, Math.round(n("reviews")) || 0),
     beach: optInt("beach"),
-    flight: b("flight"), freeCancel: b("freeCancel"), tourManager: b("tourManager"), easyVisa: b("easyVisa"),
+    flight: b("flight"), freeCancel: b("freeCancel"), tourManager: b("tourManager"),
     lastMinute: b("lastMinute"), earlyBird: b("earlyBird"), featured: b("featured"), published: b("published"),
     image, highlights: s("highlights"), days: s("days"),
+    countryCodes: [...new Set(s("countryCodes").toUpperCase().split(",").map((c) => c.trim()).filter((c) => /^[A-Z]{2}$/.test(c)))].join(","),
+    visaNote: s("visaNote") || null,
   };
 
   let slug = slugify(s("slug") || `${data.dest}-${title}-${data.nights}n`);
@@ -141,6 +144,7 @@ export async function saveTrip(_: TripFormState, fd: FormData): Promise<TripForm
     await prisma.departure.createMany({ data: plan.map((p) => ({ ...p, tripId: t.id })) });
   }
 
+  await refreshEasyVisaFlags(); // recompute the trip's "easy visa" flag from its countries
   refreshSite();
   redirect(id ? "/admin/trips?saved=1" : `/admin/trips/${tripId}?created=1#departures`);
 }

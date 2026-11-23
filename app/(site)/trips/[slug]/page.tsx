@@ -9,6 +9,9 @@ import CheckoutSheet from "@/components/trip/CheckoutSheet";
 import DepartureCalendar from "@/components/trip/DepartureCalendar";
 import QuestionSheet from "@/components/trip/QuestionSheet";
 import Reveal from "@/components/ui/Reveal";
+import VisaBox from "@/components/visa/VisaBox";
+import { DEFAULT_PASSPORT } from "@/lib/visa";
+import { getPassports, getVisaRules } from "@/lib/visa-data";
 import { getPublishedTrips, getTripBySlug } from "@/lib/trips";
 import { BOARDS, BOARD_DETAIL, KINDS, ratingWord, seeded } from "@/lib/pricing";
 
@@ -34,6 +37,7 @@ export default async function TripPage({ params, searchParams }: Props) {
   const r = await getTripBySlug(slug);
   if (!r) notFound();
   const { trip: t, departures } = r;
+  const [inRules, passports] = await Promise.all([getVisaRules(DEFAULT_PASSPORT), getPassports()]);
   const initialDate = sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : undefined;
 
   const inclusions: [string, boolean][] = [
@@ -81,7 +85,7 @@ export default async function TripPage({ params, searchParams }: Props) {
       <div className="wrap trip-layout">
         <div className="trip-main">
           <nav className="trip-tabs" aria-label="On this page">
-            <a href="#overview">Overview</a><a href="#dates">Dates &amp; prices</a><a href="#itinerary">Itinerary</a><a href="#included">Included</a><a href="#reviews">Reviews</a>
+            <a href="#overview">Overview</a><a href="#dates">Dates &amp; prices</a><a href="#itinerary">Itinerary</a><a href="#included">Included</a><a href="#visa">Visa</a><a href="#reviews">Reviews</a>
           </nav>
 
           <Reveal><section className="panel" id="overview">
@@ -90,7 +94,7 @@ export default async function TripPage({ params, searchParams }: Props) {
               {t.flight && <span className="pill">✈ Return flights included</span>}
               {t.tourManager && <span className="pill">Tour manager with you</span>}
               {t.freeCancel ? <span className="pill good">Free cancellation until 30 days before</span> : <span className="pill warn">Cancellation fee applies</span>}
-              {t.easyVisa && t.region !== "India" && <span className="pill good">Visa on arrival / e-visa</span>}
+              {t.easyVisa && t.region !== "India" && <a className="pill good" href="#visa">No embassy visa for Indians</a>}
             </div>
             <h2>Highlights</h2>
             <ul className="hl">{t.highlights.map((h) => <li key={h}>{h}</li>)}</ul>
@@ -121,6 +125,12 @@ export default async function TripPage({ params, searchParams }: Props) {
               <li>Book with 10% of the total (minimum ₹5,000). Pay the rest 30 days before you leave.</li>
               <li>Passport must be valid for 6 months after you return.</li>
             </ul>
+          </section></Reveal>
+
+          <Reveal><section className="panel" id="visa">
+            <h2>Visa</h2>
+            <VisaBox countryCodes={t.countryCodes} visaNote={t.visaNote} passports={passports}
+              initial={{ passport: DEFAULT_PASSPORT, rules: inRules.filter((r) => t.countryCodes.includes(r.d)) }} />
           </section></Reveal>
 
           <Reveal><section className="panel" id="reviews">

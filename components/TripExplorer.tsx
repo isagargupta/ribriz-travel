@@ -136,7 +136,7 @@ export default function TripExplorer({ trips, initial }: { trips: TripDTO[]; ini
         <label className="chk"><input type="checkbox" checked={f.flight} onChange={(e) => upd({ flight: e.target.checked })} /> Flights included</label>
         <label className="chk"><input type="checkbox" checked={f.beach} onChange={(e) => upd({ beach: e.target.checked })} /> Beach within 300 m</label>
         <label className="chk"><input type="checkbox" checked={f.tm} onChange={(e) => upd({ tm: e.target.checked })} /> Tour manager on trip</label>
-        <label className="chk"><input type="checkbox" checked={f.visa} onChange={(e) => upd({ visa: e.target.checked })} /> Visa on arrival / e-visa</label>
+        <label className="chk"><input type="checkbox" checked={f.visa} onChange={(e) => upd({ visa: e.target.checked })} /> No embassy visa (Indian passport)</label>
       </div>
     </div>
   );

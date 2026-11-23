@@ -15,6 +15,8 @@ interface Prefs {
   compare: string[];
   /** recently viewed trip ids, newest first */
   recent: string[];
+  /** passport country (ISO code) for visa info */
+  passport: string;
 }
 
 export interface Me { email: string; name: string | null; phone: string | null }
@@ -33,7 +35,7 @@ interface PrefsApi extends Prefs {
   money: (inr: number) => string;
 }
 
-const DEFAULTS: Prefs = { currency: "INR", from: "Mumbai", adults: 2, childAges: [], priceMode: "pp", saved: [], compare: [], recent: [] };
+const DEFAULTS: Prefs = { currency: "INR", from: "Mumbai", adults: 2, childAges: [], priceMode: "pp", saved: [], compare: [], recent: [], passport: "IN" };
 const KEY = "ribriz_prefs_v2";
 const Ctx = createContext<PrefsApi | null>(null);
 

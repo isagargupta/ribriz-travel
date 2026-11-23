@@ -37,6 +37,10 @@ export interface TripDTO {
   earlyBird: boolean;
   featured: boolean;
   image: string;
+  /** ISO codes of countries visited */
+  countryCodes: string[];
+  /** team note about visas, shown above the automatic info */
+  visaNote: string | null;
   highlights: string[];
   days: string[];
   /** cheapest upcoming departure's delta (0 when no departures) */

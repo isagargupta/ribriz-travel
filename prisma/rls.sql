@@ -9,6 +9,8 @@ ALTER TABLE "Enquiry"    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Subscriber" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Customer"   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "LoginCode"  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "VisaRule"   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "VisaSync"   ENABLE ROW LEVEL SECURITY;
 
 -- Belt and braces: the public API roles get no table privileges at all.
-REVOKE ALL ON "Trip", "Departure", "Enquiry", "Subscriber", "Customer", "LoginCode" FROM anon, authenticated;
+REVOKE ALL ON "Trip", "Departure", "Enquiry", "Subscriber", "Customer", "LoginCode", "VisaRule", "VisaSync" FROM anon, authenticated;

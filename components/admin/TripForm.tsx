@@ -7,7 +7,7 @@ export interface TripFormValues {
   id?: string; slug?: string; title?: string; dest?: string; country?: string; region?: string; kind?: string; themes?: string;
   nights?: number; stars?: number; board?: string; price?: number; was?: number | null; rating?: number; reviews?: number; beach?: number | null;
   flight?: boolean; freeCancel?: boolean; tourManager?: boolean; easyVisa?: boolean; lastMinute?: boolean; earlyBird?: boolean; featured?: boolean; published?: boolean;
-  image?: string; highlights?: string; days?: string;
+  image?: string; highlights?: string; days?: string; countryCodes?: string; visaNote?: string | null;
 }
 
 const REGIONS = ["India", "South-East Asia", "East Asia", "Middle East", "Mediterranean", "Europe", "Indian Ocean", "Africa", "Americas", "Oceania"];
@@ -53,7 +53,6 @@ export default function TripForm({ trip = {}, images }: { trip?: TripFormValues;
           {flag("flight", "Flights included", true)}
           {flag("freeCancel", "Free cancellation", true)}
           {flag("tourManager", "Tour manager")}
-          {flag("easyVisa", "Visa on arrival / e-visa / none needed", true)}
           {flag("lastMinute", "Last-minute deal")}
           {flag("earlyBird", "Early-bird deal")}
           {flag("featured", "Show in Trending")}
@@ -61,6 +60,9 @@ export default function TripForm({ trip = {}, images }: { trip?: TripFormValues;
         </div>
       </fieldset>
 
+      <label>Countries visited (2-letter codes, comma-separated)<input name="countryCodes" defaultValue={trip.countryCodes} placeholder="e.g. CH,FR,IT or IN" pattern="^\s*[A-Za-z]{2}(\s*,\s*[A-Za-z]{2})*\s*$" title="Two-letter country codes such as IN, TH, AE, separated by commas" /></label>
+      <label>Visa note for customers (optional)<input name="visaNote" defaultValue={trip.visaNote ?? ""} placeholder="e.g. Indians with a valid US visa get Turkey e-visa" /></label>
+      <p className="full fine" style={{ marginTop: -6 }}>Visa info on the trip page comes from these countries automatically. The note appears above it when you need to add or correct something.</p>
       <label className="full">Highlights (one per line)<textarea name="highlights" required defaultValue={trip.highlights} placeholder={"Overnight private houseboat\nTea museum in Munnar"} /></label>
       <label className="full">Day-by-day plan (one line per day)<textarea name="days" required defaultValue={trip.days} style={{ minHeight: 180 }} placeholder={"Arrive Kochi, Fort Kochi walk\nDrive to Munnar"} /></label>
 

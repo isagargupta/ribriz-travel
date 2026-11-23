@@ -72,10 +72,20 @@ const trips = [
     days: ["Arrive Port Blair, light show", "Ferry to Havelock", "Elephant beach", "Neil island", "Return to Port Blair", "Ross island", "Fly home"] }),
 ];
 
+/** Countries each starter trip visits (ISO 3166 two-letter codes), used for visa info. */
+const COUNTRY_CODES: Record<string, string> = {
+  "bali-ubud-seminyak-7n": "ID", "kerala-backwaters-munnar-6n": "IN", "switzerland-france-italy-10n": "CH,FR,IT",
+  "antalya-lara-all-inclusive-7n": "TR", "dubai-abu-dhabi-5n": "AE", "kashmir-gulmarg-pahalgam-6n": "IN",
+  "maldives-water-villa-4n": "MV", "phuket-krabi-6n": "TH", "crete-family-beach-8n": "GR", "royal-rajasthan-7n": "IN",
+  "hurghada-luxor-7n": "EG", "japan-cherry-blossom-9n": "JP", "north-goa-beach-4n": "IN",
+  "western-mediterranean-cruise-7n": "ES,FR,IT", "vietnam-hanoi-halong-hoian-8n": "VN", "andaman-havelock-neil-6n": "IN",
+};
+
 const start = isoDate(new Date());
 let depCount = 0;
 for (const t of trips) {
-  const row = await prisma.trip.upsert({ where: { slug: t.slug }, update: t, create: t });
+  const data = { ...t, countryCodes: COUNTRY_CODES[t.slug] ?? "" };
+  const row = await prisma.trip.upsert({ where: { slug: t.slug }, update: data, create: data });
   const plan = buildSchedule({ tripId: row.slug, kind: row.kind, base: row.price, start, days: 180, lastMinute: row.lastMinute });
   const existing = new Set((await prisma.departure.findMany({ where: { tripId: row.id }, select: { date: true } })).map((d) => d.date));
   const fresh = plan.filter((p) => !existing.has(p.date)).map((p) => ({ ...p, tripId: row.id }));

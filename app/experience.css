@@ -385,3 +385,57 @@ kbd { font-family: var(--f-mono); font-size: 11px; background: var(--surface); b
 @media (max-width: 560px) { .acc-item { grid-template-columns: 72px 1fr } .acc-img { width: 72px; height: 60px } .acc-side { grid-column: 1 / -1; justify-items: start; text-align: left; grid-auto-flow: column; justify-content: space-between; align-items: center } }
 .or-line { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 13px; font-weight: 700 }
 .or-line::before, .or-line::after { content: ""; flex: 1; height: 1px; background: var(--line) }
+
+/* ---------- visa ---------- */
+.vt { display: inline-block; font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 999px; white-space: nowrap }
+.vt.good { background: var(--good-bg); color: var(--good) }
+.vt.ok { background: #e3ecff; color: var(--blue) }
+.vt.warn { background: var(--warn-bg); color: var(--warn) }
+.vt.bad { background: #fde7e7; color: var(--bad) }
+.vt.neutral { background: var(--surface-2); color: var(--muted) }
+.fl { font-size: 22px; line-height: 1 }
+.visa { display: grid; gap: 18px }
+.visa-search { display: grid; grid-template-columns: 280px 1fr; gap: 14px; align-items: end }
+.visa-search .in { width: 100%; border: 2px solid var(--line); border-radius: 12px; padding: 11px 12px; font-weight: 600; background: var(--surface) }
+.visa-search .in:focus { border-color: var(--blue); outline: none }
+.visa-dest { position: relative }
+@media (max-width: 720px) { .visa-search { grid-template-columns: 1fr } }
+.visa-sugg { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 20; list-style: none; margin: 0; padding: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow) }
+.visa-sugg button { width: 100%; display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 0; background: none; border-radius: 10px; text-align: left; font-weight: 600; cursor: pointer }
+.visa-sugg button:hover, .visa-sugg button:focus { background: var(--surface-2) }
+.visa-sugg button span:nth-child(2) { flex: 1 }
+.visa-result { border-radius: 22px; padding: 22px; display: grid; gap: 10px; border: 2px solid var(--line); background: var(--surface) }
+.visa-result.tone-good { border-color: #9fe1c8; background: linear-gradient(180deg, var(--good-bg), var(--surface) 70%) }
+.visa-result.tone-ok { border-color: #b9cdfa; background: linear-gradient(180deg, #e3ecff, var(--surface) 70%) }
+.visa-result.tone-warn { border-color: #f5c98a; background: linear-gradient(180deg, var(--warn-bg), var(--surface) 70%) }
+.visa-result p { margin: 0; color: var(--fg); font-size: 15px }
+.vr-head { display: flex; gap: 14px; align-items: center }
+.vr-head > div { flex: 1; min-width: 0 }
+.vr-head small { color: var(--muted); font-weight: 600 }
+.vr-head h2 { font-size: clamp(20px, 2.6vw, 28px) }
+.vr-flag { font-size: 46px; line-height: 1 }
+.vr-trips { font-size: 14px }
+.vr-actions { display: flex; gap: 8px; flex-wrap: wrap }
+.visa-tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px }
+.vtab { border: 2px solid var(--line); background: var(--surface); border-radius: 16px; padding: 12px 10px; display: grid; gap: 2px; text-align: left; cursor: pointer; transition: all var(--t-fast) var(--ease) }
+.vtab b { font-family: var(--f-display); font-size: 26px; line-height: 1.1 }
+.vtab span { font-size: 12px; font-weight: 700; color: var(--muted) }
+.vtab.good b { color: var(--good) } .vtab.ok b { color: var(--blue) } .vtab.warn b { color: var(--warn) }
+.vtab[aria-selected="true"] { border-color: var(--fg); box-shadow: var(--shadow-sm); transform: translateY(-2px) }
+@media (max-width: 720px) { .visa-tabs { grid-template-columns: repeat(3, 1fr) } .vtab b { font-size: 20px } }
+.visa-tab-blurb { margin: -6px 0 0; font-size: 14px }
+.visa-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px }
+.visa-chip { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; text-align: left; cursor: pointer; font-weight: 600; font-size: 14px; transition: transform var(--t-fast) var(--ease), border-color var(--t-fast) }
+.visa-chip:hover { transform: translateY(-1px); border-color: var(--blue) }
+.visa-chip.on { border-color: var(--fg); background: var(--surface-2) }
+.visa-chip .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.visa-chip .dy { font-family: var(--f-mono); font-size: 12px; color: var(--good) }
+.visa-chip .dy.trip { color: var(--coral); font-family: var(--f-body); font-weight: 800 }
+.visa-note { max-width: 80ch }
+.visa-box { display: grid; gap: 12px }
+.vb-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap }
+.pp-compact select { border: 2px solid var(--line); border-radius: 999px; padding: 7px 12px; font-weight: 700; background: var(--surface); max-width: 240px }
+.vb-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px }
+.vb-list li { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border: 1px solid var(--line); border-radius: 14px }
+.vb-list li > div { display: grid; gap: 4px; justify-items: start }
+.vb-note { font-weight: 500 }
