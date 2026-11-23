@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { fmt } from "@/lib/pricing";
-import { shortRef } from "@/lib/validate";
 
 export default async function Dashboard() {
   const weekAgo = new Date(Date.now() - 7 * 864e5);
@@ -36,7 +35,7 @@ export default async function Dashboard() {
             <tbody>
               {recent.map((e) => (
                 <tr key={e.id}>
-                  <td className="mono"><Link href={`/admin/enquiries#${e.id}`}>{shortRef(e.id)}</Link></td>
+                  <td className="mono"><Link href={`/admin/enquiries#${e.id}`}>{e.ref}</Link></td>
                   <td><b>{e.name}</b><br /><span className="muted">{e.phone}</span></td>
                   <td style={{ textTransform: "capitalize" }}>{e.type === "custom" ? "Custom trip" : e.type === "hold" ? "Price hold" : "Question"}</td>
                   <td>{e.tripTitle ?? "—"}</td>

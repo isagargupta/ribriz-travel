@@ -25,6 +25,7 @@ export default function Footer() {
         </div>
         <div>
           <h4>Help</h4>
+          <Link href="/booking">Find my booking</Link>
           <Link href="/plan">Plan a custom trip</Link>
           <Link href="/saved">Saved trips</Link>
           <Link href="/compare">Compare trips</Link>

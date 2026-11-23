@@ -9,33 +9,57 @@ Postgres for production hosting without a disk, see below).
 ## What's inside
 
 **Customer site**
-- `/`: photo slideshow, search, price ticker, trending trips, last-minute and early-bird deals
-  with a countdown, travel styles, a 14-day cheapest-price calendar, newsletter sign-up
-- `/trips`: search and filters (type, budget, region, stars, meal plan, free cancellation, etc.);
-  filtered views have shareable links
-- `/trips/[slug]`: full trip page with itinerary, inclusions, ratings, departure dates,
-  price breakdown with 5% GST, EMI options, **price hold** and **question** forms, WhatsApp button
-- `/compare`: up to 3 trips side by side
-- `/saved`: trips saved with ♥ (kept in the visitor's browser)
-- `/plan`: custom-trip request form
-- Currency switch (₹ / € / zł) and departure city, used everywhere
-- SEO: page titles and descriptions, `sitemap.xml`, `robots.txt`
+- `/`: photo slideshow, search, live price ticker, "recently viewed", trending trips,
+  last-minute and early-bird deals with a countdown, travel styles, a 14-day cheapest-price
+  calendar built from real departures, "how booking works", newsletter sign-up
+- **⌘K / Ctrl+K search** on every page: typo-tolerant ("maldvies" finds Maldives), shows prices
+- `/trips`: filters with live counts, typo-tolerant search, date filter that uses real
+  departures, shareable filtered links, slide-up filter panel on phones
+- `/trips/[slug]`: month calendar of departures coloured by price, seats left, live price
+  breakdown, EMI, sticky price bar on phones, and a 3-step **reserve flow** (free 48-hour
+  price hold, no payment) with a reference number and an "add to calendar" file
+- `/booking`: customers look up a hold with their reference + email and see a live countdown
+  and status timeline
+- `/compare`, `/saved`, `/plan` (custom trip request)
+- Prices per adult or as the **total for your group incl. GST** (switch in the header), in
+  ₹ / € / zł, with a "what's in this price" explainer on every card
+- Motion: page transitions, scroll reveals, animated price changes, skeleton loaders;
+  all motion turns off for visitors who prefer reduced motion
+- SEO: titles, descriptions, structured data for trips, `sitemap.xml`, `robots.txt`
 
 **Admin panel** at `/admin` (password protected)
 - Dashboard: new enquiries, last 7 days, bookings, value of open quotes
-- Enquiries: every price hold, question and custom-trip request, with phone, email,
-  WhatsApp link, status (new / contacted / booked / closed) and an internal note
-- Trips: add, edit, hide, or delete trips; pick a photo or upload your own
-- Subscribers: newsletter list with CSV download
+- Enquiries: holds, questions and custom requests with reference, travellers, hold expiry,
+  WhatsApp link, status and internal notes. **Marking a hold "booked" takes the seats off
+  that departure**; moving it back returns them
+- Trips: add, edit, hide or delete; pick or upload a photo
+- **Departure dates** per trip: generate a schedule (every N days for M months), add single
+  dates, change each date's price, seats or close it
+- Subscribers with CSV download
+
+## How it's built
+
+| Layer | Where | Notes |
+|---|---|---|
+| Price engine | `lib/pricing.ts` | One pure `quote()` used by every page **and** the server |
+| Search | `lib/search.ts` | Weighted fuzzy matching with edit distance |
+| Schedules | `lib/schedule.ts` | Seasonal, weekday and last-minute pricing for departures |
+| Data access | `lib/trips.ts` | Cached reads; the admin clears the cache on every save |
+| Bookings | `lib/bookings.ts` | Re-prices on the server, checks seats and dates, seat accounting |
+| Validation | `lib/schemas.ts` | zod schemas for every form and API |
+| Tests | `tests/` | `npm test` covers pricing, search and scheduling |
+
+The server never trusts a price from the browser: when someone reserves, it recalculates the
+total from the database and asks them to confirm if it changed.
 
 ## Run it on your computer
 
-Requires Node.js 20 or newer.
+Requires Node.js 22.6 or newer.
 
 ```bash
 npm install
 cp .env.example .env        # then edit .env: set ADMIN_PASSWORD and SESSION_SECRET
-npm run setup               # creates the database and adds the 16 starter trips
+npm run setup               # creates the database, 16 starter trips and 6 months of dates
 npm run dev                 # http://localhost:3000
 ```
 
@@ -100,23 +124,24 @@ Vercel has no permanent disk, so use a hosted Postgres (Neon, Supabase or Vercel
 - [ ] Use a long, unique `ADMIN_PASSWORD` and a fresh `SESSION_SECRET`.
 - [ ] Check the exchange rates in `lib/pricing.ts` (`RATES`) and the city flight
       supplements (`FROM_CITIES`).
-- [ ] Departure dates on trip pages are generated automatically from today's date.
-      If you run fixed departures, tell customers dates are confirmed on enquiry, or
-      ask a developer to add a departures table.
+- [ ] Review each trip's departure dates, prices and seats (Admin → Trips → a trip →
+      Departure dates). The starter schedule is generated automatically.
 - [ ] Add privacy policy and terms pages if you collect customer data in your country.
-- [ ] Online payment is **not** included: the hold and enquiry forms save the request and
-      your team collects payment. A payment gateway (e.g. Razorpay) can be added later.
+- [ ] Online payment is **not** included: a reservation is a free 48-hour hold and your team
+      collects the deposit. A payment gateway (e.g. Razorpay) can be added later.
+- [ ] Rate limiting is in-memory (per server). Behind several servers, use a shared store.
 
 ## Project layout
 
 ```
 app/
-  (site)/            customer pages (home, trips, trip page, compare, saved, plan)
+  (site)/            customer pages (home, trips, trip page, booking, compare, saved, plan)
   admin/             sign-in page, server actions, and the (panel) admin pages
   api/               enquiries, newsletter, uploaded photos
 components/          UI pieces (cards, search, booking box, admin trip form…)
-lib/                 database, pricing maths, filters, auth, validation
-prisma/              schema.prisma and seed.mjs (starter trips)
+lib/                 price engine, search, schedules, data access, bookings, auth, validation
+prisma/              schema.prisma and seed.ts (starter trips + departures)
+tests/               unit tests (npm test)
 public/img/          logo and destination photos (Unsplash)
 prototype/           the original single-file design prototype, for reference
 ```

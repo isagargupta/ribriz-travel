@@ -2,11 +2,20 @@
 import { randomBytes } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { endSession, passwordMatches, requireAdmin, startSession } from "@/lib/auth";
-import { BOARDS, KINDS } from "@/lib/pricing";
+import { BOARDS, KINDS, isoDate } from "@/lib/pricing";
+import { setEnquiryStatus } from "@/lib/bookings";
+import { buildSchedule } from "@/lib/schedule";
+import { TRIPS_TAG } from "@/lib/trips";
+
+/** Clear cached trip data so the public site shows changes immediately. */
+function refreshSite() {
+  revalidateTag(TRIPS_TAG);
+  revalidatePath("/", "layout");
+}
 
 /* ---------- auth ---------- */
 export async function login(_: { error?: string } | undefined, fd: FormData) {
@@ -32,8 +41,8 @@ export async function updateEnquiry(fd: FormData) {
   const status = String(fd.get("status"));
   const note = String(fd.get("note") ?? "").slice(0, 2000);
   if (!STATUSES.includes(status)) return;
-  await prisma.enquiry.update({ where: { id }, data: { status, note: note || null } });
-  revalidatePath("/admin", "layout");
+  await setEnquiryStatus(id, status, note || null);
+  refreshSite();
 }
 
 export async function deleteEnquiry(fd: FormData) {
@@ -100,17 +109,24 @@ export async function saveTrip(_: TripFormState, fd: FormData): Promise<TripForm
   const clash = await prisma.trip.findFirst({ where: { slug, NOT: id ? { id } : undefined } });
   if (clash) slug = `${slug}-${randomBytes(2).toString("hex")}`;
 
+  let tripId = id;
   if (id) await prisma.trip.update({ where: { id }, data: { ...data, slug } });
-  else await prisma.trip.create({ data: { ...data, slug } });
+  else {
+    const t = await prisma.trip.create({ data: { ...data, slug } });
+    tripId = t.id;
+    // new trips get six months of dates straight away; edit them on the trip page
+    const plan = buildSchedule({ tripId: t.slug, kind: t.kind, base: t.price, start: isoDate(new Date()), days: 180, lastMinute: t.lastMinute });
+    await prisma.departure.createMany({ data: plan.map((p) => ({ ...p, tripId: t.id })) });
+  }
 
-  revalidatePath("/", "layout");
-  redirect("/admin/trips?saved=1");
+  refreshSite();
+  redirect(id ? "/admin/trips?saved=1" : `/admin/trips/${tripId}?created=1#departures`);
 }
 
 export async function deleteTrip(fd: FormData) {
   await requireAdmin();
   await prisma.trip.delete({ where: { id: String(fd.get("id")) } });
-  revalidatePath("/", "layout");
+  refreshSite();
   redirect("/admin/trips?deleted=1");
 }
 
@@ -119,11 +135,68 @@ export async function togglePublished(fd: FormData) {
   const id = String(fd.get("id"));
   const t = await prisma.trip.findUnique({ where: { id }, select: { published: true } });
   if (t) await prisma.trip.update({ where: { id }, data: { published: !t.published } });
-  revalidatePath("/", "layout");
+  refreshSite();
 }
 
 export async function deleteSubscriber(fd: FormData) {
   await requireAdmin();
   await prisma.subscriber.delete({ where: { id: String(fd.get("id")) } });
   revalidatePath("/admin/subscribers");
+}
+
+/* ---------- departures ---------- */
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+export async function addDeparture(fd: FormData) {
+  await requireAdmin();
+  const tripId = String(fd.get("tripId"));
+  const date = String(fd.get("date"));
+  if (!DATE_RE.test(date)) return;
+  const seats = String(fd.get("seats") ?? "").trim();
+  await prisma.departure.upsert({
+    where: { tripId_date: { tripId, date } },
+    update: { priceDelta: Math.round(Number(fd.get("delta")) || 0), seatsLeft: seats === "" ? null : Math.max(0, Math.round(Number(seats))), status: "open" },
+    create: { tripId, date, priceDelta: Math.round(Number(fd.get("delta")) || 0), seatsLeft: seats === "" ? null : Math.max(0, Math.round(Number(seats))) },
+  });
+  refreshSite();
+}
+
+export async function updateDeparture(fd: FormData) {
+  await requireAdmin();
+  const id = String(fd.get("id"));
+  const seats = String(fd.get("seats") ?? "").trim();
+  await prisma.departure.update({
+    where: { id },
+    data: {
+      priceDelta: Math.round(Number(fd.get("delta")) || 0),
+      seatsLeft: seats === "" ? null : Math.max(0, Math.round(Number(seats))),
+      status: fd.get("status") === "closed" ? "closed" : "open",
+    },
+  });
+  refreshSite();
+}
+
+export async function deleteDeparture(fd: FormData) {
+  await requireAdmin();
+  await prisma.departure.delete({ where: { id: String(fd.get("id")) } });
+  refreshSite();
+}
+
+/** Fill the calendar: one departure every N days for the next M months (existing dates are kept). */
+export async function generateDepartures(fd: FormData) {
+  await requireAdmin();
+  const tripId = String(fd.get("tripId"));
+  const t = await prisma.trip.findUnique({ where: { id: tripId } });
+  if (!t) return;
+  const every = Math.min(60, Math.max(1, Math.round(Number(fd.get("every")) || 3)));
+  const months = Math.min(18, Math.max(1, Math.round(Number(fd.get("months")) || 6)));
+  const seatsRaw = String(fd.get("seats") ?? "").trim();
+  const plan = buildSchedule({
+    tripId: t.slug, kind: t.kind, base: t.price, start: isoDate(new Date()), days: months * 30, every,
+    seats: seatsRaw === "" ? null : Math.max(1, Math.round(Number(seatsRaw))), lastMinute: t.lastMinute,
+  });
+  const existing = new Set((await prisma.departure.findMany({ where: { tripId }, select: { date: true } })).map((d) => d.date));
+  const fresh = plan.filter((p) => !existing.has(p.date)).map((p) => ({ ...p, tripId }));
+  if (fresh.length) await prisma.departure.createMany({ data: fresh });
+  refreshSite();
 }

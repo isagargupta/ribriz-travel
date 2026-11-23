@@ -44,31 +44,64 @@ model Trip {
   highlights  String
   /// one itinerary day per line
   days        String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
   enquiries   Enquiry[]
+  departures  Departure[]
+}
+
+/// A dated departure of a trip. Price = trip.price + priceDelta (+ city flight supplement).
+model Departure {
+  id         String    @id @default(cuid())
+  tripId     String
+  trip       Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  /// calendar date as YYYY-MM-DD (no time zone ambiguity)
+  date       String
+  /// per-adult price change versus the trip base price, in INR (can be negative)
+  priceDelta Int       @default(0)
+  /// seats or rooms left; null = not limited
+  seatsLeft  Int?
+  /// open | closed
+  status     String    @default("open")
+  enquiries  Enquiry[]
+
+  @@unique([tripId, date])
+  @@index([date])
 }
 
 model Enquiry {
-  id          String   @id @default(cuid())
+  id          String     @id @default(cuid())
+  /// short public reference customers quote, e.g. RB-7K2Q9M
+  ref         String     @unique
   /// hold | enquiry | custom
   type        String
   name        String
   phone       String
   email       String
   tripId      String?
-  trip        Trip?    @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  trip        Trip?      @relation(fields: [tripId], references: [id], onDelete: SetNull)
   tripTitle   String?
+  departureId String?
+  dep         Departure? @relation(fields: [departureId], references: [id], onDelete: SetNull)
   departure   String?
-  adults      Int      @default(2)
-  children    Int      @default(0)
+  adults      Int        @default(2)
+  children    Int        @default(0)
+  /// JSON array of child ages
+  childAges   String?
+  /// JSON array of other traveller names
+  travellers  String?
   fromCity    String?
+  /// total in INR calculated on the server at the time of the request
   quotedTotal Int?
   message     String?
   /// new | contacted | booked | closed
-  status      String   @default("new")
+  status      String     @default("new")
   note        String?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @default(now()) @updatedAt
+
+  @@index([status, createdAt])
+  @@index([email])
 }
 
 model Subscriber {

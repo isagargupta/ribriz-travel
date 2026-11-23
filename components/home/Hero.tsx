@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const SLIDES = [
@@ -25,7 +26,7 @@ export default function Hero() {
     <section className="hero">
       <div className="hero-art" aria-hidden="true">
         {SLIDES.map((s, n) => (
-          <img key={s.src} src={s.src} alt="" className={`slide ${n === i ? "on" : ""}`} fetchPriority={n === 0 ? "high" : "low"} />
+          <Image key={s.src} src={s.src} alt="" fill sizes="100vw" priority={n === 0} quality={70} className={`slide ${n === i ? "on" : ""}`} />
         ))}
         <svg className="flight" viewBox="0 0 1440 640" preserveAspectRatio="xMidYMid slice">
           <path id="fp" d="M-80 260 C300 160 700 120 1600 60" fill="none" />

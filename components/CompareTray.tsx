@@ -1,32 +1,31 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { TripIndexItem } from "@/lib/types";
+import { adultPrice } from "@/lib/pricing";
 import { usePrefs } from "./Prefs";
-import { fmt, ppPrice } from "@/lib/pricing";
 
-export interface MiniTrip { id: string; dest: string; price: number; flight: boolean }
-
-export default function CompareTray({ trips }: { trips: MiniTrip[] }) {
-  const { compare, toggleCompare, currency, from } = usePrefs();
+export default function CompareTray({ index }: { index: TripIndexItem[] }) {
+  const { compare, toggleCompare, money, from, set } = usePrefs();
   const path = usePathname();
-  const items = compare.map((id) => trips.find((t) => t.id === id)).filter((t): t is MiniTrip => !!t);
+  const items = compare.map((id) => index.find((t) => t.id === id)).filter((t): t is TripIndexItem => !!t);
   if (!items.length || path === "/compare") return null;
 
   return (
     <div className="tray" role="region" aria-label="Compare trips">
-      <div className="in">
-        <strong>Compare</strong>
+      <div className="tray-in">
+        <strong>Compare <span className="muted">{items.length}/3</span></strong>
         <div className="slots">
           {items.map((t) => (
-            <span className="slot" key={t.id}>{t.dest} · {fmt(ppPrice(t, from), currency)}
+            <span className="slot" key={t.id}>{t.dest} · {money(adultPrice(t.price, t.minDelta, t.flight, from))}
               <button onClick={() => toggleCompare(t.id)} aria-label={`Remove ${t.dest} from compare`}>✕</button>
             </span>
           ))}
-          {items.length < 3 && <span className="slot" style={{ opacity: .6 }}>+ add {3 - items.length} more</span>}
         </div>
+        <button className="btn ghost-light sm" onClick={() => set({ compare: [] })}>Clear</button>
         {items.length >= 2
           ? <Link className="btn hot" href="/compare">Compare now</Link>
-          : <button className="btn hot" disabled>Compare now</button>}
+          : <span className="tray-hint">Add one more trip</span>}
       </div>
     </div>
   );

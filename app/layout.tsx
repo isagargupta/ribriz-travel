@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Unbounded, Plus_Jakarta_Sans, DM_Mono } from "next/font/google";
 import { PrefsProvider } from "@/components/Prefs";
 import "./globals.css";
+import "./experience.css";
 
 const display = Unbounded({ subsets: ["latin"], weight: ["500", "700", "800"], variable: "--font-display" });
 const body = Plus_Jakarta_Sans({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"], variable: "--font-body" });
@@ -21,7 +22,11 @@ export const viewport: Viewport = { themeColor: "#f6f7ff", width: "device-width"
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${display.variable} ${body.variable} ${mono.variable}`}>
+    <html lang="en" className={`${display.variable} ${body.variable} ${mono.variable}`} suppressHydrationWarning>
+      <head>
+        {/* lets CSS start reveal animations only when JS is running */}
+        <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }} />
+      </head>
       <body>
         <PrefsProvider>{children}</PrefsProvider>
       </body>

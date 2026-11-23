@@ -1,18 +1,17 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CompareTray from "@/components/CompareTray";
-import { prisma } from "@/lib/db";
-
-export const dynamic = "force-dynamic";
+import { getPublishedTrips, toIndex } from "@/lib/trips";
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
-  const mini = await prisma.trip.findMany({ where: { published: true }, select: { id: true, dest: true, price: true, flight: true } });
+  const index = toIndex(await getPublishedTrips());
   return (
     <>
-      <Header />
-      <main>{children}</main>
+      <a className="skip" href="#main">Skip to content</a>
+      <Header index={index} />
+      <main id="main">{children}</main>
       <Footer />
-      <CompareTray trips={mini} />
+      <CompareTray index={index} />
     </>
   );
 }

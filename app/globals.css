@@ -36,7 +36,7 @@ header.top .wrap { display: flex; align-items: center; gap: 18px; padding-block:
 .logo { display: flex; align-items: center; gap: 10px; text-decoration: none }
 .logo img { height: 40px; width: auto; display: block }
 .logo .word { font-weight: 800; font-size: 11px; letter-spacing: .32em; color: var(--blue); border-left: 2px solid var(--line); padding-left: 10px; line-height: 1.1 }
-nav.main { display: flex; gap: 2px; flex: 1; justify-content: center; flex-wrap: wrap }
+nav.main { display: flex; gap: 2px; flex: 1; justify-content: center; flex-wrap: nowrap; white-space: nowrap }
 nav.main a { text-decoration: none; padding: 8px 14px; border-radius: 999px; font-weight: 600; font-size: 14px; transition: background .2s }
 nav.main a:hover, nav.main a[aria-current="page"] { background: var(--surface-2) }
 nav.main a.hot::after { content: "HOT"; font-size: 9px; font-weight: 800; background: var(--coral); color: #fff; padding: 1px 5px; border-radius: 4px; margin-left: 6px; vertical-align: 2px }
@@ -44,7 +44,7 @@ nav.main a.hot::after { content: "HOT"; font-size: 9px; font-weight: 800; backgr
 .tools select, .pill-btn { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center }
 .badge-count { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--coral); color: #fff; font-size: 11px; font-weight: 800; margin-left: 6px }
 .menu-btn { display: none }
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   nav.main { display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--surface); flex-direction: column; padding: 10px 16px 16px; border-bottom: 1px solid var(--line); box-shadow: var(--shadow) }
   nav.main.open { display: flex }
   .logo { flex: 1 }
@@ -109,7 +109,7 @@ nav.main a.hot::after { content: "HOT"; font-size: 9px; font-weight: 800; backgr
 
 /* ---------- sections ---------- */
 section.band { padding-block: 64px }
-.sec-head { display: flex; justify-content: space-between; align-items: end; gap: 18px; margin-bottom: 26px; flex-wrap: wrap }
+.sec-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 18px; margin-bottom: 26px; flex-wrap: wrap }
 .sec-head h2 { font-size: clamp(26px, 3.6vw, 42px); font-weight: 800; margin-top: 8px }
 .sec-head p { margin: 8px 0 0; color: var(--muted); max-width: 56ch }
 .seg { display: inline-flex; background: var(--surface-2); border-radius: 999px; padding: 4px; gap: 2px }
@@ -188,7 +188,7 @@ input[type=range] { width: 100%; accent-color: var(--coral) }
 .empty { padding: 48px; text-align: center; border: 2px dashed var(--line); border-radius: 22px; color: var(--muted) }
 
 /* ---------- cards ---------- */
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; overflow: hidden; display: flex; flex-direction: column; transition: transform .25s cubic-bezier(.2, .8, .2, 1), box-shadow .25s }
+.card { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 22px; overflow: hidden; display: flex; flex-direction: column; transition: transform .25s cubic-bezier(.2, .8, .2, 1), box-shadow .25s }
 .card:hover { transform: translateY(-6px); box-shadow: var(--shadow) }
 .card .art { position: relative; aspect-ratio: 4/3; overflow: hidden; display: block }
 .card .art img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s cubic-bezier(.2, .8, .2, 1); background: var(--surface-2) }
@@ -212,7 +212,7 @@ input[type=range] { width: 100%; accent-color: var(--coral) }
 .pill.warn { background: var(--warn-bg); color: var(--warn) }
 .rating { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600 }
 .score { background: var(--blue); color: #fff; font-weight: 800; border-radius: 8px; padding: 3px 7px; font-family: var(--f-mono); font-size: 12px }
-.priceblock { display: flex; justify-content: space-between; align-items: end; gap: 10px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line) }
+.priceblock { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line) }
 .price { font-family: var(--f-display); font-size: 23px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1 }
 .price small { font-family: var(--f-body); font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0 }
 .was { font-family: var(--f-mono); font-size: 12px; color: var(--muted); text-decoration: line-through }
@@ -245,10 +245,10 @@ input[type=range] { width: 100%; accent-color: var(--coral) }
 @media (max-width: 560px) { .form-grid { grid-template-columns: 1fr } }
 
 /* ---------- trip page ---------- */
-.trip-hero { position: relative; height: clamp(260px, 42vw, 460px); overflow: hidden; border-radius: 0 0 28px 28px }
+.trip-hero { position: relative; min-height: clamp(300px, 42vw, 480px); overflow: hidden; border-radius: 0 0 28px 28px; display: flex; align-items: flex-end }
 .trip-hero img { width: 100%; height: 100%; object-fit: cover; display: block }
-.trip-hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(6, 10, 40, .55), transparent 55%) }
-.trip-hero .wrap { position: absolute; left: 0; right: 0; bottom: 24px; z-index: 1; color: #fff }
+.trip-hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(6, 10, 40, .72), rgba(6, 10, 40, .15) 60%, rgba(6, 10, 40, .25)) }
+.trip-hero .wrap { position: relative; width: 100%; z-index: 1; color: #fff; padding-block: 90px 28px }
 .trip-hero h1 { font-size: clamp(26px, 4.4vw, 52px); font-weight: 800; max-width: 22ch; text-shadow: 0 2px 20px rgba(0, 0, 0, .3) }
 .crumbs { font-size: 13px; font-weight: 600; opacity: .9; margin-bottom: 10px }
 .crumbs a { text-decoration: none }
@@ -320,7 +320,7 @@ input[type=range] { width: 100%; accent-color: var(--coral) }
 
 /* ---------- compare ---------- */
 .tray { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 60; background: var(--fg); color: #fff; border-radius: 999px; box-shadow: var(--shadow); width: min(860px, calc(100% - 24px)) }
-.tray .in { display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 22px; flex-wrap: wrap }
+.tray .tray-in { display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 22px; flex-wrap: wrap }
 .tray .slots { display: flex; gap: 8px; flex: 1; flex-wrap: wrap }
 .tray .slot { background: rgba(255, 255, 255, .14); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 600; display: flex; gap: 8px; align-items: center }
 .tray .slot button { background: none; border: 0; color: inherit; opacity: .7 }
@@ -332,8 +332,7 @@ input[type=range] { width: 100%; accent-color: var(--coral) }
 .cmp-table td.best { color: var(--good); font-weight: 800 }
 .cmp-table img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 12px; display: block; margin-bottom: 8px }
 
-.toast { position: fixed; left: 50%; bottom: calc(90px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--coral); color: #fff; padding: 12px 20px; border-radius: 999px; z-index: 100; font-weight: 700; box-shadow: var(--shadow); animation: rise .3s }
-@keyframes rise { from { transform: translate(-50%, 20px); opacity: 0 } }
+
 
 /* ---------- footer ---------- */
 footer.site { background: #e9efff; border-top: 1px solid var(--line); margin-top: 64px; overflow: hidden }

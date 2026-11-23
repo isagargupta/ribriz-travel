@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { EMAIL_RE, clean, clientIp, rateLimited } from "@/lib/validate";
+import { clientIp, fail, rateLimited, readJson } from "@/lib/http";
+import { newsletterSchema } from "@/lib/schemas";
 
 export async function POST(req: Request) {
-  if (rateLimited("nl:" + clientIp(req), 5)) return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
-  let body: Record<string, unknown>;
-  try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid request." }, { status: 400 }); }
-  const email = clean(body.email, 160).toLowerCase();
-  if (!EMAIL_RE.test(email)) return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
+  if (rateLimited("nl:" + clientIp(req), 5)) return fail("Too many requests. Try again later.", 429);
+  const parsed = await readJson(req, newsletterSchema);
+  if ("res" in parsed) return parsed.res;
+  const { email } = parsed.data;
   await prisma.subscriber.upsert({ where: { email }, update: {}, create: { email } });
   return NextResponse.json({ ok: true });
 }

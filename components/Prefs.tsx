@@ -1,54 +1,78 @@
 "use client";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import type { Currency } from "@/lib/pricing";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { fmt, type Currency } from "@/lib/pricing";
+
+export type PriceMode = "pp" | "total";
 
 interface Prefs {
   currency: Currency;
   from: string;
   adults: number;
   childAges: number[];
+  /** show prices per person or as the total for the whole party */
+  priceMode: PriceMode;
   saved: string[];
   compare: string[];
+  /** recently viewed trip ids, newest first */
+  recent: string[];
 }
 
+interface Toast { id: number; msg: string; tone: "info" | "ok" | "err"; action?: { label: string; run: () => void } }
+
 interface PrefsApi extends Prefs {
+  ready: boolean;
   set: (p: Partial<Prefs>) => void;
   toggleSaved: (id: string) => boolean;
   toggleCompare: (id: string) => "added" | "removed" | "full";
-  toast: (msg: string) => void;
+  addRecent: (id: string) => void;
+  toast: (msg: string, opts?: { tone?: Toast["tone"]; action?: Toast["action"] }) => void;
+  money: (inr: number) => string;
 }
 
-const DEFAULTS: Prefs = { currency: "INR", from: "Mumbai", adults: 2, childAges: [], saved: [], compare: [] };
-const KEY = "ribriz_prefs_v1";
+const DEFAULTS: Prefs = { currency: "INR", from: "Mumbai", adults: 2, childAges: [], priceMode: "pp", saved: [], compare: [], recent: [] };
+const KEY = "ribriz_prefs_v2";
 const Ctx = createContext<PrefsApi | null>(null);
 
 export function PrefsProvider({ children }: { children: React.ReactNode }) {
   const [p, setP] = useState<Prefs>(DEFAULTS);
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const nextId = useRef(1);
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(KEY);
       if (raw) setP({ ...DEFAULTS, ...JSON.parse(raw) });
-    } catch {}
+    } catch { /* storage blocked: keep defaults */ }
+    setReady(true);
   }, []);
 
-  const persist = useCallback((next: Prefs) => {
-    try { localStorage.setItem(KEY, JSON.stringify(next)); } catch {}
-    return next;
+  // keep tabs in sync
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === KEY && e.newValue) try { setP({ ...DEFAULTS, ...JSON.parse(e.newValue) }); } catch {}
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  const set = useCallback((part: Partial<Prefs>) => setP((cur) => persist({ ...cur, ...part })), [persist]);
+  const set = useCallback((part: Partial<Prefs>) => {
+    setP((cur) => {
+      const next = { ...cur, ...part };
+      try { localStorage.setItem(KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
 
-  const toast = useCallback((msg: string) => {
-    setToastMsg(msg);
-    window.clearTimeout((toast as unknown as { t?: number }).t);
-    (toast as unknown as { t?: number }).t = window.setTimeout(() => setToastMsg(null), 2800);
+  const toast = useCallback<PrefsApi["toast"]>((msg, opts) => {
+    const id = nextId.current++;
+    setToasts((t) => [...t.slice(-2), { id, msg, tone: opts?.tone ?? "info", action: opts?.action }]);
+    window.setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), opts?.action ? 5000 : 3200);
   }, []);
 
   const toggleSaved = useCallback((id: string) => {
     const on = !p.saved.includes(id);
-    set({ saved: on ? [...p.saved, id] : p.saved.filter((x) => x !== id) });
+    set({ saved: on ? [id, ...p.saved] : p.saved.filter((x) => x !== id) });
     return on;
   }, [p.saved, set]);
 
@@ -59,12 +83,31 @@ export function PrefsProvider({ children }: { children: React.ReactNode }) {
     return "added";
   }, [p.compare, set]);
 
-  const api = useMemo(() => ({ ...p, set, toggleSaved, toggleCompare, toast }), [p, set, toggleSaved, toggleCompare, toast]);
+  const addRecent = useCallback((id: string) => {
+    setP((cur) => {
+      if (cur.recent[0] === id) return cur;
+      const next = { ...cur, recent: [id, ...cur.recent.filter((x) => x !== id)].slice(0, 8) };
+      try { localStorage.setItem(KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
+
+  const money = useCallback((inr: number) => fmt(inr, p.currency), [p.currency]);
+
+  const api = useMemo(() => ({ ...p, ready, set, toggleSaved, toggleCompare, addRecent, toast, money }),
+    [p, ready, set, toggleSaved, toggleCompare, addRecent, toast, money]);
 
   return (
     <Ctx.Provider value={api}>
       {children}
-      {toastMsg && <div className="toast" role="status">{toastMsg}</div>}
+      <div className="toasts" aria-live="polite">
+        {toasts.map((t) => (
+          <div key={t.id} className={`toast ${t.tone}`} role="status">
+            <span>{t.msg}</span>
+            {t.action && <button onClick={() => { t.action!.run(); setToasts((x) => x.filter((y) => y.id !== t.id)); }}>{t.action.label}</button>}
+          </div>
+        ))}
+      </div>
     </Ctx.Provider>
   );
 }

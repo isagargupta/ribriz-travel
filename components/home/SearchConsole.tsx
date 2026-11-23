@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { usePrefs } from "../Prefs";
-import { FROM_CITIES, isoDate } from "@/lib/pricing";
+import { FROM_CITIES, INDIA_CITIES, isoDate } from "@/lib/pricing";
 import PaxPicker from "../PaxPicker";
 
 const TABS = [
@@ -13,7 +13,7 @@ const TABS = [
   { k: "hotel", label: "⌂ Hotel only" },
   { k: "cruise", label: "⚓ Cruises" },
 ];
-const INDIA = ["Mumbai", "Delhi", "Bengaluru", "Chennai", "Kolkata", "Ahmedabad"];
+const INDIA = INDIA_CITIES;
 
 export default function SearchConsole({ destinations }: { destinations: string[] }) {
   const router = useRouter();

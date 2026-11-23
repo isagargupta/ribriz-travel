@@ -1,10 +1,20 @@
-// Seeds the database with the starter trips. Safe to run more than once:
-// existing trips (matched by slug) are updated, nothing is deleted.
+// Seeds the database with the starter trips and ~6 months of departures.
+// Safe to run more than once: trips (matched by slug) are updated, departures
+// that already exist are kept, and nothing is deleted.
 import { PrismaClient } from "@prisma/client";
+import { buildSchedule } from "../lib/schedule.ts";
+import { isoDate } from "../lib/pricing.ts";
 
 const prisma = new PrismaClient();
 
-const T = (o) => ({
+type Seed = {
+  slug: string; title: string; dest: string; country: string; region: string; kind: string; themes: string[];
+  nights: number; stars: number; board: string; price: number; was: number | null; rating: number; reviews: number;
+  beach: number | null; flight: boolean; freeCancel: boolean; tourManager: boolean; easyVisa: boolean;
+  lastMinute: boolean; earlyBird: boolean; featured?: boolean; image: string; highlights: string[]; days: string[];
+};
+
+const T = (o: Seed) => ({
   ...o,
   themes: o.themes.join(","),
   highlights: o.highlights.join("\n"),
@@ -62,8 +72,15 @@ const trips = [
     days: ["Arrive Port Blair, light show", "Ferry to Havelock", "Elephant beach", "Neil island", "Return to Port Blair", "Ross island", "Fly home"] }),
 ];
 
+const start = isoDate(new Date());
+let depCount = 0;
 for (const t of trips) {
-  await prisma.trip.upsert({ where: { slug: t.slug }, update: t, create: t });
+  const row = await prisma.trip.upsert({ where: { slug: t.slug }, update: t, create: t });
+  const plan = buildSchedule({ tripId: row.slug, kind: row.kind, base: row.price, start, days: 180, lastMinute: row.lastMinute });
+  const existing = new Set((await prisma.departure.findMany({ where: { tripId: row.id }, select: { date: true } })).map((d) => d.date));
+  const fresh = plan.filter((p) => !existing.has(p.date)).map((p) => ({ ...p, tripId: row.id }));
+  if (fresh.length) await prisma.departure.createMany({ data: fresh });
+  depCount += fresh.length;
 }
-console.log(`Seeded ${trips.length} trips.`);
+console.log(`Seeded ${trips.length} trips and ${depCount} new departures.`);
 await prisma.$disconnect();

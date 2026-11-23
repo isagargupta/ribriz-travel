@@ -21,15 +21,15 @@ export default function PlanForm() {
     try {
       const r = await fetch("/api/enquiries", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "custom", name: f.name, phone: f.phone, email: f.email, adults, children: childAges.length, fromCity: from, message }),
+        body: JSON.stringify({ type: "custom", name: f.name, phone: f.phone, email: f.email, adults, childAges, from, message }),
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || "Something went wrong");
-      setState({ busy: false, ok: `Thanks ${f.name.split(" ")[0]}! Reference ${j.ref}. A travel expert will send you a costed plan within one working day.` });
+      setState({ busy: false, ok: `Thanks ${f.name.split(" ")[0]}! Your reference is ${j.ref}. A travel expert will send you a costed plan within one working day.` });
     } catch (err) { setState({ busy: false, err: (err as Error).message }); }
   }
 
-  if (state.ok) return <div className="notice ok">{state.ok}</div>;
+  if (state.ok) return <div className="panel co-done pop-in"><div className="tick" aria-hidden="true"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24" /><path d="M15 27l7 7 15-16" /></svg></div><h3>Request sent</h3><p>{state.ok}</p></div>;
 
   return (
     <form className="form-grid panel" onSubmit={submit}>
@@ -47,7 +47,7 @@ export default function PlanForm() {
       <label className="full">Anything else?<textarea value={f.message} onChange={up("message")} placeholder="Hotels you like, food preferences, must-see places…" /></label>
       <p className="full muted" style={{ margin: 0, fontSize: 13 }}>Travellers: {adults} adult{adults > 1 ? "s" : ""}{childAges.length ? `, ${childAges.length} child${childAges.length > 1 ? "ren" : ""}` : ""} from {from}. Change these in the search box on the home page.</p>
       {state.err && <div className="notice err full">{state.err}</div>}
-      <button className="btn hot full" type="submit" disabled={state.busy} style={{ padding: 14 }}>{state.busy ? "Sending…" : "Send my trip request"}</button>
+      <button className="btn hot full" type="submit" disabled={state.busy} style={{ padding: 14 }}>{state.busy ? <span className="spinner light" aria-label="Sending" /> : "Send my trip request"}</button>
     </form>
   );
 }
