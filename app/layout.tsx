@@ -14,7 +14,6 @@ export const metadata: Metadata = {
   metadataBase: new URL(site),
   title: { default: "Ribriz Travel: holidays, group tours & beach escapes", template: "%s · Ribriz Travel" },
   description: "Flight + hotel packages, escorted group tours and beach hotels from India and Europe. One honest price with taxes shown, 0% EMI and a 48-hour price hold.",
-  icons: { icon: "/img/logo.png" },
   openGraph: { siteName: "Ribriz Travel", type: "website", images: ["/img/hero.jpg"] },
 };
 
