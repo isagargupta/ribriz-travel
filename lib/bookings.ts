@@ -15,7 +15,7 @@ export function newRef() {
 }
 
 /** Retries on the (very unlikely) chance of a duplicate reference. */
-async function withRef<T>(create: (ref: string) => Promise<T>): Promise<T> {
+export async function withRef<T>(create: (ref: string) => Promise<T>): Promise<T> {
   for (let i = 0; ; i++) {
     try {
       return await create(newRef());

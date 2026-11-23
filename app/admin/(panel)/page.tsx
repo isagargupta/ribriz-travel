@@ -37,7 +37,7 @@ export default async function Dashboard() {
                 <tr key={e.id}>
                   <td className="mono"><Link href={`/admin/enquiries#${e.id}`}>{e.ref}</Link></td>
                   <td><b>{e.name}</b><br /><span className="muted">{e.phone}</span></td>
-                  <td style={{ textTransform: "capitalize" }}>{e.type === "custom" ? "Custom trip" : e.type === "hold" ? "Price hold" : "Question"}</td>
+                  <td style={{ textTransform: "capitalize" }}>{({ hold: "Price hold", custom: "Custom trip", enquiry: "Question" } as Record<string, string>)[e.type] ?? e.type}</td>
                   <td>{e.tripTitle ?? "—"}</td>
                   <td className="mono">{e.quotedTotal ? fmt(e.quotedTotal) : "—"}</td>
                   <td><span className={`status ${e.status}`}>{e.status}</span></td>

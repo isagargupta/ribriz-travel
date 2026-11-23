@@ -77,7 +77,29 @@ export function holdConfirmationEmail(h: HoldInfo): Built {
   };
 }
 
-export function enquiryReceivedEmail(e: { ref: string; name: string; type: "enquiry" | "custom"; tripTitle?: string | null; message?: string | null }): Built {
+const SERVICE_COPY: Record<string, { subject: string; heading: string; line: string }> = {
+  visa: { subject: "Your visa request", heading: "We're on your visa", line: "a visa expert will contact you within 4 working hours with the exact documents and fee." },
+  forex: { subject: "Your forex request", heading: "We're arranging your forex", line: "our forex partner will confirm your rate and delivery within 2 working hours." },
+  insurance: { subject: "Your travel insurance request", heading: "We're finding your insurance", line: "we'll send plan options and a quote within 2 working hours." },
+  flight: { subject: "Your flight request", heading: "We're finding your flights", line: "we'll send the best fares within 2 working hours." },
+  hotel: { subject: "Your hotel request", heading: "We're finding your hotel", line: "we'll send hotel options within 2 working hours." },
+};
+
+export function enquiryReceivedEmail(e: { ref: string; name: string; type: string; tripTitle?: string | null; message?: string | null }): Built {
+  const svc = SERVICE_COPY[e.type];
+  if (svc) {
+    return {
+      subject: `${svc.subject} (${e.ref})`,
+      html: layout({
+        preheader: svc.line, heading: svc.heading,
+        body: p(`Hi ${esc(e.name.split(" ")[0])}, thanks! ${svc.line.charAt(0).toUpperCase() + svc.line.slice(1)}`) +
+          box([["Reference", `<span style="font-family:Menlo,Consolas,monospace;color:#0b4fc4">${e.ref}</span>`], ...(e.tripTitle ? [["Trip", esc(e.tripTitle)] as [string, string]] : [])]) +
+          (e.message ? `<div style="margin:12px 0;padding:12px 14px;background:#f6f7ff;border-radius:12px;font-size:14px;white-space:pre-wrap;color:#1c2558">${esc(e.message)}</div>` : ""),
+        cta: { label: "Open my trip hub", url: `${site()}/hub` },
+      }),
+      text: `${svc.heading}. Reference ${e.ref}. ${svc.line}\n${site()}/hub`,
+    };
+  }
   const custom = e.type === "custom";
   return {
     subject: custom ? `We're planning your trip (${e.ref})` : `We got your question${e.tripTitle ? ` about ${e.tripTitle}` : ""} (${e.ref})`,
@@ -116,7 +138,8 @@ export function statusUpdateEmail(e: { ref: string; name: string; status: string
 }
 
 export function teamAlertEmail(e: { ref: string; type: string; name: string; phone: string; email: string; tripTitle?: string | null; date?: string | null; total?: number | null; travellers: string; message?: string | null }): Built {
-  const label = e.type === "hold" ? "Price hold" : e.type === "custom" ? "Custom trip request" : "Question";
+  const LABELS: Record<string, string> = { hold: "Price hold", custom: "Custom trip request", enquiry: "Question", visa: "Visa request", forex: "Forex request", insurance: "Insurance request", flight: "Flight request", hotel: "Hotel request" };
+  const label = LABELS[e.type] ?? "Request";
   return {
     subject: `New ${label.toLowerCase()}: ${e.name}${e.tripTitle ? ` · ${e.tripTitle}` : ""} (${e.ref})`,
     html: layout({

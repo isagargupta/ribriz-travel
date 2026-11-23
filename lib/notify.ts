@@ -41,7 +41,7 @@ export async function notifyEnquiry(ref: string) {
   const e = await load(ref);
   if (!e) return;
   await Promise.all([
-    sendEmail({ to: e.email, idempotencyKey: `enq-${e.ref}`, ...enquiryReceivedEmail({ ref: e.ref, name: e.name, type: e.type === "custom" ? "custom" : "enquiry", tripTitle: e.tripTitle, message: e.message }) }),
+    sendEmail({ to: e.email, idempotencyKey: `enq-${e.ref}`, ...enquiryReceivedEmail({ ref: e.ref, name: e.name, type: e.type, tripTitle: e.tripTitle, message: e.message }) }),
     alertTeam(e),
   ]);
 }

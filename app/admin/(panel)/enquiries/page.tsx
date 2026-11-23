@@ -4,6 +4,7 @@ import { fmt } from "@/lib/pricing";
 import { deleteEnquiry, updateEnquiry } from "../../actions";
 
 const FILTERS = ["all", "new", "contacted", "booked", "closed"];
+const TYPE_LABELS: Record<string, string> = { hold: "48-hour price hold", enquiry: "Question about a trip", custom: "Custom trip request", visa: "Visa application help", forex: "Forex order", insurance: "Travel insurance", flight: "Flight booking", hotel: "Hotel booking" };
 
 export default async function Enquiries({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const { status = "all" } = await searchParams;
@@ -31,7 +32,7 @@ export default async function Enquiries({ searchParams }: { searchParams: Promis
                   </div>
                 </div>
                 <div style={{ textAlign: "right", fontSize: 14 }}>
-                  <b>{e.type === "custom" ? "Custom trip request" : e.type === "hold" ? "48-hour price hold" : "Question about a trip"}</b>{e.type === "hold" && e.status === "new" && <><br /><span className={Date.now() - e.createdAt.getTime() > 48 * 3600e3 ? "warn-txt" : "muted"}>{Date.now() - e.createdAt.getTime() > 48 * 3600e3 ? "Hold expired" : `Hold ends ${new Date(e.createdAt.getTime() + 48 * 3600e3).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}`}</span></>}<br />
+                  <b>{TYPE_LABELS[e.type] ?? e.type}</b>{e.missionId && <span className="pill" style={{ marginLeft: 6 }}>via Riya</span>}{e.type === "hold" && e.status === "new" && <><br /><span className={Date.now() - e.createdAt.getTime() > 48 * 3600e3 ? "warn-txt" : "muted"}>{Date.now() - e.createdAt.getTime() > 48 * 3600e3 ? "Hold expired" : `Hold ends ${new Date(e.createdAt.getTime() + 48 * 3600e3).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}`}</span></>}<br />
                   {e.tripTitle && <span>{e.tripTitle}<br /></span>}
                   <span className="muted">{e.adults} adult{e.adults > 1 ? "s" : ""}{e.children ? `, ${e.children} child${e.children > 1 ? "ren" : ""}` : ""}{e.fromCity ? ` · from ${e.fromCity}` : ""}{e.departure ? ` · departs ${e.departure}` : ""}</span>
                   {e.quotedTotal ? <div className="mono" style={{ fontWeight: 700 }}>Quoted {fmt(e.quotedTotal)}</div> : null}

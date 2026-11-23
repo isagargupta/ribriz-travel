@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { startCustomerSession } from "@/lib/customer";
+import { claimBrowserMissions } from "@/lib/owner";
 import { rateLimited } from "@/lib/http";
 import { sendLoginCode, verifyLoginCode } from "@/lib/otp";
 
@@ -36,5 +37,6 @@ export async function verifyCustomerCode(rawEmail: string, code: string, next?: 
     create: { email: e.data, name: last?.name ?? null, phone: last?.phone ?? null, lastLoginAt: new Date() },
   });
   await startCustomerSession(customer.id);
+  await claimBrowserMissions(customer.id); // trips started before signing in move to the account
   return { ok: true, redirect: safeNext(next) };
 }

@@ -78,7 +78,7 @@ model Enquiry {
   id          String     @id @default(cuid())
   /// short public reference customers quote, e.g. RB-7K2Q9M
   ref         String     @unique
-  /// hold | enquiry | custom
+  /// hold | enquiry | custom | visa | forex | insurance | flight | hotel
   type        String
   name        String
   phone       String
@@ -99,6 +99,10 @@ model Enquiry {
   /// total in INR calculated on the server at the time of the request
   quotedTotal Int?
   message     String?
+  /// JSON with the service details (visa, forex, insurance, flight, hotel requests)
+  details     String?
+  missionId   String?
+  mission     Mission?   @relation(fields: [missionId], references: [id], onDelete: SetNull)
   /// new | contacted | booked | closed
   status      String     @default("new")
   note        String?
@@ -164,4 +168,90 @@ model VisaSync {
   sourceDate DateTime
   syncedAt   DateTime
   rows       Int
+}
+
+/// A traveller's trip, run by the agent from idea to departure.
+model Mission {
+  id            String         @id @default(cuid())
+  /// signed-in owner; anonymous visitors are tracked by anonId until they sign in
+  customerId    String?
+  anonId        String?
+  title         String
+  /// what the traveller asked for, in their words
+  goal          String
+  /// planning | active | done | cancelled
+  status        String         @default("planning")
+  tripId        String?
+  departureId   String?
+  adults        Int            @default(2)
+  childAges     String         @default("[]")
+  fromCity      String         @default("Mumbai")
+  passport      String         @default("IN")
+  budgetPerAdult Int?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  tasks         MissionTask[]
+  approvals     Approval[]
+  events        MissionEvent[]
+  requests      Enquiry[]
+
+  @@index([customerId, updatedAt])
+  @@index([anonId, updatedAt])
+}
+
+/// One step of a mission (choose trip, hold price, visa, insurance, forex, flights, hotels, documents).
+model MissionTask {
+  id        String   @id @default(cuid())
+  missionId String
+  mission   Mission  @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  kind      String
+  title     String
+  /// todo | in_progress | needs_approval | waiting | done | skipped
+  status    String   @default("todo")
+  /// short, traveller-facing note on where it stands
+  note      String?
+  /// JSON with results (trip chosen, reference numbers, …)
+  data      String?
+  order     Int      @default(0)
+  dueDate   String?
+  updatedAt DateTime @updatedAt
+
+  @@unique([missionId, kind])
+}
+
+/// An action the agent prepared that only runs after the traveller approves it.
+model Approval {
+  id         String    @id @default(cuid())
+  missionId  String?
+  mission    Mission?  @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  customerId String?
+  anonId     String?
+  /// price_hold | service_request
+  action     String
+  /// JSON input for the action, fixed at proposal time
+  payload    String
+  summary    String
+  amountInr  Int?
+  /// pending | approved | declined | expired | done | failed
+  status     String    @default("pending")
+  /// JSON result (reference, error)
+  result     String?
+  createdAt  DateTime  @default(now())
+  decidedAt  DateTime?
+  expiresAt  DateTime
+
+  @@index([missionId])
+}
+
+/// Timeline / audit trail of everything that happened on a mission.
+model MissionEvent {
+  id        String   @id @default(cuid())
+  missionId String
+  mission   Mission  @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  /// agent | traveller | team | system
+  actor     String
+  message   String
+  createdAt DateTime @default(now())
+
+  @@index([missionId, createdAt])
 }

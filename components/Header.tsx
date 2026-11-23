@@ -12,6 +12,7 @@ const NAV = [
   { href: "/trips?kind=escorted", label: "Group tours" },
   { href: "/trips?region=India", label: "India" },
   { href: "/trips?theme=honeymoon", label: "Honeymoon" },
+  { href: "/hub", label: "Trip hub" },
   { href: "/visa", label: "Visa checker" },
   { href: "/plan", label: "Plan my trip" },
 ];

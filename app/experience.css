@@ -506,3 +506,78 @@ kbd { font-family: var(--f-mono); font-size: 11px; background: var(--surface); b
 .ask-chips button:hover { background: rgba(255, 255, 255, .16); transform: translateX(3px) }
 .ask-chips .ask-open { background: var(--coral); border-color: var(--coral); justify-content: center; font-weight: 800 }
 @media (max-width: 820px) { .ask-band { grid-template-columns: 1fr; padding: 20px } }
+
+/* ---------- agent: approvals, missions, trip hub ---------- */
+.appr { border: 2px solid var(--coral); background: var(--surface); border-radius: 18px; padding: 14px; display: grid; gap: 10px; animation: popIn .3s var(--spring) both; box-shadow: 0 10px 24px -16px rgba(255, 90, 54, .6) }
+.appr.done { border-color: var(--mint); box-shadow: none }
+.appr.declined { border-color: var(--line); box-shadow: none; opacity: .8 }
+.appr-head { display: flex; gap: 10px; align-items: center }
+.appr-head > div { flex: 1; display: grid; min-width: 0 }
+.appr-head small { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--coral) }
+.appr.done .appr-head small { color: var(--good) } .appr.declined .appr-head small { color: var(--muted) }
+.appr-head b { font-size: 15px }
+.appr-ico { font-size: 22px }
+.appr-amt { font-family: var(--f-display); font-weight: 800; font-size: 17px }
+.appr-lines { margin: 0; padding-left: 18px; font-size: 13px; color: var(--muted); display: grid; gap: 2px }
+.appr-contact { display: grid; gap: 6px }
+.appr-contact input { border: 2px solid var(--line); border-radius: 10px; padding: 8px 10px; font-size: 14px; background: var(--bg) }
+.appr-contact input:focus { outline: none; border-color: var(--blue) }
+.appr-btns { display: flex; gap: 8px; justify-content: flex-end }
+.appr-msg { margin: 0; font-size: 13px; font-weight: 600 }
+.appr-msg.done { color: var(--good) }
+.appr-err { margin: 0; color: var(--bad); font-size: 13px; font-weight: 600 }
+.ai-msg.note { align-self: center; max-width: 95%; background: var(--good-bg); color: var(--good); border: 0; border-radius: 12px; font-size: 13px; font-weight: 600 }
+.ai-mission { display: flex; gap: 10px; align-items: center; text-decoration: none; background: linear-gradient(120deg, #0b1240, #0b4fc4); color: #fff; border-radius: 16px; padding: 12px 14px; animation: popIn .3s var(--spring) both }
+.ai-mission > span:nth-child(2) { flex: 1; display: grid }
+.ai-mission small { opacity: .8; font-size: 12px }
+.hub { padding-bottom: 50px }
+.hub-empty { display: grid; justify-items: center; gap: 6px }
+.hub-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px }
+.hub-card { display: grid; text-decoration: none; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; transition: transform var(--t-med) var(--ease), box-shadow var(--t-med) }
+.hub-card:hover { transform: translateY(-3px); box-shadow: var(--shadow) }
+.hub-img { position: relative; height: 140px; background: var(--surface-2); display: grid; place-items: center }
+.hub-img img { object-fit: cover }
+.hub-ph { font-size: 40px }
+.hub-body { padding: 14px 16px; display: grid; gap: 8px }
+.hub-body b { font-family: var(--f-display); font-size: 17px }
+.hub-bar { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden }
+.hub-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--blue), var(--mint)); border-radius: 4px; transition: width .6s var(--ease) }
+.hub-body small { color: var(--muted); font-weight: 600 }
+.hub-hero { position: relative; border-radius: 26px; overflow: hidden; min-height: 240px; margin: 24px 0 22px; display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 26px; background: linear-gradient(120deg, #0b1240, #0b4fc4); color: #fff; isolation: isolate }
+.hub-hero img { object-fit: cover; z-index: -2 }
+.hub-hero::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(0deg, rgba(6, 10, 40, .78), rgba(6, 10, 40, .25)) }
+.hub-hero h1 { font-size: clamp(26px, 4vw, 44px); margin: 6px 0 }
+.hub-hero p { margin: 0; opacity: .9 }
+.hub-hero .crumbs { color: #fff; text-decoration: none; opacity: .85 }
+.hub-facts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px }
+.hub-facts span { background: rgba(255, 255, 255, .16); backdrop-filter: blur(6px); padding: 5px 12px; border-radius: 999px; font-size: 13px; font-weight: 700 }
+.hub-count { background: var(--coral) !important }
+.hub-ring { --p: 0; flex: none; width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center; align-content: center; background: conic-gradient(var(--mint) calc(var(--p) * 1%), rgba(255, 255, 255, .2) 0); position: relative }
+.hub-ring::before { content: ""; position: absolute; inset: 9px; border-radius: 50%; background: rgba(6, 10, 40, .85) }
+.hub-ring b, .hub-ring small { position: relative; line-height: 1.1 }
+.hub-ring b { font-family: var(--f-display); font-size: 22px }
+.hub-ring small { font-size: 11px; opacity: .8 }
+.hub-layout { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start }
+.hub-layout > * { min-width: 0 }
+.hub-main { display: grid; gap: 18px }
+@media (max-width: 900px) { .hub-layout { grid-template-columns: 1fr } .hub-hero { flex-direction: column; align-items: flex-start } }
+.hub-sec-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px }
+.hub-sec-head h2 { margin: 0 }
+.hub-appr { display: grid; gap: 12px }
+.hub-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px }
+.hub-steps li { display: grid; grid-template-columns: 34px 1fr; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line) }
+.hub-steps li:last-child { border-bottom: 0 }
+.st-ico { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; background: var(--surface-2); color: var(--muted) }
+.st-done .st-ico { background: var(--mint); color: #fff }
+.st-needs_approval .st-ico { background: var(--coral); color: #fff; animation: aiPulse 2s infinite }
+.st-in_progress .st-ico, .st-waiting .st-ico { background: #e3ecff; color: var(--blue) }
+.st-skipped { opacity: .6 }
+.hub-steps b { font-size: 15px }
+.st-label { display: block; font-size: 12px; font-weight: 700; color: var(--muted) }
+.st-needs_approval .st-label { color: var(--coral) } .st-done .st-label { color: var(--good) }
+.hub-steps p { margin: 4px 0 0; font-size: 14px; color: var(--fg) }
+.hub-side { display: grid; gap: 12px; position: sticky; top: 84px }
+.hub-timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; max-height: 420px; overflow-y: auto }
+.hub-timeline li { border-left: 3px solid var(--line); padding-left: 12px }
+.hub-timeline small { color: var(--muted); font-weight: 700; font-size: 11px }
+.hub-timeline p { margin: 2px 0 0; font-size: 13px }

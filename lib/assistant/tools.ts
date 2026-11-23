@@ -8,14 +8,17 @@ import { searchItems, tripFields } from "../search";
 import { COUNTRY_NAMES } from "../country-names";
 import { PROCESSING_DAYS, VISA_META, countryName, visaReadyWithin, type VisaCategory } from "../visa";
 import type { DepartureDTO, TripDTO } from "../types";
+import type { Owner } from "../owner";
+import { chooseTrip, createMission, getOwnedMission, logEvent, missionView, setTask, type TaskKind } from "../missions";
+import { proposePriceHold, proposeService, SERVICES, type ApprovalCard, type Service } from "../approvals";
 
 /** Who is asking: set by the server from the visitor's saved preferences, never by the model. */
-export interface VisitorContext { from: string; passport: string; adults: number; childAges: number[]; currency: string; name?: string | null }
+export interface VisitorContext { from: string; passport: string; adults: number; childAges: number[]; currency: string; name?: string | null; owner: Owner }
 
 /** Compact trip card the chat UI renders under a reply. Prices in INR per adult. */
 export interface CardTrip { slug: string; title: string; image: string; dest: string; country: string; nights: number; price: number; date?: string | null; seats?: number | null; visa?: string }
 
-export interface ToolOutcome { result: unknown; cards?: CardTrip[]; status: string }
+export interface ToolOutcome { result: unknown; cards?: CardTrip[]; status: string; approval?: ApprovalCard; mission?: { id: string; title: string } }
 
 const THEME_KEYS = ["honeymoon", "family", "group", "beach", "heritage", "nature", "city", "luxury"] as const;
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD");
@@ -51,6 +54,31 @@ const QuoteInput = z.object({
   adults: z.number().int().min(1).max(9).optional(),
   child_ages: z.array(z.number().int().min(0).max(11)).max(6).optional(),
 }).strict();
+
+const NEED_KINDS = ["insurance", "forex", "flights", "hotels"] as const;
+const StartMissionInput = z.object({
+  title: z.string().min(3).max(80),
+  goal: z.string().min(3).max(600),
+  budget_per_adult_inr: z.number().int().positive().optional(),
+  needs: z.array(z.enum(NEED_KINDS)).max(4).optional(),
+}).strict();
+const ChooseInput = z.object({ mission_id: z.string().max(40).optional(), slug: z.string().min(1).max(120), date: date.optional() }).strict();
+const HoldInput = z.object({
+  mission_id: z.string().max(40).optional(), slug: z.string().min(1).max(120), date,
+  adults: z.number().int().min(1).max(9).optional(), child_ages: z.array(z.number().int().min(0).max(11)).max(6).optional(),
+}).strict();
+const ServiceInput = z.object({
+  mission_id: z.string().max(40).optional(),
+  service: z.enum(["visa", "forex", "insurance", "flight", "hotel"]),
+  details: z.record(z.string().max(40), z.union([z.string().max(300), z.number(), z.array(z.string().max(80)).max(10)])).refine((d) => Object.keys(d).length <= 12, "Too many details"),
+}).strict();
+const TaskInput = z.object({
+  mission_id: z.string().max(40).optional(),
+  task: z.enum(["choose_trip", "visa", "insurance", "forex", "flights", "hotels", "prep"]),
+  status: z.enum(["todo", "in_progress", "done", "skipped"]),
+  note: z.string().max(240),
+}).strict();
+const MissionInput = z.object({ mission_id: z.string().max(40).optional() }).strict();
 
 /* ---------------- definitions sent to Claude ---------------- */
 
@@ -128,6 +156,63 @@ export const TOOLS: Anthropic.Beta.BetaTool[] = [
         child_ages: { type: "array", items: { type: "integer" }, description: "Ages 0-11 on return." },
       },
     },
+  },
+  {
+    name: "start_mission",
+    description: "Start a trip mission when the traveller wants to actually go somewhere or asks you to handle things. A mission is their trip plan from idea to departure; it appears in their trip hub with steps (choose trip, hold price, visa, prep, plus any of insurance, forex, flights, hotels). Start one mission per trip. Don't start one for idle browsing or a single quick question.",
+    eager_input_streaming: true,
+    input_schema: {
+      type: "object", additionalProperties: false, required: ["title", "goal"],
+      properties: {
+        title: { type: "string", description: "Short name, e.g. 'Bali honeymoon, December'." },
+        goal: { type: "string", description: "What they want, in their words: who, when, budget, style, must-haves." },
+        budget_per_adult_inr: { type: "integer" },
+        needs: { type: "array", items: { type: "string", enum: [...NEED_KINDS] }, description: "Extra services to include. International trips usually need insurance and forex; add flights/hotels only if the package won't cover them." },
+      },
+    },
+  },
+  {
+    name: "choose_trip",
+    description: "Lock a trip (and date, when agreed) into the mission. Works out visa steps and deadlines for their passport, and marks flights/hotels covered when the package includes them.",
+    eager_input_streaming: true,
+    input_schema: { type: "object", additionalProperties: false, required: ["slug"], properties: { mission_id: { type: "string" }, slug: { type: "string" }, date: { type: "string", description: "YYYY-MM-DD departure date." } } },
+  },
+  {
+    name: "propose_price_hold",
+    description: "Prepare a free 48-hour price hold for a trip date. This does NOT hold anything yet: it shows the traveller an approval card with the exact total; it only happens if they tap Approve. Use once you and the traveller have settled on a trip and date.",
+    eager_input_streaming: true,
+    input_schema: {
+      type: "object", additionalProperties: false, required: ["slug", "date"],
+      properties: { mission_id: { type: "string" }, slug: { type: "string" }, date: { type: "string" }, adults: { type: "integer" }, child_ages: { type: "array", items: { type: "integer" } } },
+    },
+  },
+  {
+    name: "request_service",
+    description: "Prepare a request to Ribriz's team for a visa application, forex, travel insurance, flights or hotels. Shows the traveller an approval card; only sent if they approve. Put everything you already know in `details` (destination, dates, travellers, preferences) so the team needn't ask again. Visa: countries, travel dates, purpose. Forex: currencies, amounts, card or cash, delivery city and date. Insurance: countries, dates, ages, any medical conditions mentioned. Flight: from, to, dates, class, travellers. Hotel: city, dates, rooms, budget, style.",
+    eager_input_streaming: true,
+    input_schema: {
+      type: "object", additionalProperties: false, required: ["service", "details"],
+      properties: {
+        mission_id: { type: "string" },
+        service: { type: "string", enum: ["visa", "forex", "insurance", "flight", "hotel"] },
+        details: { type: "object", description: "Flat key-value pairs, short values, e.g. {\"countries\":\"Japan\",\"dates\":\"3-12 Apr 2027\",\"travellers\":\"2 adults\"}" },
+      },
+    },
+  },
+  {
+    name: "update_mission_task",
+    description: "Record progress on a mission step with a short traveller-facing note, e.g. mark insurance skipped because they have cover, or visa in progress. You can't mark price holds or approved requests done; those update themselves.",
+    eager_input_streaming: true,
+    input_schema: {
+      type: "object", additionalProperties: false, required: ["task", "status", "note"],
+      properties: { mission_id: { type: "string" }, task: { type: "string", enum: ["choose_trip", "visa", "insurance", "forex", "flights", "hotels", "prep"] }, status: { type: "string", enum: ["todo", "in_progress", "done", "skipped"] }, note: { type: "string" } },
+    },
+  },
+  {
+    name: "get_mission",
+    description: "The traveller's current mission (or one by id): steps with status and notes, pending approvals and recent timeline. Use before continuing a trip in progress.",
+    eager_input_streaming: true,
+    input_schema: { type: "object", additionalProperties: false, properties: { mission_id: { type: "string" } } },
   },
 ];
 
@@ -308,6 +393,61 @@ async function quoteTrip(i: z.infer<typeof QuoteInput>, ctx: VisitorContext): Pr
   };
 }
 
+/* ---------------- mission actions ---------------- */
+
+async function resolveMission(ctx: VisitorContext, id?: string) {
+  const m = await getOwnedMission(ctx.owner, id ?? null);
+  if (!m && id) throw new Error("No mission with that id for this traveller.");
+  return m;
+}
+
+async function startMission(i: z.infer<typeof StartMissionInput>, ctx: VisitorContext): Promise<ToolOutcome> {
+  const m = await createMission(ctx.owner, {
+    title: i.title, goal: i.goal, adults: ctx.adults, childAges: ctx.childAges, fromCity: ctx.from, passport: ctx.passport,
+    budgetPerAdult: i.budget_per_adult_inr ?? null, needs: (i.needs ?? []) as TaskKind[],
+  });
+  return { status: "Setting up your trip plan…", mission: { id: m.id, title: m.title }, result: { mission_id: m.id, hub_url: `${site()}/hub/${m.id}`, steps: (await missionView(ctx.owner, m.id))?.tasks } };
+}
+
+async function chooseTripTool(i: z.infer<typeof ChooseInput>, ctx: VisitorContext): Promise<ToolOutcome> {
+  const m = await resolveMission(ctx, i.mission_id);
+  if (!m) return { status: "Saving your choice…", result: { error: "No mission yet. Call start_mission first." }, };
+  const r = await chooseTrip(m.id, i.slug, i.date ?? null);
+  return {
+    status: "Saving your choice…",
+    result: { mission_id: m.id, trip: r.trip.title, date: r.dep?.date ?? null, visa: r.visas.map((v) => ({ country: countryName(v.code), type: VISA_META[v.cat].label })), visa_lead_days: r.lead, steps: (await missionView(ctx.owner, m.id))?.tasks },
+  };
+}
+
+async function proposeHoldTool(i: z.infer<typeof HoldInput>, ctx: VisitorContext): Promise<ToolOutcome> {
+  const m = await resolveMission(ctx, i.mission_id);
+  const card = await proposePriceHold(ctx.owner, { missionId: m?.id ?? null, slug: i.slug, date: i.date, adults: i.adults ?? ctx.adults, childAges: i.child_ages ?? ctx.childAges, from: ctx.from });
+  return { status: "Preparing your price hold…", approval: card, result: { approval_id: card.id, shown_to_traveller: true, total_inr: card.amountInr, note: "Waiting for the traveller to tap Approve on the card. Don't say it's held yet." } };
+}
+
+async function requestServiceTool(i: z.infer<typeof ServiceInput>, ctx: VisitorContext): Promise<ToolOutcome> {
+  const m = await resolveMission(ctx, i.mission_id);
+  const card = await proposeService(ctx.owner, { missionId: m?.id ?? null, service: i.service as Service, details: i.details as Record<string, string | number | string[]> });
+  return { status: `Preparing your ${SERVICES[i.service as Service].label.toLowerCase()}…`, approval: card, result: { approval_id: card.id, shown_to_traveller: true, note: "Waiting for the traveller to approve the card. Don't say it's sent yet." } };
+}
+
+async function updateTaskTool(i: z.infer<typeof TaskInput>, ctx: VisitorContext): Promise<ToolOutcome> {
+  const m = await resolveMission(ctx, i.mission_id);
+  if (!m) return { status: "Updating your plan…", result: { error: "No mission yet." } };
+  const t = m.tasks.find((x) => x.kind === i.task);
+  if (t && (t.status === "needs_approval" || t.status === "waiting")) return { status: "Updating your plan…", result: { error: "That step is waiting on an approval or the team; it updates itself." } };
+  await setTask(m.id, i.task as TaskKind, { status: i.status, note: i.note });
+  await logEvent(m.id, "agent", `${i.task.replace("_", " ")}: ${i.note}`);
+  return { status: "Updating your plan…", result: { ok: true } };
+}
+
+async function getMissionTool(i: z.infer<typeof MissionInput>, ctx: VisitorContext): Promise<ToolOutcome> {
+  const m = await resolveMission(ctx, i.mission_id);
+  if (!m) return { status: "Checking your trip…", result: { mission: null, note: "The traveller has no open mission." } };
+  const v = await missionView(ctx.owner, m.id);
+  return { status: "Checking your trip…", result: v && { ...v, events: v.events.slice(0, 8), hub_url: `${site()}/hub/${m.id}` } };
+}
+
 /* ---------------- dispatcher ---------------- */
 
 const REGISTRY = {
@@ -316,11 +456,19 @@ const REGISTRY = {
   get_trip: { schema: TripInput, run: getTrip },
   check_visa: { schema: VisaInput, run: checkVisa },
   quote_trip: { schema: QuoteInput, run: quoteTrip },
+  start_mission: { schema: StartMissionInput, run: startMission },
+  choose_trip: { schema: ChooseInput, run: chooseTripTool },
+  propose_price_hold: { schema: HoldInput, run: proposeHoldTool },
+  request_service: { schema: ServiceInput, run: requestServiceTool },
+  update_mission_task: { schema: TaskInput, run: updateTaskTool },
+  get_mission: { schema: MissionInput, run: getMissionTool },
 } as const;
 
 export const TOOL_STATUS: Record<string, string> = {
   search_trips: "Searching trips…", find_hot_deals: "Finding the best deals…", get_trip: "Opening the trip…",
   check_visa: "Checking visa rules…", quote_trip: "Working out your price…",
+  start_mission: "Setting up your trip plan…", choose_trip: "Saving your choice…", propose_price_hold: "Preparing your price hold…",
+  request_service: "Preparing your request…", update_mission_task: "Updating your plan…", get_mission: "Checking your trip…",
 };
 
 /** Validates the model's input against the schema, then runs the tool. Errors come back as results, never throws. */
@@ -334,6 +482,7 @@ export async function runTool(name: string, input: unknown, ctx: VisitorContext)
     return await (entry.run as (i: unknown, c: VisitorContext) => Promise<ToolOutcome>)(parsed.data, ctx);
   } catch (e) {
     console.error("assistant tool failed", name, e);
-    return { status: TOOL_STATUS[name], result: { error: "The lookup failed. Try again or offer to connect the traveller with an expert." }, isError: true };
+    const msg = e instanceof Error && /not found|isn't an open|seats left|No mission|No trip/i.test(e.message) ? e.message : "The lookup failed. Try again or offer to connect the traveller with an expert.";
+    return { status: TOOL_STATUS[name], result: { error: msg }, isError: true };
   }
 }

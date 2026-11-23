@@ -5,9 +5,10 @@ import { usePathname } from "next/navigation";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { fmtDate } from "@/lib/pricing";
 import { usePrefs } from "../Prefs";
+import ApprovalCard, { type ApprovalCardData } from "./ApprovalCard";
 
 interface Card { slug: string; title: string; image: string; dest: string; country: string; nights: number; price: number; date?: string | null; seats?: number | null; visa?: string }
-interface Msg { role: "user" | "assistant"; content: string; cards?: Card[]; error?: boolean }
+interface Msg { role: "user" | "assistant"; content: string; cards?: Card[]; approvals?: ApprovalCardData[]; mission?: { id: string; title: string }; error?: boolean; note?: boolean }
 
 const KEY = "ribriz_chat_v1";
 const SUGGESTIONS = [
@@ -91,7 +92,7 @@ export default function Assistant() {
     try {
       const res = await fetch("/api/assistant", {
         method: "POST", signal: ctrl.signal, headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: history.slice(-20).map(({ role, content }) => ({ role, content })), context: { from, passport, adults, childAges, currency } }),
+        body: JSON.stringify({ messages: toApi(history), context: { from, passport, adults, childAges, currency } }),
       });
       if (!res.ok || !res.body) {
         const j = await res.json().catch(() => ({}));
@@ -109,8 +110,11 @@ export default function Assistant() {
           if (!line) continue;
           const e = JSON.parse(line) as { t: string; v?: unknown };
           if (e.t === "text") { setStatus(""); patch((m) => ({ ...m, content: m.content + (e.v as string) })); }
+          else if (e.t === "retract") patch((m) => ({ ...m, content: m.content.slice(0, Math.max(0, m.content.length - (e.v as number))) }));
           else if (e.t === "status") setStatus((e.v as string) || "Thinking…");
           else if (e.t === "cards") patch((m) => ({ ...m, cards: dedupe([...(m.cards ?? []), ...(e.v as Card[])]) }));
+          else if (e.t === "approval") patch((m) => ({ ...m, approvals: [...(m.approvals ?? []), e.v as ApprovalCardData] }));
+          else if (e.t === "mission") patch((m) => ({ ...m, mission: e.v as { id: string; title: string } }));
           else if (e.t === "error") patch((m) => ({ ...m, content: (m.content ? m.content + "\n\n" : "") + (e.v as string), error: !m.content }));
         }
       }
@@ -157,7 +161,7 @@ export default function Assistant() {
             )}
             {msgs.map((m, i) => (
               <Fragment key={i}>
-                <div className={`ai-msg ${m.role} ${m.error ? "err" : ""}`}>
+                <div className={`ai-msg ${m.role} ${m.error ? "err" : ""} ${m.note ? "note" : ""}`}>
                   {m.role === "assistant" ? <Rich text={m.content} /> : <p>{m.content}</p>}
                   {m.role === "assistant" && busy && i === msgs.length - 1 && (
                     <div className="ai-status"><span className="ai-typing"><i /><i /><i /></span>{status}</div>
@@ -179,6 +183,18 @@ export default function Assistant() {
                     ))}
                   </div>
                 )}
+                {m.mission && (
+                  <Link className="ai-mission" href={`/hub/${m.mission.id}`} onClick={() => { if (window.innerWidth < 640) setOpen(false); }}>
+                    <span aria-hidden="true">🧭</span><span><b>{m.mission.title}</b><small>Trip plan started · open your trip hub</small></span><span aria-hidden="true">→</span>
+                  </Link>
+                )}
+                {m.approvals?.map((a) => (
+                  <ApprovalCard key={a.id} card={a} compact onDecided={(o) => setMsgs((all) => [
+                    // remember the outcome on the card itself so it stays correct after a reload
+                    ...all.map((x) => (x.approvals?.some((y) => y.id === a.id) ? { ...x, approvals: x.approvals.map((y) => (y.id === a.id ? { ...y, status: o.status } : y)) } : x)),
+                    { role: "assistant", note: true, content: o.status === "done" ? `✓ Approved: ${a.summary}. ${o.message}` : `Not now: ${a.summary}.` },
+                  ])} />
+                ))}
               </Fragment>
             ))}
           </div>
@@ -196,6 +212,19 @@ export default function Assistant() {
       )}
     </>
   );
+}
+
+/** Plain-text history for the API: notes about approvals are folded into the assistant turn before them. */
+function toApi(history: Msg[]) {
+  const out: { role: "user" | "assistant"; content: string }[] = [];
+  for (const m of history) {
+    if (!m.content.trim()) continue;
+    const last = out[out.length - 1];
+    if (last && last.role === m.role) last.content += "\n\n" + m.content;
+    else out.push({ role: m.role, content: m.content });
+  }
+  while (out.length && out[0].role !== "user") out.shift();
+  return out.slice(-20);
 }
 
 function dedupe(cards: Card[]) {

@@ -3,6 +3,19 @@ import { randomBytes } from "node:crypto";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { after } from "next/server";
 import { notifyStatus } from "@/lib/notify";
+import { logEvent, setTask, type TaskKind } from "@/lib/missions";
+
+const TASK_FOR: Record<string, TaskKind> = { hold: "price_hold", visa: "visa", forex: "forex", insurance: "insurance", flight: "flights", hotel: "hotels" };
+const TEAM_NOTE: Record<string, string> = { contacted: "Our team is working on it.", booked: "Confirmed by our team.", closed: "Closed by our team." };
+
+/** Mirrors a team status change onto the traveller's trip hub. */
+async function syncMissionFromEnquiry(id: string, status: string) {
+  const e = await prisma.enquiry.findUnique({ where: { id }, select: { missionId: true, type: true, ref: true } });
+  const kind = e?.missionId ? TASK_FOR[e.type] : undefined;
+  if (!e?.missionId || !kind || !TEAM_NOTE[status]) return;
+  await setTask(e.missionId, kind, { status: status === "booked" ? "done" : status === "closed" ? "skipped" : "waiting", note: `${TEAM_NOTE[status]} Ref ${e.ref}.` });
+  await logEvent(e.missionId, "team", `${kind.replace("_", " ")}: ${TEAM_NOTE[status]} (ref ${e.ref})`);
+}
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { adminEmails, endSession, passwordLoginEnabled, passwordMatches, requireAdmin, startSession } from "@/lib/auth";
@@ -67,6 +80,7 @@ export async function updateEnquiry(fd: FormData) {
   if (!STATUSES.includes(status)) return;
   const before = await prisma.enquiry.findUnique({ where: { id }, select: { status: true } });
   await setEnquiryStatus(id, status, note || null);
+  await syncMissionFromEnquiry(id, status);
   if (before && before.status !== status && fd.get("notify") === "on") after(() => notifyStatus(id));
   refreshSite();
 }

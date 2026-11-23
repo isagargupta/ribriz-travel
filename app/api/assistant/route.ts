@@ -2,7 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { contextMessage, SYSTEM_PROMPT } from "@/lib/assistant/prompt";
 import { runTool, TOOLS, TOOL_STATUS, type VisitorContext } from "@/lib/assistant/tools";
-import { currentCustomer } from "@/lib/customer";
+import { missionsForContext } from "@/lib/missions";
+import { getOwner } from "@/lib/owner";
 import { clientIp, fail, rateLimited } from "@/lib/http";
 import { FROM_CITIES, RATES, isoDate, type Currency } from "@/lib/pricing";
 import { countryName } from "@/lib/visa";
@@ -28,9 +29,12 @@ let client: Anthropic | null = null;
 const getClient = () => (client ??= new Anthropic());
 
 /**
- * Chat with the travel assistant. Streams newline-delimited JSON events:
+ * Chat with the travel agent. Streams newline-delimited JSON events:
+ *   {t:"mission", v}  a trip mission was started
+ *   {t:"approval", v} an action is ready for the traveller to approve
  *   {t:"status", v}  a tool is running ("Searching trips…")
  *   {t:"text", v}    a piece of the reply
+ *   {t:"retract", v} remove the last v characters (a working note before a tool call)
  *   {t:"cards", v}   trips to show under the reply
  *   {t:"done"} | {t:"error", v}
  */
@@ -44,8 +48,10 @@ export async function POST(req: Request) {
   if (turns[0].role !== "user" || turns[turns.length - 1].role !== "user") return fail("Invalid conversation.");
   if (turns.reduce((n, m) => n + m.content.length, 0) > 16000) return fail("This chat is getting long. Start a new one to continue.");
 
-  const me = await currentCustomer().catch(() => null);
-  const ctx: VisitorContext = { ...body.context, name: me?.name ?? null };
+  // gives first-time visitors a browser id so their missions persist without sign-up
+  const owner = await getOwner(true);
+  const ctx: VisitorContext = { ...body.context, name: owner.name, owner };
+  const missions = await missionsForContext(owner);
 
   // Earlier turns go back as plain text (no thinking blocks), which the API accepts;
   // inside this reply the tool loop appends the model's content unchanged.
@@ -55,6 +61,7 @@ export async function POST(req: Request) {
     content: contextMessage({
       from: ctx.from, passport: ctx.passport, passportName: countryName(ctx.passport), adults: ctx.adults, childAges: ctx.childAges,
       currency: ctx.currency, rate: RATES[ctx.currency as Currency], name: ctx.name, today: isoDate(new Date()),
+      signedIn: !!owner.customerId, missions,
     }),
   });
 
@@ -76,7 +83,8 @@ export async function POST(req: Request) {
             messages,
           }, { signal: req.signal });
 
-          run.on("text", (delta) => send({ t: "text", v: delta }));
+          let roundChars = 0;
+          run.on("text", (delta) => { roundChars += delta.length; send({ t: "text", v: delta }); });
           const msg = await run.finalMessage();
 
           if (msg.stop_reason === "refusal") {
@@ -85,12 +93,18 @@ export async function POST(req: Request) {
           }
           const calls = msg.content.filter((b): b is Anthropic.Beta.BetaToolUseBlock => b.type === "tool_use");
           if (msg.stop_reason !== "tool_use" || calls.length === 0) break;
+          // text written just before tool calls is a working note, not part of the answer
+          if (roundChars) send({ t: "retract", v: roundChars });
 
           messages.push({ role: "assistant", content: msg.content });
           for (const c of calls) send({ t: "status", v: TOOL_STATUS[c.name] ?? "Looking that up…" });
           const outcomes = await Promise.all(calls.map((c) => runTool(c.name, c.input, ctx)));
           const cards = outcomes.flatMap((o) => o.cards ?? []);
           if (cards.length) send({ t: "cards", v: cards });
+          for (const o of outcomes) {
+            if (o.mission) send({ t: "mission", v: o.mission });
+            if (o.approval) send({ t: "approval", v: o.approval });
+          }
           // all results for this round go back together in one user message
           messages.push({
             role: "user",
