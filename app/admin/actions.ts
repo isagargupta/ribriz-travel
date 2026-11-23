@@ -240,3 +240,11 @@ export async function generateDepartures(fd: FormData) {
   if (fresh.length) await prisma.departure.createMany({ data: fresh });
   refreshSite();
 }
+
+/** "Run agents now" on the dashboard: same work as the daily run, on demand. */
+export async function runAgentsNow() {
+  await requireAdmin();
+  const { runAgents } = await import("@/lib/agents/run");
+  await runAgents();
+  revalidatePath("/admin");
+}

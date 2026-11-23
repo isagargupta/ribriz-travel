@@ -40,3 +40,10 @@ export const newsletterSchema = z.object({ email });
 export function firstError(e: z.ZodError) {
   return e.issues[0]?.message ?? "Please check the form and try again.";
 }
+
+export const priceWatchSchema = z.object({
+  slug: z.string().min(1).max(120),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullish(),
+  email: email.optional(),
+  from: z.string().max(40).optional(),
+});

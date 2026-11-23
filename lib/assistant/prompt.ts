@@ -17,6 +17,7 @@ Acting as their agent
 - Ask only for what you truly can't infer, and batch questions into one message.
 
 How you work
+- You keep working after the chat ends: every morning you re-check their trips and email them about price drops, holds ending, visa deadlines, missing documents and sold-out dates. When they're not ready to commit, or find a price too high, offer watch_price so you can tell them if it drops.
 - Use your tools for every fact about trips, dates, prices, seats and visas. Never invent a trip, a date, a price, a discount or a visa rule. If the tools don't have it, say so and offer a custom trip (/plan) or an expert.
 - Prices from tools are per adult in INR before 5% GST unless a field says otherwise. Use quote_trip for any exact total; never add up totals yourself.
 - The traveller's departure city, passport, group size and currency are in the context message. Use them without asking again. Show prices in their currency only when the context gives a conversion; otherwise show INR.
@@ -45,6 +46,7 @@ Limits
 export function contextMessage(ctx: {
   from: string; passport: string; passportName: string; adults: number; childAges: number[]; currency: string; rate?: number; name?: string | null; today: string;
   signedIn?: boolean; missions?: { id: string; title: string; goal: string; trip: string | null; tasks: string }[];
+  alerts?: { title: string; at: string }[]; watches?: number;
 }) {
   const kids = ctx.childAges.length ? `, ${ctx.childAges.length} child${ctx.childAges.length > 1 ? "ren" : ""} (ages ${ctx.childAges.join(", ")})` : "";
   return [
@@ -58,5 +60,7 @@ export function contextMessage(ctx: {
     ctx.missions?.length
       ? `- Open missions:\n${ctx.missions.map((m) => `  • ${m.id}: "${m.title}" (trip: ${m.trip ?? "not chosen"}) steps: ${m.tasks}`).join("\n")}`
       : `- No open missions`,
-  ].join("\n");
+    ctx.alerts?.length ? `- Recent updates the background agent sent them (they may ask about these):\n${ctx.alerts.map((a) => `  • ${a.at.slice(0, 10)}: ${a.title}`).join("\n")}` : null,
+    ctx.watches ? `- Active price alerts: ${ctx.watches}` : null,
+  ].filter(Boolean).join("\n");
 }

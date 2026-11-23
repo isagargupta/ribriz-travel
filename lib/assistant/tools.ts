@@ -12,6 +12,7 @@ import type { Owner } from "../owner";
 import { chooseTrip, createMission, getOwnedMission, logEvent, missionView, setTask, type TaskKind } from "../missions";
 import { proposePriceHold, proposeService, SERVICES, type ApprovalCard, type Service } from "../approvals";
 import { visaChecklist } from "../documents";
+import { WatchError, watchPrice } from "../watches";
 
 /** Who is asking: set by the server from the visitor's saved preferences, never by the model. */
 export interface VisitorContext { from: string; passport: string; adults: number; childAges: number[]; currency: string; name?: string | null; owner: Owner }
@@ -81,6 +82,7 @@ const TaskInput = z.object({
 }).strict();
 const MissionInput = z.object({ mission_id: z.string().max(40).optional() }).strict();
 const ChecklistInput = z.object({ mission_id: z.string().max(40).optional() }).strict();
+const WatchInput = z.object({ slug: z.string().min(1).max(120), date: date.optional(), email: z.string().trim().toLowerCase().email().max(160).optional() }).strict();
 
 /* ---------------- definitions sent to Claude ---------------- */
 
@@ -215,6 +217,15 @@ export const TOOLS: Anthropic.Beta.BetaTool[] = [
     description: "The visa document checklist for a mission: which documents are needed for the traveller's passport and destinations, which are uploaded and checked, what problems the automatic check found, and which Ribriz provides itself. Use whenever visas or documents come up on a trip in progress.",
     eager_input_streaming: true,
     input_schema: { type: "object", additionalProperties: false, properties: { mission_id: { type: "string" } } },
+  },
+  {
+    name: "watch_price",
+    description: "Set a price-drop alert on a trip, or one departure date of it. Every day the background agent re-checks the price and emails the traveller if it falls by at least ₹1,000 and 2%. Use when the traveller isn't ready to hold yet, says the price is too high, or wants to wait. Needs their email: if the result says so, ask for it, then call again with email.",
+    eager_input_streaming: true,
+    input_schema: {
+      type: "object", additionalProperties: false, required: ["slug"],
+      properties: { slug: { type: "string" }, date: { type: "string", description: "YYYY-MM-DD departure; omit to watch the trip's cheapest date" }, email: { type: "string", description: "Only an address the traveller typed in this chat" } },
+    },
   },
   {
     name: "get_mission",
@@ -471,6 +482,16 @@ async function getMissionTool(i: z.infer<typeof MissionInput>, ctx: VisitorConte
   return { status: "Checking your trip…", result: v && { ...v, events: v.events.slice(0, 8), hub_url: `${site()}/hub/${m.id}` } };
 }
 
+async function watchPriceTool(i: z.infer<typeof WatchInput>, ctx: VisitorContext): Promise<ToolOutcome> {
+  try {
+    const r = await watchPrice(ctx.owner, { slug: i.slug, date: i.date, email: i.email, from: ctx.from });
+    return { status: "Setting a price alert…", result: { ok: true, watching_price_per_adult: r.price, message: r.message } };
+  } catch (e) {
+    if (e instanceof WatchError) return { status: "Setting a price alert…", result: { error: e.message, need_email: e.message.startsWith("Add your email") } };
+    throw e;
+  }
+}
+
 /* ---------------- dispatcher ---------------- */
 
 const REGISTRY = {
@@ -486,6 +507,7 @@ const REGISTRY = {
   update_mission_task: { schema: TaskInput, run: updateTaskTool },
   get_mission: { schema: MissionInput, run: getMissionTool },
   get_visa_checklist: { schema: ChecklistInput, run: visaChecklistTool },
+  watch_price: { schema: WatchInput, run: watchPriceTool },
 } as const;
 
 export const TOOL_STATUS: Record<string, string> = {
@@ -493,7 +515,7 @@ export const TOOL_STATUS: Record<string, string> = {
   check_visa: "Checking visa rules…", quote_trip: "Working out your price…",
   start_mission: "Setting up your trip plan…", choose_trip: "Saving your choice…", propose_price_hold: "Preparing your price hold…",
   request_service: "Preparing your request…", update_mission_task: "Updating your plan…", get_mission: "Checking your trip…",
-  get_visa_checklist: "Checking your documents…",
+  get_visa_checklist: "Checking your documents…", watch_price: "Setting a price alert…",
 };
 
 /** Validates the model's input against the schema, then runs the tool. Errors come back as results, never throws. */

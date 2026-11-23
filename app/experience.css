@@ -609,3 +609,25 @@ kbd { font-family: var(--f-mono); font-size: 11px; background: var(--surface); b
 .ai-attach:disabled { opacity: .5; cursor: default }
 .admin-docs { margin-top: 10px; padding: 12px 14px; border: 1px dashed var(--line); border-radius: 12px; display: grid; gap: 6px; font-size: 14px }
 .admin-docs ul { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 6px }
+
+/* price alert */
+.price-alert { margin: 10px 0 2px; text-align: center }
+.price-alert .link-btn { font-weight: 600 }
+.price-alert form { text-align: left; animation: fadeUp .25s ease-out }
+.price-alert .pa-row { display: flex; gap: 8px; margin-top: 6px }
+.price-alert .pa-row .in { flex: 1; min-width: 0 }
+.price-alert.on { font-size: 13px; color: var(--ok, #0a7a4b); background: #eafaf2; border-radius: 12px; padding: 10px 12px; text-align: left }
+
+/* updates from Riya */
+.notices ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px }
+.notice-item { display: grid; grid-template-columns: 34px 1fr; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); animation: fadeUp .35s ease-out both }
+.notice-item.unread { border-color: #c9c2ff; background: linear-gradient(135deg, #f6f4ff, #fff) }
+.notice-item .ni-ico { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: #eef0ff; font-size: 16px }
+.notice-item.k-price_drop .ni-ico { background: #e3f8ee; color: #0a7a4b; font-weight: 800 }
+.notice-item.k-hold_expiring .ni-ico, .notice-item.k-visa_deadline .ni-ico, .notice-item.k-sold_out .ni-ico { background: #fff1e0 }
+.notice-item b { display: block; font-size: 15px }
+.notice-item p { margin: 3px 0 4px; font-size: 14px; color: var(--ink-2, #3a4170); line-height: 1.5 }
+.notice-item small { color: var(--muted, #5b628a) }
+.watch-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 0; padding: 0; list-style: none }
+.watch-list li { font-size: 13px; padding: 6px 12px; border-radius: 999px; background: #eef0ff }
+.hub-updates { display: grid; gap: 14px; margin: 0 0 22px }

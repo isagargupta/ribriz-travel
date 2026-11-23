@@ -4,13 +4,19 @@ import Link from "next/link";
 import { StartMission } from "@/components/hub/HubClient";
 import { listMissions } from "@/lib/missions";
 import { getOwner } from "@/lib/owner";
+import Notices from "@/components/hub/Notices";
+import { noticesFor } from "@/lib/notifications";
+import { watchesFor } from "@/lib/watches";
+import { getPublishedTrips } from "@/lib/trips";
+import { fmt } from "@/lib/pricing";
 
 export const metadata: Metadata = { title: "Trip hub", robots: { index: false } };
 export const dynamic = "force-dynamic";
 
 export default async function HubPage() {
   const owner = await getOwner();
-  const missions = await listMissions(owner);
+  const [missions, notices, watches, trips] = await Promise.all([listMissions(owner), noticesFor(owner, { take: 5, sinceDays: 30 }), watchesFor(owner), getPublishedTrips()]);
+  const watching = watches.map((w) => ({ w, t: trips.find((t) => t.id === w.tripId) })).filter((x) => x.t);
   return (
     <div className="wrap hub">
       <div className="page-head">
@@ -18,6 +24,20 @@ export default async function HubPage() {
         <h1>Your trips</h1>
         <p>Everything Riya is handling for you, from choosing the trip to visa, insurance and forex. Anything that needs your OK shows up here.</p>
       </div>
+      {(notices.length > 0 || watching.length > 0) && (
+        <div className="hub-updates">
+          <Notices items={notices} title="Latest from Riya" />
+          {watching.length > 0 && (
+            <section className="panel">
+              <h2 style={{ fontSize: 17 }}>Price alerts</h2>
+              <p className="fine">Riya checks these every morning and emails you when the price really drops.</p>
+              <ul className="watch-list">
+                {watching.map(({ w, t }) => <li key={w.id}><Link href={`/trips/${t!.slug}`}>{t!.dest}</Link> · under {fmt(w.lastPrice)}{w.departureId ? "" : " (any date)"}</li>)}
+              </ul>
+            </section>
+          )}
+        </div>
+      )}
       {missions.length === 0 ? (
         <div className="empty hub-empty">
           <h3>No trips yet</h3>

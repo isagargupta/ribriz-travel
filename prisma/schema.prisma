@@ -281,3 +281,63 @@ model TravelDoc {
 
   @@index([missionId, kind])
 }
+
+/// Something the background agents told a traveller (shown in the trip hub, sent by email).
+model Notification {
+  id         String    @id @default(cuid())
+  customerId String?
+  anonId     String?
+  /// where it was sent
+  email      String?
+  missionId  String?
+  /// price_drop | hold_expiring | hold_expired | visa_deadline | docs_missing | sold_out | pre_trip
+  kind       String
+  title      String
+  body       String
+  url        String?
+  /// stops the same alert being created twice
+  dedupeKey  String    @unique
+  emailedAt  DateTime?
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([customerId, createdAt])
+  @@index([anonId, createdAt])
+  @@index([email, emailedAt])
+}
+
+/// "Tell me if the price drops" on a trip (and optionally one date).
+model PriceWatch {
+  id          String   @id @default(cuid())
+  customerId  String?
+  anonId      String?
+  email       String
+  tripId      String
+  /// a specific departure, or null for "any date around targetDate"
+  departureId String?
+  fromCity    String   @default("Mumbai")
+  /// per-adult price when last checked, INR
+  lastPrice   Int
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([email, tripId, departureId])
+  @@index([active])
+}
+
+/// One run of the background agents, for the admin dashboard.
+model AgentRun {
+  id         String    @id @default(cuid())
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  /// JSON counts per detector, emails sent, errors
+  stats      String?
+  error      String?
+}
+
+/// People who asked not to receive reminder emails.
+model EmailOptOut {
+  email     String   @id
+  createdAt DateTime @default(now())
+}

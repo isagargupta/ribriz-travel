@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { fmt } from "@/lib/pricing";
+import { runAgentsNow } from "../actions";
+
+const KIND_LABEL: Record<string, string> = { price_drop: "price drops", hold_expiring: "holds ending", hold_expired: "holds ended", visa_deadline: "visa deadlines", docs_missing: "missing documents", sold_out: "sold-out dates", pre_trip: "pre-trip checklists" };
 
 export default async function Dashboard() {
   const weekAgo = new Date(Date.now() - 7 * 864e5);
-  const [fresh, week, booked, trips, subs, recent, pipeline] = await Promise.all([
+  const [fresh, week, booked, trips, subs, recent, pipeline, lastRun, watches, alertsWeek] = await Promise.all([
     prisma.enquiry.count({ where: { status: "new" } }),
     prisma.enquiry.count({ where: { createdAt: { gte: weekAgo } } }),
     prisma.enquiry.count({ where: { status: "booked" } }),
@@ -12,7 +15,11 @@ export default async function Dashboard() {
     prisma.subscriber.count(),
     prisma.enquiry.findMany({ orderBy: { createdAt: "desc" }, take: 8 }),
     prisma.enquiry.aggregate({ _sum: { quotedTotal: true }, where: { status: { in: ["new", "contacted"] } } }),
+    prisma.agentRun.findFirst({ orderBy: { startedAt: "desc" } }),
+    prisma.priceWatch.count({ where: { active: true } }),
+    prisma.notification.groupBy({ by: ["kind"], _count: true, where: { createdAt: { gte: weekAgo } } }),
   ]);
+  const stats = lastRun?.stats ? (JSON.parse(lastRun.stats) as { new?: number; emailsSent?: number; aiWritten?: number }) : null;
 
   return (
     <>
@@ -24,6 +31,26 @@ export default async function Dashboard() {
         <div className="kpi"><b>{fmt(pipeline._sum.quotedTotal ?? 0)}</b><span>open quotes (new + contacted)</span></div>
       </div>
       <p className="muted" style={{ marginTop: -8 }}>{trips} trips on sale · {subs} newsletter subscribers</p>
+
+      <section className="agent-card">
+        <div>
+          <h2 style={{ fontSize: 18, margin: 0 }}>Riya's background agent</h2>
+          <p className="muted" style={{ margin: "4px 0 0" }}>
+            Checks every open trip daily at 08:00 IST: price drops, holds ending, visa deadlines, missing documents, sold-out dates and pre-trip checklists, then sends each traveller one note.
+          </p>
+          <p style={{ margin: "8px 0 0" }}>
+            {lastRun ? (
+              <>Last run {lastRun.startedAt.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" })}
+                {lastRun.error ? <span className="status closed" style={{ marginLeft: 8 }}>error</span> : !lastRun.finishedAt ? " (running)" : stats ? `: ${stats.new ?? 0} new alerts, ${stats.emailsSent ?? 0} emails${stats.aiWritten ? ` (${stats.aiWritten} written by Riya)` : ""}` : ""}
+              </>
+            ) : "Not run yet."}
+            {" · "}{watches} active price alerts
+          </p>
+          {alertsWeek.length > 0 && <p className="muted" style={{ margin: "4px 0 0" }}>This week: {alertsWeek.map((a) => `${a._count} ${KIND_LABEL[a.kind] ?? a.kind}`).join(", ")}</p>}
+          {lastRun?.error && <p className="muted" style={{ margin: "4px 0 0" }}>{lastRun.error}</p>}
+        </div>
+        <form action={runAgentsNow}><button className="btn sm">Run agents now</button></form>
+      </section>
 
       <div className="admin-head" style={{ marginTop: 18 }}><h2 style={{ fontSize: 20 }}>Latest enquiries</h2><Link className="btn sm" href="/admin/enquiries">See all</Link></div>
       {recent.length === 0 ? (

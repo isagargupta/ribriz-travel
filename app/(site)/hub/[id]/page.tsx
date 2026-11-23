@@ -10,6 +10,8 @@ import { missionView } from "@/lib/missions";
 import { getOwner } from "@/lib/owner";
 import { addDays, daysBetween, fmtDate, isoDate } from "@/lib/pricing";
 import { countryName } from "@/lib/visa";
+import Notices from "@/components/hub/Notices";
+import { markSeen, noticesFor } from "@/lib/notifications";
 
 export const metadata: Metadata = { title: "Trip hub", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -28,6 +30,8 @@ export default async function MissionPage({ params }: { params: Promise<{ id: st
   const pending = (await Promise.all(m.approvals.filter((a) => a.status === "pending").map((a) => pendingCard(owner, a.id)))).filter((c) => c !== null);
   const days = m.date ? daysBetween(isoDate(new Date()), m.date) : null;
   const visa = m.trip ? await visaChecklist(owner, m.id) : null;
+  const notices = await noticesFor(owner, { missionId: m.id, take: 6 });
+  await markSeen(owner, notices.filter((n) => n.unread).map((n) => n.id)); // shown as new this once
 
   return (
     <div className="wrap hub">
@@ -54,6 +58,7 @@ export default async function MissionPage({ params }: { params: Promise<{ id: st
               <HubApprovals cards={pending} />
             </section>
           )}
+          <Notices items={notices} />
           {visa && (
             <section className="panel" id="visa">
               <div className="hub-sec-head"><h2>Visa</h2></div>
@@ -80,7 +85,7 @@ export default async function MissionPage({ params }: { params: Promise<{ id: st
           <h2>What&apos;s happened</h2>
           <ol className="hub-timeline">
             {m.events.map((e, i) => (
-              <li key={i}><small>{ACTOR[e.actor] ?? e.actor} · {new Date(e.at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</small><p>{e.message}</p></li>
+              <li key={i}><small>{ACTOR[e.actor] ?? e.actor} · {new Date(e.at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" })}</small><p>{e.message}</p></li>
             ))}
           </ol>
           {m.trip && <Link className="btn block" href={`/trips/${m.trip.slug}${m.date ? `?date=${m.date}` : ""}`}>View trip details</Link>}

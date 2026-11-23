@@ -80,7 +80,7 @@ export async function chooseTrip(missionId: string, slug: string, date?: string 
   await setTask(missionId, "choose_trip", {
     status: dep ? "done" : "in_progress",
     note: dep ? `${trip.title}, ${fmtDate(dep.date)} – ${fmtDate(addDays(dep.date, trip.nights))}, ${fmt(price)} per adult` : `${trip.title}; choosing the date next`,
-    data: { slug: trip.slug, date: dep?.date ?? null },
+    data: { slug: trip.slug, date: dep?.date ?? null, perAdult: price },
   });
 
   // visa follows from the countries on the trip and the traveller's passport

@@ -8,7 +8,7 @@ const phone = () => process.env.NEXT_PUBLIC_PHONE || "";
 interface Built { subject: string; html: string; text: string }
 
 /** Shared layout: table-based so it renders the same in Gmail, Outlook and Apple Mail. */
-function layout(opts: { preheader: string; heading: string; body: string; cta?: { label: string; url: string } }): string {
+function layout(opts: { preheader: string; heading: string; body: string; cta?: { label: string; url: string }; unsubscribe?: string }): string {
   const s = site();
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${esc(opts.heading)}</title></head>
 <body style="margin:0;background:#f6f7ff;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#0b1240">
@@ -23,7 +23,7 @@ ${opts.cta ? `<table role="presentation" cellpadding="0" cellspacing="0" style="
 </td></tr>
 <tr><td style="padding:18px 28px;background:#eef0ff;font-size:12px;color:#5b628a;line-height:1.6">
 Ribriz Travel${phone() ? ` · ${esc(phone())}` : ""} · <a href="${s}" style="color:#0b4fc4">ribriztravel.com</a><br>
-You're receiving this because you used Ribriz Travel. Reply to this email to reach our team.
+You're receiving this because you used Ribriz Travel. Reply to this email to reach our team.${opts.unsubscribe ? `<br><a href="${opts.unsubscribe}" style="color:#5b628a">Stop trip updates from Riya</a>` : ""}
 </td></tr></table></td></tr></table></body></html>`;
 }
 
@@ -171,5 +171,31 @@ export function welcomeEmail(): Built {
       cta: { label: "See this week's deals", url: `${site()}/trips?deal=lm` },
     }),
     text: `You're on the Ribriz price-drop list. See this week's deals: ${site()}/trips?deal=lm`,
+  };
+}
+
+export interface DigestItem { title: string; body: string; url: string }
+
+/** Riya's daily note: an intro (AI-written or template) above the facts, which always come from code. */
+export function digestEmail(d: { name: string | null; subject: string; intro: string; items: DigestItem[]; unsubscribe: string }): Built {
+  const s = site();
+  const abs = (u: string) => (u.startsWith("http") ? u : s + u);
+  const hi = d.name ? `Hi ${esc(d.name.split(" ")[0])},` : "Hi,";
+  const cards = d.items.map((i) =>
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 12px;border:1px solid #dfe3fb;border-radius:14px"><tr><td style="padding:14px 16px">
+<div style="font-size:15px;font-weight:700;color:#0b1240;margin:0 0 6px">${esc(i.title)}</div>
+<div style="font-size:14px;line-height:1.55;color:#1c2558">${esc(i.body)}</div>
+<div style="margin-top:10px"><a href="${abs(i.url)}" style="font-size:14px;font-weight:700;color:#0b4fc4;text-decoration:none">Open →</a></div>
+</td></tr></table>`).join("");
+  return {
+    subject: d.subject,
+    html: layout({
+      preheader: d.items[0]?.title ?? d.subject,
+      heading: d.items.length > 1 ? `${d.items.length} updates on your trip` : "An update on your trip",
+      body: p(`${hi} ${esc(d.intro)}`) + cards + p("— Riya, your Ribriz travel agent"),
+      cta: { label: "Open my trip hub", url: `${s}/hub` },
+      unsubscribe: d.unsubscribe,
+    }),
+    text: `${hi} ${d.intro}\n\n${d.items.map((i) => `• ${i.title}\n  ${i.body}\n  ${abs(i.url)}`).join("\n\n")}\n\n— Riya, Ribriz Travel\nStop these updates: ${d.unsubscribe}`,
   };
 }

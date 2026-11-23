@@ -4,6 +4,7 @@ import { usePrefs } from "../Prefs";
 import PaxPicker from "../PaxPicker";
 import Money from "../ui/Money";
 import { useBooking } from "./BookingContext";
+import PriceAlert from "./PriceAlert";
 
 export default function BookingPanel() {
   const { trip, selected, q, setCheckout, setQuestion } = useBooking();
@@ -54,6 +55,7 @@ export default function BookingPanel() {
             {on ? "♥ Saved" : "♡ Save"}
           </button>
         </div>
+        <PriceAlert />
         {wa && (
           <a className="wa" href={`https://wa.me/${wa}?text=${encodeURIComponent(`Hi Ribriz, I'm looking at "${trip.title}"${selected ? ` leaving ${selected.date}` : ""}.`)}`} target="_blank" rel="noopener noreferrer">
             Chat with an expert on WhatsApp

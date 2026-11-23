@@ -8,6 +8,7 @@ export interface Email {
   replyTo?: string;
   /** stops duplicate sends if the same request is retried */
   idempotencyKey?: string;
+  headers?: Record<string, string>;
 }
 
 const FROM = () => process.env.EMAIL_FROM || "Ribriz Travel <hello@ribriztravel.com>";
@@ -38,6 +39,7 @@ export async function sendEmail(e: Email): Promise<{ ok: boolean; id?: string; e
       body: JSON.stringify({
         from: FROM(), to: [e.to].flat(), subject: e.subject, html: e.html, text: e.text,
         reply_to: e.replyTo ?? process.env.TEAM_EMAIL ?? undefined,
+        ...(e.headers ? { headers: e.headers } : {}),
       }),
     });
     const j = (await res.json().catch(() => ({}))) as { id?: string; message?: string };
