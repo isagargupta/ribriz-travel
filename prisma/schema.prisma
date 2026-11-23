@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// SQLite for local development. To use Postgres in production change
+// provider to "postgresql" and point DATABASE_URL at your database.
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Trip {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  title       String
+  dest        String
+  country     String
+  region      String
+  /// package | escorted | hotel | cruise
+  kind        String
+  /// comma-separated: honeymoon,family,group,beach,heritage,nature,city,luxury
+  themes      String
+  nights      Int
+  stars       Int
+  /// RO | BB | HB | FB | AI
+  board       String
+  /// price per adult in INR, flights from Mumbai included when `flight` is true
+  price       Int
+  was         Int?
+  rating      Float     @default(9)
+  reviews     Int       @default(0)
+  /// metres to the beach, null when not a beach stay
+  beach       Int?
+  flight      Boolean   @default(true)
+  freeCancel  Boolean   @default(true)
+  tourManager Boolean   @default(false)
+  easyVisa    Boolean   @default(true)
+  lastMinute  Boolean   @default(false)
+  earlyBird   Boolean   @default(false)
+  featured    Boolean   @default(false)
+  published   Boolean   @default(true)
+  image       String
+  /// one highlight per line
+  highlights  String
+  /// one itinerary day per line
+  days        String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  enquiries   Enquiry[]
+}
+
+model Enquiry {
+  id          String   @id @default(cuid())
+  /// hold | enquiry | custom
+  type        String
+  name        String
+  phone       String
+  email       String
+  tripId      String?
+  trip        Trip?    @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  tripTitle   String?
+  departure   String?
+  adults      Int      @default(2)
+  children    Int      @default(0)
+  fromCity    String?
+  quotedTotal Int?
+  message     String?
+  /// new | contacted | booked | closed
+  status      String   @default("new")
+  note        String?
+  createdAt   DateTime @default(now())
+}
+
+model Subscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}

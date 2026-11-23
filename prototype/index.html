@@ -1,0 +1,1043 @@
+<title>Ribriz Travel</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: glass header → full-bleed animated poster hero with floating search → destination ticker → bento "hot now" → deals with live countdown → style chips → cheapest-day calendar → filters + results → stories → services → footer. */
+:root{
+  --bg:#f6f7ff; --surface:#ffffff; --surface-2:#eef0ff; --line:#dfe3fb;
+  --fg:#0b1240; --muted:#5b628a;
+  --blue:#0b4fc4; --blue-ink:#ffffff; --logo-on-light:block; --logo-on-dark:none; --coral:#ff5a36; --sun:#ffc531; --sun-ink:#2a1c00; --mint:#0fb68f;
+  --good:#0b8f6c; --good-bg:#dcf7ee; --warn:#d2410f;
+  --header:rgba(246,247,255,.82);
+  --shadow:0 18px 40px -18px rgba(27,38,120,.35); --shadow-sm:0 4px 14px -6px rgba(27,38,120,.25);
+  --f-display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --f-body:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"DM Mono",ui-monospace,Menlo,monospace;
+  --r:18px;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.55;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:60;background:var(--bg)}
+h1,h2,h3,h4{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.08;letter-spacing:-.02em}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px;border-radius:6px}
+.wrap{max-width:1280px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.kicker{display:inline-flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--coral)}
+.kicker::before{content:"";width:18px;height:2px;background:currentColor;border-radius:2px}
+
+/* header */
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:var(--header);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;align-items:center;gap:18px;padding-block:12px}
+.logo{display:flex;align-items:center;gap:10px;font-family:var(--f-display);font-weight:800;font-size:20px;color:var(--fg);text-decoration:none;letter-spacing:-.03em}
+.logo .mark{width:34px;height:34px;border-radius:11px;background:conic-gradient(from 200deg,var(--coral),var(--sun),var(--mint),var(--blue),var(--coral));display:grid;place-items:center;color:#fff;font-size:17px;box-shadow:var(--shadow-sm)}
+.logo img{height:40px;width:auto;display:block}
+.logo .lg-light{display:var(--logo-on-light)}
+.logo .lg-dark{display:var(--logo-on-dark)}
+.logo .word{font-family:var(--f-body);font-weight:800;font-size:11px;letter-spacing:.32em;color:var(--blue);border-left:2px solid var(--line);padding-left:10px;line-height:1.1}
+footer .logo img{height:48px}
+footer .logo .word{color:var(--blue);border-color:var(--line)}
+.logo small{font-family:var(--f-body);font-weight:600;font-size:11px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;display:block;margin-top:-2px}
+nav.main{display:flex;gap:2px;flex:1;justify-content:center;flex-wrap:wrap}
+nav.main a{color:var(--fg);text-decoration:none;padding:8px 14px;border-radius:999px;font-weight:600;font-size:14px;transition:background .2s}
+nav.main a:hover{background:var(--surface-2)}
+nav.main a.hot::after{content:"HOT";font-size:9px;font-weight:800;background:var(--coral);color:#fff;padding:1px 5px;border-radius:4px;margin-left:6px;vertical-align:2px}
+.tools{display:flex;gap:8px;align-items:center}
+.tools select,.pill-btn{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:600}
+.badge-count{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--coral);color:#fff;font-size:11px;font-weight:800;margin-left:6px}
+@media (max-width:900px){nav.main{display:none}.logo{flex:1}}
+
+/* hero */
+.hero{position:relative;overflow:hidden;isolation:isolate;min-height:600px;display:flex;align-items:flex-start}
+.hero-art{position:absolute;inset:0;z-index:-1}
+.hero-art{background:#0b1240}
+.hero-art .slide{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transform:scale(1.08);transition:opacity 1.4s ease,transform 9s linear}
+.hero-art .slide.on{opacity:1;transform:scale(1)}
+.hero-art::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(6,10,40,.55) 0%,rgba(6,10,40,.25) 45%,rgba(6,10,40,0) 75%),linear-gradient(0deg,rgba(6,10,40,.3),transparent 35%)}
+.hero-art .flight{position:absolute;inset:0;width:100%;height:100%;z-index:1}
+.hero-dots{display:flex;gap:6px;margin-top:26px}
+.hero-dots button{width:28px;height:4px;border-radius:2px;border:0;background:rgba(255,255,255,.4);padding:0;transition:width .3s}
+.hero-dots button.on{background:#fff;width:44px}
+.hero .wrap{width:100%;padding-block:64px 150px}
+.hero h1{font-size:clamp(38px,6.4vw,84px);font-weight:800;max-width:13ch;color:#fff;text-shadow:0 4px 30px rgba(0,0,0,.35);letter-spacing:-.04em}
+.rot{display:inline-block;position:relative;color:#fff;background:var(--coral);padding:0 .22em;border-radius:.18em;transform:rotate(-2deg);box-shadow:0 8px 0 -2px #ffc531}
+.rot span{display:inline-block;animation:rotIn .5s cubic-bezier(.2,.9,.3,1.3)}
+@keyframes rotIn{from{transform:translateY(60%) rotate(4deg);opacity:0}to{transform:none;opacity:1}}
+.hero p.lede{max-width:46ch;color:#e8ecff;font-size:18px;font-weight:500;margin:22px 0 0}
+.hero-badges{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.hero-badges span{background:rgba(255,255,255,.75);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:#0b1240;border-radius:999px;padding:7px 14px;font-size:13px;font-weight:700;display:flex;gap:7px;align-items:center}
+.hero-badges b{color:#2b4bff}
+.cloud{animation:drift linear infinite}
+@keyframes drift{from{transform:translateX(-30%)}to{transform:translateX(130%)}}
+.rays{transform-origin:1090px 210px;animation:spin 60s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.wave{animation:wave 7s ease-in-out infinite alternate}
+.wave.b{animation-duration:9s}
+@keyframes wave{to{transform:translateX(-60px)}}
+.boat{animation:bob 4s ease-in-out infinite alternate}
+@keyframes bob{to{transform:translate(18px,4px) rotate(-2deg)}}
+
+/* console */
+.console-wrap{position:relative;z-index:5;margin-top:-110px}
+.console{background:var(--surface);border-radius:24px;box-shadow:var(--shadow);border:1px solid var(--line)}
+.console-tabs{display:flex;gap:6px;padding:12px 12px 0;overflow-x:auto}
+.console-tabs button{background:var(--surface-2);border:0;padding:10px 16px;font-weight:700;color:var(--muted);border-radius:999px;white-space:nowrap;font-size:14px;display:flex;gap:8px;align-items:center;transition:all .2s}
+.console-tabs button[aria-selected="true"]{background:var(--fg);color:var(--bg)}
+.console form{display:grid;grid-template-columns:1.1fr 1.4fr 1.15fr .9fr 1fr auto;gap:8px;padding:12px}
+.field{display:flex;flex-direction:column;gap:2px;padding:10px 14px;border-radius:14px;background:var(--surface-2);min-width:0;position:relative;border:2px solid transparent;transition:border-color .2s}
+.field:focus-within{border-color:var(--blue)}
+.field label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.field input,.field select,.field .pick{border:0;background:transparent;padding:2px 0;font-size:15px;font-weight:700;width:100%;min-width:0;text-align:left}
+.field input:focus,.field select:focus{outline:none}
+.flex-chips{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
+.flex-chips button{font-size:11px;border:1px solid var(--line);background:var(--surface);border-radius:20px;padding:1px 8px;color:var(--muted);font-weight:600}
+.flex-chips button.on{background:var(--blue);color:var(--blue-ink);border-color:var(--blue)}
+.go{background:var(--coral);color:#fff;border:0;border-radius:14px;font-weight:800;padding:0 30px;font-size:16px;display:flex;gap:8px;align-items:center;justify-content:center;transition:transform .15s,box-shadow .15s;box-shadow:0 8px 20px -8px var(--coral)}
+.go:hover{transform:translateY(-2px);box-shadow:0 14px 26px -10px var(--coral)}
+.pax-pop{position:absolute;top:calc(100% + 8px);right:0;z-index:30;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:16px;width:290px;display:grid;gap:12px}
+.pax-row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pax-row small{display:block;color:var(--muted);font-size:12px}
+.stepper{display:flex;align-items:center;gap:10px}
+.stepper button{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--surface-2);font-weight:800}
+.child-ages{display:flex;gap:6px;flex-wrap:wrap}
+.child-ages select{border:1px solid var(--line);border-radius:6px;padding:4px;background:var(--surface)}
+.quick{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:0 16px 14px;font-size:13px;color:var(--muted)}
+.quick button{border:1px dashed var(--line);background:none;border-radius:999px;padding:4px 12px;font-weight:600;color:var(--fg);font-size:13px}
+.quick button:hover{border-style:solid;border-color:var(--blue);color:var(--blue)}
+@media (max-width:1020px){.console form{grid-template-columns:1fr 1fr}.go{grid-column:1/-1;padding:16px}}
+@media (max-width:520px){.console form{grid-template-columns:1fr}.pax-pop{left:0;right:auto}}
+
+/* ticker */
+.ticker{margin-top:44px;background:var(--blue);color:#fff;overflow:hidden;transform:rotate(-1.2deg);margin-inline:-20px}
+.ticker .track{display:flex;gap:42px;padding-block:14px;width:max-content;animation:tick 45s linear infinite}
+.ticker:hover .track{animation-play-state:paused}
+.ticker span{font-family:var(--f-display);font-weight:700;font-size:18px;white-space:nowrap;display:flex;gap:12px;align-items:center}
+.ticker span i{font-style:normal;font-family:var(--f-mono);font-size:14px;font-weight:500;color:var(--sun)}
+.ticker span::after{content:"✦";color:var(--coral);margin-left:30px}
+@keyframes tick{to{transform:translateX(-50%)}}
+
+/* sections */
+section.band{padding-block:64px}
+.sec-head{display:flex;justify-content:space-between;align-items:end;gap:18px;margin-bottom:26px;flex-wrap:wrap}
+.sec-head h2{font-size:clamp(26px,3.6vw,42px);font-weight:800;margin-top:8px}
+.sec-head p{margin:8px 0 0;color:var(--muted);max-width:56ch}
+.seg{display:inline-flex;background:var(--surface-2);border-radius:999px;padding:4px;gap:2px}
+.seg button{border:0;background:none;padding:8px 16px;border-radius:999px;font-weight:700;font-size:13px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:var(--shadow-sm)}
+
+/* bento */
+.bento{display:grid;grid-template-columns:1.5fr 1fr 1fr;grid-template-rows:260px 260px;gap:16px}
+.tile{position:relative;border-radius:var(--r);overflow:hidden;border:0;padding:0;text-align:left;color:#fff;isolation:isolate;box-shadow:var(--shadow-sm)}
+.tile:first-child{grid-row:span 2}
+.tile .art{position:absolute;inset:0;z-index:-2;transition:transform .6s cubic-bezier(.2,.8,.2,1)}
+.tile:hover .art{transform:scale(1.07)}
+.tile .art svg{width:100%;height:100%;display:block}
+.tile::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,transparent 35%,rgba(6,10,40,.78))}
+.tile .t-in{position:absolute;left:20px;right:20px;bottom:18px;display:grid;gap:4px}
+.tile h3{font-size:clamp(22px,2.6vw,34px);font-weight:800;text-shadow:0 2px 12px rgba(0,0,0,.25)}
+.tile:first-child h3{font-size:clamp(30px,4vw,54px)}
+.tile .sub{font-size:13px;opacity:.9;font-weight:600}
+.tile .from{position:absolute;top:16px;right:16px;background:#fff;color:#0b1240;border-radius:999px;padding:6px 12px;font-weight:800;font-size:13px;box-shadow:var(--shadow-sm)}
+.tile .from em{font-style:normal;font-weight:600;color:#5b628a;font-size:11px;margin-right:4px}
+@media (max-width:900px){.bento{grid-template-columns:1fr 1fr;grid-template-rows:none;grid-auto-rows:200px}.tile:first-child{grid-column:1/-1;grid-row:auto;height:280px}}
+@media (max-width:520px){.bento{grid-template-columns:1fr}}
+
+/* deals */
+.timer{display:flex;gap:6px;align-items:center;font-weight:700;font-size:13px;color:var(--muted)}
+.timer b{font-family:var(--f-mono);background:var(--fg);color:var(--bg);border-radius:8px;padding:6px 8px;font-size:15px;min-width:36px;text-align:center}
+.rail{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(290px,1fr);gap:18px;overflow-x:auto;padding:4px 4px 16px;scroll-snap-type:x mandatory;scrollbar-width:thin}
+.rail>*{scroll-snap-align:start}
+
+/* themes */
+.themes{display:grid;grid-template-columns:repeat(6,1fr);gap:14px}
+.theme-tile{border:0;border-radius:var(--r);padding:20px 16px;text-align:left;display:grid;gap:10px;color:#0b1240;transition:transform .2s,box-shadow .2s;position:relative;overflow:hidden}
+.theme-tile:hover{transform:translateY(-4px) rotate(-1deg);box-shadow:var(--shadow)}
+.theme-tile.on{outline:3px solid var(--fg);outline-offset:3px}
+.theme-tile b{font-family:var(--f-display);font-size:16px;font-weight:700}
+.theme-tile span{font-size:12px;font-weight:600;opacity:.75}
+.theme-tile .ico{width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.6);display:grid;place-items:center}
+.theme-tile .n{position:absolute;right:12px;top:12px;font-family:var(--f-mono);font-size:12px;font-weight:500;opacity:.7}
+@media (max-width:1000px){.themes{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:520px){.themes{grid-template-columns:repeat(2,1fr)}}
+
+/* calendar */
+.cal-card{background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:22px}
+.cal{display:grid;grid-template-columns:repeat(14,minmax(62px,1fr));gap:8px;overflow-x:auto;padding:4px 2px 8px;align-items:end}
+.cal button{border:0;background:none;padding:0;display:grid;gap:6px;text-align:center;justify-items:center}
+.cal .col{width:100%;border-radius:12px 12px 6px 6px;background:var(--surface-2);position:relative;transition:background .2s}
+.cal .col::after{content:"";position:absolute;left:0;right:0;bottom:0;height:var(--h);border-radius:12px 12px 6px 6px;background:linear-gradient(180deg,var(--blue),color-mix(in srgb,var(--blue) 55%,var(--mint)));opacity:.85;transition:height .4s}
+.cal button.cheap .col::after{background:linear-gradient(180deg,var(--mint),var(--good))}
+.cal button:hover .col{background:var(--line)}
+.cal .p{font-family:var(--f-mono);font-size:11px;font-weight:500}
+.cal .d{font-size:11px;color:var(--muted);font-weight:600;line-height:1.2}
+.cal .n{font-family:var(--f-display);font-size:18px;font-weight:700;line-height:1}
+.cal button.cheap .p{color:var(--good)}
+.cal button.sel .n{background:var(--coral);color:#fff;border-radius:10px;padding:4px 8px}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-top:8px;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+
+/* results */
+.results{display:grid;grid-template-columns:270px 1fr;gap:28px;align-items:start}
+@media (max-width:960px){.results{grid-template-columns:1fr}.filters{position:static!important;max-height:none!important}}
+.filters{position:sticky;top:calc(env(safe-area-inset-top,0px) + 84px);background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:20px;display:grid;gap:20px;max-height:calc(100vh - 110px);overflow:auto}
+.filters h4{font-size:12px;font-family:var(--f-body);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;font-weight:700}
+.chk{display:flex;align-items:center;gap:10px;font-size:14px;padding:4px 0;cursor:pointer;font-weight:500}
+.chk input{accent-color:var(--blue);width:17px;height:17px}
+.chk .ct{margin-left:auto;color:var(--muted);font-family:var(--f-mono);font-size:12px}
+input[type=range]{width:100%;accent-color:var(--coral)}
+.stars-row{display:flex;gap:6px;flex-wrap:wrap}
+.stars-row button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:700}
+.stars-row button.on{background:var(--sun);color:var(--sun-ink);border-color:var(--sun)}
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.toolbar strong{font-family:var(--f-display);font-size:20px}
+.toolbar select{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px;font-weight:600}
+.active-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.active-chips button{border:0;background:var(--blue);color:var(--blue-ink);border-radius:999px;padding:4px 12px;font-size:12px;font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px}
+
+/* cards */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:22px;overflow:hidden;display:flex;flex-direction:column;transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s}
+.card:hover{transform:translateY(-6px);box-shadow:var(--shadow)}
+.card .art{position:relative;aspect-ratio:4/3;max-width:100%;overflow:hidden}
+.card .art .pic{position:absolute;inset:0;transition:transform .6s cubic-bezier(.2,.8,.2,1)}
+.card:hover .art .pic{transform:scale(1.08)}
+.card .art svg{display:block;width:100%;height:100%}
+.tagline{position:absolute;left:12px;top:12px;display:flex;gap:6px;flex-wrap:wrap;z-index:2}
+.tag{font-size:11px;font-weight:800;padding:4px 9px;border-radius:999px;letter-spacing:.02em}
+.tag.lm{background:#ff5a36;color:#fff}
+.tag.eb{background:#ffc531;color:#2a1c00}
+.tag.tm{background:#fff;color:#0b1240}
+.heart{position:absolute;right:12px;top:12px;z-index:2;width:38px;height:38px;border-radius:50%;border:0;background:rgba(255,255,255,.95);display:grid;place-items:center;color:#0b1240;transition:transform .2s}
+.heart:hover{transform:scale(1.12)}
+.heart.on{color:#ff3b5c}
+.heart.on svg{animation:pop .35s}
+@keyframes pop{50%{transform:scale(1.4)}}
+.save-badge{position:absolute;left:12px;bottom:12px;z-index:2;background:#0fb68f;color:#fff;font-weight:800;font-size:12px;padding:4px 10px;border-radius:999px}
+.card .body{padding:16px 18px 18px;display:flex;flex-direction:column;gap:10px;flex:1}
+.loc{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.card h3{font-size:17px;font-weight:700;line-height:1.2}
+.meta{display:flex;gap:6px;flex-wrap:wrap}
+.pill{font-size:12px;background:var(--surface-2);border-radius:999px;padding:3px 10px;color:var(--fg);font-weight:600;white-space:nowrap}
+.pill.good{background:var(--good-bg);color:var(--good)}
+.rating{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+.score{background:var(--blue);color:var(--blue-ink);font-weight:800;border-radius:8px;padding:3px 7px;font-family:var(--f-mono);font-size:12px}
+.priceblock{display:flex;justify-content:space-between;align-items:end;gap:10px;margin-top:auto;padding-top:12px;border-top:1px solid var(--line)}
+.price{font-family:var(--f-display);font-size:23px;font-weight:800;letter-spacing:-.03em;line-height:1.1}
+.price small{font-family:var(--f-body);font-size:12px;font-weight:600;color:var(--muted);letter-spacing:0}
+.was{font-family:var(--f-mono);font-size:12px;color:var(--muted);text-decoration:line-through}
+.emi{font-size:12px;color:var(--blue);font-weight:700}
+.go-btn{width:44px;height:44px;border-radius:50%;border:0;background:var(--fg);color:var(--bg);display:grid;place-items:center;flex:none;transition:transform .2s,background .2s}
+.card:hover .go-btn{background:var(--coral);color:#fff;transform:rotate(-45deg)}
+.cmp{font-size:12px;display:flex;align-items:center;gap:6px;color:var(--muted);font-weight:600;cursor:pointer}
+.cmp input{accent-color:var(--blue)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:10px 16px;font-weight:700;font-size:14px;transition:transform .15s}
+.btn:hover{transform:translateY(-1px)}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn.hot{background:var(--coral);color:#fff;border-color:var(--coral)}
+.empty{padding:48px;text-align:center;border:2px dashed var(--line);border-radius:22px;color:var(--muted)}
+
+/* stories */
+.stories{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.story{border-radius:22px;padding:24px;display:grid;gap:14px;color:#0b1240;position:relative}
+.story q{font-family:var(--f-display);font-size:18px;font-weight:500;line-height:1.35;quotes:none}
+.story .who{display:flex;gap:12px;align-items:center;font-size:13px;font-weight:700}
+.story .av{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-weight:800;color:#fff;background:#0b1240}
+.story .who span{display:block;font-weight:500;opacity:.75}
+@media (max-width:900px){.stories{grid-template-columns:1fr}}
+
+/* stats + services */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:40px}
+.stat{border-top:3px solid var(--fg);padding-top:14px}
+.stat b{display:block;font-family:var(--f-display);font-size:clamp(30px,4vw,48px);font-weight:800;letter-spacing:-.04em}
+.stat span{color:var(--muted);font-weight:600;font-size:14px}
+.services{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.svc{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:22px;display:grid;gap:10px;align-content:start;transition:transform .2s,box-shadow .2s}
+.svc:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
+.svc .ico{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;color:#0b1240}
+.svc h3{font-size:18px}
+.svc p{margin:0;color:var(--muted);font-size:14px}
+.svc .rate{font-family:var(--f-mono);font-size:12px;color:var(--blue)}
+@media (max-width:900px){.services,.stats{grid-template-columns:1fr 1fr}}
+@media (max-width:520px){.services{grid-template-columns:1fr}}
+
+/* newsletter */
+.cta{border-radius:28px;background:var(--blue);color:#fff;padding:40px;display:grid;grid-template-columns:1.3fr 1fr;gap:24px;align-items:center;position:relative;overflow:hidden;isolation:isolate}
+.cta::before{content:"";position:absolute;width:420px;height:420px;border-radius:50%;background:var(--coral);right:-120px;top:-180px;z-index:-1;opacity:.9}
+.cta::after{content:"";position:absolute;width:220px;height:220px;border-radius:50%;background:var(--sun);right:120px;bottom:-140px;z-index:-1}
+.cta h2{font-size:clamp(24px,3.2vw,38px);color:#fff}
+.cta p{margin:10px 0 0;opacity:.9}
+.cta form{display:flex;gap:8px;background:#fff;border-radius:999px;padding:6px}
+.cta input{flex:1;min-width:0;border:0;background:none;padding:10px 14px;color:#0b1240;font-weight:600}
+.cta input:focus{outline:none}
+.cta button{background:#0b1240;color:#fff;border:0;border-radius:999px;padding:10px 20px;font-weight:800}
+@media (max-width:800px){.cta{grid-template-columns:1fr;padding:28px}}
+
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgba(5,8,30,.6);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:70}
+.sheet{position:fixed;top:0;right:0;bottom:0;width:min(740px,100%);background:var(--bg);z-index:80;overflow-y:auto;box-shadow:-20px 0 50px rgba(0,0,0,.3);padding-top:env(safe-area-inset-top,0px);padding-right:env(safe-area-inset-right,0px);animation:slide .35s cubic-bezier(.2,.8,.2,1)}
+@keyframes slide{from{transform:translateX(40px);opacity:.4}}
+.sheet .art{aspect-ratio:21/9;position:relative;overflow:hidden}
+.sheet .art svg{width:100%;height:100%;display:block}
+.ph{display:block;width:100%;height:100%;object-fit:cover;background:var(--surface-2)}
+.sheet .close{position:absolute;right:16px;top:16px;width:42px;height:42px;border-radius:50%;border:0;background:#fff;color:#0b1240;font-size:22px;line-height:1;box-shadow:var(--shadow-sm)}
+.sheet .inner{padding:24px 26px 40px}
+.sheet h2{font-size:clamp(24px,3vw,32px);margin:8px 0 10px}
+.tabs{display:flex;gap:6px;margin:18px 0;overflow-x:auto}
+.tabs button{border:0;background:var(--surface-2);padding:9px 14px;font-weight:700;color:var(--muted);border-radius:999px;white-space:nowrap;font-size:13px}
+.tabs button[aria-selected="true"]{background:var(--fg);color:var(--bg)}
+.day{display:grid;grid-template-columns:56px 1fr;gap:14px;padding:12px 0;position:relative}
+.day .dn{font-family:var(--f-display);font-size:13px;font-weight:700;background:var(--surface-2);border-radius:12px;display:grid;place-items:center;height:44px}
+.day b{display:block;font-size:15px}
+.incl{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;padding:0;list-style:none}
+.incl li{display:flex;gap:8px;font-size:14px;font-weight:500}
+.incl li .y{color:var(--good);font-weight:800}
+.incl li.no{color:var(--muted)}
+.breakdown{width:100%;border-collapse:collapse;font-size:14px}
+.breakdown td{padding:9px 0;border-bottom:1px solid var(--line)}
+.breakdown td:last-child{text-align:right;font-family:var(--f-mono)}
+.breakdown tr.total td{font-weight:800;font-size:16px;border-bottom:0;border-top:2px solid var(--fg)}
+.emi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.emi-grid button{border:2px solid var(--line);background:var(--surface);border-radius:14px;padding:12px 6px;display:grid;gap:2px;text-align:center}
+.emi-grid button.on{border-color:var(--blue)}
+.emi-grid .m{font-size:12px;color:var(--muted);font-weight:600}
+.emi-grid .v{font-family:var(--f-mono);font-weight:500}
+.emi-grid .z{font-size:10px;color:var(--good);font-weight:800;letter-spacing:.06em}
+.dep-dates{display:flex;gap:8px;flex-wrap:wrap}
+.dep-dates button{border:2px solid var(--line);background:var(--surface);border-radius:14px;padding:10px 12px;display:grid;text-align:left;font-size:13px}
+.dep-dates button.on{border-color:var(--coral);background:color-mix(in srgb,var(--coral) 10%,var(--surface))}
+.dep-dates .seats{font-size:11px;color:var(--warn);font-weight:700}
+.sheet-foot{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:14px 26px calc(14px + env(safe-area-inset-bottom,0px));display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-grid label{display:grid;gap:4px;font-size:13px;color:var(--muted);font-weight:600}
+.form-grid input{border:2px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 12px;color:var(--fg)}
+.form-grid input:focus{border-color:var(--blue);outline:none}
+@media (max-width:520px){.form-grid,.incl{grid-template-columns:1fr}.emi-grid{grid-template-columns:1fr 1fr}}
+.reviews{display:grid;gap:10px}
+.review{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px}
+.review p{margin:6px 0 0;font-size:14px}
+.bars{display:grid;gap:8px;margin:14px 0}
+.bars div{display:grid;grid-template-columns:120px 1fr 34px;gap:10px;align-items:center;font-size:13px;font-weight:600}
+.bars i{display:block;height:8px;border-radius:4px;background:var(--surface-2);position:relative;overflow:hidden}
+.bars i::after{content:"";position:absolute;inset:0;width:var(--w);background:linear-gradient(90deg,var(--blue),var(--mint));border-radius:4px}
+
+/* compare tray */
+.tray{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:60;background:var(--fg);color:var(--bg);border-radius:999px;box-shadow:var(--shadow);width:min(860px,calc(100% - 24px))}
+.tray .in{display:flex;align-items:center;gap:12px;padding:10px 10px 10px 22px;flex-wrap:wrap}
+.tray .slots{display:flex;gap:8px;flex:1;flex-wrap:wrap}
+.tray .slot{background:color-mix(in srgb,var(--bg) 14%,transparent);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600;display:flex;gap:8px;align-items:center}
+.tray .slot button{background:none;border:0;color:inherit;opacity:.7}
+.cmp-table-wrap{overflow-x:auto}
+.cmp-table{border-collapse:collapse;width:100%;min-width:520px;font-size:14px}
+.cmp-table th,.cmp-table td{padding:12px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.cmp-table th{font-weight:700;color:var(--muted);width:150px}
+.cmp-table td.best{color:var(--good);font-weight:800}
+
+.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--coral);color:#fff;padding:12px 20px;border-radius:999px;z-index:100;font-weight:700;box-shadow:var(--shadow);animation:rise .3s}
+@keyframes rise{from{transform:translate(-50%,20px);opacity:0}}
+
+footer{background:#e9efff;color:var(--fg);border-top:1px solid var(--line);margin-top:64px;position:relative;overflow:hidden}
+footer .big{font-family:var(--f-display);font-weight:800;font-size:clamp(60px,15vw,210px);letter-spacing:-.06em;line-height:.8;color:#d3ddff;white-space:nowrap;padding-top:30px}
+footer .wrap.cols{padding-block:40px;display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:28px}
+footer h4{font-family:var(--f-body);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);margin-bottom:12px}
+footer a{display:block;color:var(--fg);opacity:.82;text-decoration:none;font-size:14px;padding:3px 0}
+footer a:hover{opacity:1;color:var(--blue)}
+footer p{opacity:.72;font-size:13px;max-width:42ch;margin:0 0 8px}
+@media (max-width:760px){footer .wrap.cols{grid-template-columns:1fr 1fr}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="#top" aria-label="Ribriz Travel home">
+      <img class="lg-light" src="img/logo.png" alt="Ribriz" width="98" height="40">
+      <img class="lg-dark" src="img/logo-light.png" alt="Ribriz" width="98" height="40">
+      <span class="word">TRAVEL</span>
+    </a>
+    <nav class="main" aria-label="Main">
+      <a href="#deals" class="hot">Deals</a>
+      <a href="#search-results" data-nav="escorted">Group tours</a>
+      <a href="#search-results" data-nav="India">India</a>
+      <a href="#search-results" data-nav="honeymoon">Honeymoon</a>
+      <a href="#services">Visa &amp; forex</a>
+    </nav>
+    <div class="tools">
+      <select id="currency" aria-label="Currency">
+        <option value="INR">₹ INR</option>
+        <option value="EUR">€ EUR</option>
+        <option value="PLN">zł PLN</option>
+      </select>
+      <button class="pill-btn" id="wishBtn" aria-label="Saved trips">♥<span class="badge-count" id="wishCount">0</span></button>
+    </div>
+  </div>
+</header>
+
+<section class="hero" id="top">
+  <div class="hero-art" aria-hidden="true">
+    <img src="img/hero.jpg" class="slide on" data-w="somewhere sunny" alt="">
+    <img src="img/hero-maldives.jpg" class="slide" data-w="the Maldives" alt="">
+    <img src="img/hero-bali.jpg" class="slide" data-w="Bali" alt="">
+    <img src="img/hero-kashmir.jpg" class="slide" data-w="Kashmir" alt="">
+    <img src="img/hero-japan.jpg" class="slide" data-w="Japan" alt="">
+    <svg class="flight" viewBox="0 0 1440 640" preserveAspectRatio="xMidYMid slice">
+      <path id="fp" d="M-80 260 C300 160 700 120 1600 60" fill="none"/>
+      <path d="M-80 260 C300 160 700 120 1600 60" stroke="#fff" stroke-width="2" stroke-dasharray="2 10" fill="none" opacity=".7"/>
+      <g><path d="M0 -7 L26 0 L0 7 L5 0z M7 -2 L-2 -16 L5 -16 L16 -2z M7 2 L-2 16 L5 16 L16 2z" fill="#fff"/><animateMotion dur="20s" repeatCount="indefinite" rotate="auto"><mpath href="#fp"/></animateMotion></g>
+    </svg>
+  </div>
+  <div class="wrap">
+    <span class="kicker" style="color:#ffc531">Holidays from India &amp; Europe</span>
+    <h1 style="margin-top:14px">Your next trip is <span class="rot" id="rot"><span>somewhere sunny</span></span></h1>
+    <p class="lede">Flights, stays, transfers and a local guide in one honest price. Find the cheapest week, compare trips side by side, pay in easy EMIs.</p>
+    <div class="hero-badges">
+      <span>★ <b>4.7</b> from 38,400 travellers</span>
+      <span><b>0%</b> EMI on 3 &amp; 6 months</span>
+      <span><b>24×7</b> on-trip help</span>
+    </div>
+    <div class="hero-dots" id="heroDots"></div>
+  </div>
+</section>
+
+<div class="wrap console-wrap">
+  <div class="console">
+    <div class="console-tabs" role="tablist" aria-label="Trip type">
+      <button role="tab" aria-selected="true" data-kind="all">✦ All holidays</button>
+      <button role="tab" aria-selected="false" data-kind="package">✈ Flight + hotel</button>
+      <button role="tab" aria-selected="false" data-kind="escorted">⚑ Group tours</button>
+      <button role="tab" aria-selected="false" data-kind="hotel">⌂ Hotel only</button>
+      <button role="tab" aria-selected="false" data-kind="cruise">⚓ Cruises</button>
+    </div>
+    <form id="searchForm" autocomplete="off">
+      <div class="field">
+        <label for="from">Flying from</label>
+        <select id="from">
+          <optgroup label="India"><option>Mumbai</option><option>Delhi</option><option>Bengaluru</option><option>Chennai</option><option>Kolkata</option><option>Ahmedabad</option></optgroup>
+          <optgroup label="Europe"><option>Warsaw</option><option>Kraków</option><option>Katowice</option><option>Gdańsk</option></optgroup>
+        </select>
+      </div>
+      <div class="field">
+        <label for="dest">Where to</label>
+        <input id="dest" list="destList" placeholder="Anywhere · Bali, Kerala, Turkey…">
+        <datalist id="destList"></datalist>
+      </div>
+      <div class="field">
+        <label for="date">Departure</label>
+        <input id="date" type="date">
+        <div class="flex-chips" id="flexChips" aria-label="Date flexibility">
+          <button type="button" data-flex="0">Exact</button>
+          <button type="button" data-flex="3" class="on">±3 days</button>
+          <button type="button" data-flex="7">±7 days</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="nights">Nights</label>
+        <select id="nights">
+          <option value="any" selected>Any length</option>
+          <option value="3-5">3 – 5</option>
+          <option value="6-8">6 – 8</option>
+          <option value="9-12">9 – 12</option>
+          <option value="13-30">13+</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="paxBtn">Travellers</label>
+        <button type="button" class="pick" id="paxBtn" aria-expanded="false">2 adults</button>
+        <div class="pax-pop" id="paxPop" hidden>
+          <div class="pax-row"><div>Adults<small>12+ years</small></div><div class="stepper"><button type="button" data-pax="ad-" aria-label="Fewer adults">−</button><span class="mono" id="adN">2</span><button type="button" data-pax="ad+" aria-label="More adults">+</button></div></div>
+          <div class="pax-row"><div>Children<small>0–11 years, age on return</small></div><div class="stepper"><button type="button" data-pax="ch-" aria-label="Fewer children">−</button><span class="mono" id="chN">0</span><button type="button" data-pax="ch+" aria-label="More children">+</button></div></div>
+          <div class="child-ages" id="childAges"></div>
+          <button type="button" class="btn primary" id="paxDone">Done</button>
+        </div>
+      </div>
+      <button class="go" type="submit"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>Search</button>
+    </form>
+    <div class="quick">Popular:
+      <button type="button" data-quick="Bali">Bali</button>
+      <button type="button" data-quick="Maldives">Maldives</button>
+      <button type="button" data-quick="Kashmir">Kashmir</button>
+      <button type="button" data-quick="Antalya">Turkey</button>
+      <button type="button" data-quick="Europe">Europe tour</button>
+      <button type="button" data-quick="Dubai">Dubai</button>
+    </div>
+  </div>
+</div>
+
+<div class="ticker" aria-label="Starting prices"><div class="track" id="ticker"></div></div>
+
+<section class="band" id="hot">
+  <div class="wrap">
+    <div class="sec-head">
+      <div><span class="kicker">Trending this month</span><h2>Where everyone's going</h2></div>
+      <p>The five most-searched trips from India and Poland this week. Tap one to see the full plan.</p>
+    </div>
+    <div class="bento" id="bento"></div>
+  </div>
+</section>
+
+<section class="band" id="deals" style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head">
+      <div><span class="kicker">Deals</span><h2 id="dealTitle">Last-minute seats</h2><p id="dealSub">Departures in the next 21 days, priced to fill the last rooms.</p></div>
+      <div style="display:grid;gap:12px;justify-items:end">
+        <div class="seg" role="group" aria-label="Deal type">
+          <button aria-pressed="true" data-deal="lm">Last minute</button>
+          <button aria-pressed="false" data-deal="eb">Early booking</button>
+        </div>
+        <div class="timer" aria-live="off">Today's prices end in <b id="tH">00</b>:<b id="tM">00</b>:<b id="tS">00</b></div>
+      </div>
+    </div>
+    <div class="rail" id="dealRail"></div>
+  </div>
+</section>
+
+<section class="band" style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head"><div><span class="kicker">Travel styles</span><h2>How do you like to travel?</h2></div><p>Pick a style and the trips below update.</p></div>
+    <div class="themes" id="themes"></div>
+  </div>
+</section>
+
+<section class="band" style="padding-top:0">
+  <div class="wrap">
+    <div class="cal-card">
+      <div class="sec-head" style="margin-bottom:16px">
+        <div><span class="kicker">Price calendar</span><h2 style="font-size:clamp(22px,2.8vw,30px)">Cheapest days to leave</h2><p id="calSub"></p></div>
+      </div>
+      <div class="cal" id="cal"></div>
+      <div class="legend"><span><i style="background:var(--mint)"></i>3 cheapest days</span><span><i style="background:var(--blue)"></i>Lowest price per person that day (taller = pricier)</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="search-results" style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head"><div><span class="kicker">All trips</span><h2>Find your trip</h2></div></div>
+  </div>
+  <div class="wrap results">
+    <aside class="filters" aria-label="Filters">
+      <div>
+        <h4>Budget per person</h4>
+        <input type="range" id="budget" min="20000" max="400000" step="5000" value="400000" aria-label="Maximum price per person">
+        <div class="mono" style="font-size:13px;display:flex;justify-content:space-between"><span>up to</span><span id="budgetLbl"></span></div>
+      </div>
+      <div><h4>Region</h4><div id="fRegion"></div></div>
+      <div><h4>Hotel stars</h4><div class="stars-row" id="fStars"></div></div>
+      <div><h4>Meal plan</h4><div id="fBoard"></div></div>
+      <div>
+        <h4>Must have</h4>
+        <label class="chk"><input type="checkbox" id="fFree"> Free cancellation</label>
+        <label class="chk"><input type="checkbox" id="fFlight"> Flights included</label>
+        <label class="chk"><input type="checkbox" id="fBeach"> Beach within 300 m</label>
+        <label class="chk"><input type="checkbox" id="fTM"> Tour manager on trip</label>
+        <label class="chk"><input type="checkbox" id="fVisa"> Visa on arrival / e-visa</label>
+      </div>
+      <button class="btn" id="resetF">Clear all filters</button>
+    </aside>
+    <div style="min-width:0">
+      <div class="toolbar">
+        <div><strong id="resCount"></strong><div class="active-chips" id="activeChips"></div></div>
+        <label style="display:flex;gap:8px;align-items:center;font-size:14px;font-weight:600">Sort
+          <select id="sort">
+            <option value="rec">Recommended</option>
+            <option value="price">Lowest price</option>
+            <option value="rating">Guest rating</option>
+            <option value="deal">Biggest saving</option>
+            <option value="nights">Shortest trip</option>
+          </select>
+        </label>
+      </div>
+      <div class="grid" id="grid"></div>
+    </div>
+  </div>
+</section>
+
+<section class="band" style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head"><div><span class="kicker">Traveller stories</span><h2>Back home and still smiling</h2></div><p>Example reviews for this demo.</p></div>
+    <div class="stories">
+      <div class="story" style="background:#ffd6c9"><q>Transfers on time every day, and the cheapest-week calendar saved us ₹18,000 on Bali.</q><div class="who"><span class="av" style="background:#ff5a36">PA</span><div>Priya &amp; Arjun<span>Pune · Bali, 7 nights</span></div></div></div>
+      <div class="story" style="background:#cfe9ff"><q>Our tour manager knew every shortcut in Rome. The kids still talk about the gondola.</q><div class="who"><span class="av" style="background:#2b4bff">MF</span><div>The Mehta family<span>Surat · Europe, 10 nights</span></div></div></div>
+      <div class="story" style="background:#d4f5e7"><q>Price on the site matched the price at check-in. No surprises, just a very good week in Crete.</q><div class="who"><span class="av" style="background:#0fb68f">K</span><div>Kasia<span>Wrocław · Crete, 8 nights</span></div></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="services" style="padding-top:0">
+  <div class="wrap">
+    <div class="stats">
+      <div class="stat"><b>1.2M+</b><span>travellers since 2009</span></div>
+      <div class="stat"><b>64</b><span>countries covered</span></div>
+      <div class="stat"><b>4.7★</b><span>average trip rating</span></div>
+      <div class="stat"><b>11</b><span>departure cities</span></div>
+    </div>
+    <div class="sec-head"><div><span class="kicker">Before you fly</span><h2>Everything around the trip</h2></div><p>Sorted in the same booking, by the same team.</p></div>
+    <div class="services">
+      <div class="svc"><span class="ico" style="background:#ffe7a1"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20M6 15h4"/></svg></span><h3>Forex card</h3><p>Load USD, EUR, THB and 12 more. Delivered home in 24 hours.</p><span class="rate" id="fxRate"></span></div>
+      <div class="svc"><span class="ico" style="background:#cfe9ff"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M8 17h8"/></svg></span><h3>Visa help</h3><p>Checklist, appointment booking and form filling for 60+ countries.</p><span class="rate">Schengen · UK · USA · Japan</span></div>
+      <div class="svc"><span class="ico" style="background:#d4f5e7"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>Travel cover</h3><p>Medical up to $100,000, lost baggage and trip cancellation in one policy.</p><span class="rate">from ₹38 / day</span></div>
+      <div class="svc"><span class="ico" style="background:#ffd6c9"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21l3-9 9-9 6 6-9 9z"/><path d="M14 4l6 6"/></svg></span><h3>Custom trip</h3><p>Tell an expert your dates and budget. Get a costed plan within a day.</p><button class="btn hot" id="customBtn" style="justify-self:start;padding:8px 14px">Plan my trip</button></div>
+    </div>
+  </div>
+</section>
+
+<section class="band" style="padding-top:0">
+  <div class="wrap">
+    <div class="cta">
+      <div><h2>Get price drops before anyone else</h2><p>One email a week with flash sales from your city. Unsubscribe in one click.</p></div>
+      <form id="newsForm"><input id="newsEmail" type="email" required placeholder="Your email" aria-label="Email address"><button type="submit">Notify me</button></form>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap"><div class="big" aria-hidden="true">ribriz travel</div></div>
+  <div class="wrap cols">
+    <div>
+      <div class="logo" style="margin-bottom:14px"><img src="img/logo.png" alt="Ribriz" width="118" height="48"><span class="word">TRAVEL</span></div>
+      <p>Ribriz Travel is a demo concept. Trips, prices, dates and reviews are illustrative examples, not live inventory. Exchange rates are indicative. Photos from Unsplash.</p>
+    </div>
+    <div><h4>Holidays</h4><a href="#search-results">India packages</a><a href="#search-results">International</a><a href="#search-results">Group tours</a><a href="#deals">Last minute</a></div>
+    <div><h4>Help</h4><a href="#services">Visa assistance</a><a href="#services">Forex</a><a href="#services">Travel insurance</a><a href="#top">Manage booking</a></div>
+    <div><h4>Talk to us</h4><p class="mono" style="opacity:1;font-size:16px">1800 000 0000</p><p>Daily, 8 am – 11 pm IST</p></div>
+  </div>
+</footer>
+
+<div class="tray" id="tray" hidden>
+  <div class="in">
+    <strong>Compare</strong>
+    <div class="slots" id="slots"></div>
+    <button class="btn hot" id="cmpGo">Compare now</button>
+  </div>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="sheet" id="sheet" hidden aria-modal="true" role="dialog" aria-labelledby="sheetTitle"></aside>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const store = {get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}, set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+
+/* ---------- data (illustrative) ---------- */
+const TRIPS = [
+ {id:"bali7",title:"Ubud rice terraces & Seminyak sunsets",dest:"Bali",country:"Indonesia",region:"South-East Asia",kind:"package",themes:["honeymoon","beach"],nights:7,stars:5,board:"BB",price:84900,was:99900,rating:9.1,reviews:2184,beach:150,flight:true,free:true,tm:false,visa:true,scene:"beach",pal:["#ff9a6b","#ffd27a","#1fb5a8","#0c7c8c"],lm:true,eb:false,
+  hl:["Private pool villa in Ubud","Kintamani volcano sunrise","Candlelit beach dinner"],
+  days:["Arrive Denpasar, transfer to Ubud villa","Rice terraces and Tirta Empul temple","Free day: spa or Ayung rafting","Kintamani sunrise and coffee plantation","Move to Seminyak beach resort","Nusa Penida day cruise","Tanah Lot sunset","Fly home"]},
+ {id:"kerala6",title:"Kerala backwaters & Munnar tea hills",dest:"Kerala",country:"India",region:"India",kind:"package",themes:["family","honeymoon","nature"],nights:6,stars:4,board:"HB",price:38500,was:44000,rating:8.9,reviews:3410,beach:null,flight:true,free:true,tm:false,visa:true,scene:"backwater",pal:["#a8e6cf","#fff1b8","#2f9e5b","#16613a"],lm:true,eb:false,
+  hl:["Overnight private houseboat","Tea museum in Munnar","Kathakali show in Kochi"],
+  days:["Arrive Kochi, Fort Kochi walk","Drive to Munnar through Cheeyappara falls","Tea gardens and Eravikulam park","Thekkady spice plantation","Alleppey houseboat overnight","Kochi, fly home"]},
+ {id:"swiss10",title:"Best of Switzerland, France & Italy",dest:"Europe",country:"Switzerland · France · Italy",region:"Europe",kind:"escorted",themes:["group","family"],nights:10,stars:4,board:"FB",price:259000,was:289000,rating:9.0,reviews:1288,beach:null,flight:true,free:false,tm:true,visa:false,scene:"mountain",pal:["#7cc4ff","#e3f3ff","#4a5bd6","#1f8a5a"],lm:false,eb:true,
+  hl:["Jungfraujoch, Top of Europe","Eiffel Tower level 2","Indian dinners every evening"],
+  days:["Fly to Paris, evening Seine cruise","Eiffel Tower and Louvre exterior","TGV to Geneva, drive to Interlaken","Jungfraujoch excursion","Mt Titlis and Lucerne","Liechtenstein, drive to Innsbruck","Venice gondola ride","Pisa and Florence","Rome: Colosseum and Vatican","Rome free day","Fly home"]},
+ {id:"antalya7",title:"All-inclusive on the Lara coast",dest:"Antalya",country:"Turkey",region:"Mediterranean",kind:"package",themes:["family","beach"],nights:7,stars:5,board:"AI",price:72400,was:81000,rating:8.7,reviews:5120,beach:0,flight:true,free:true,tm:false,visa:true,scene:"beach",pal:["#5ec8ff","#ffe8b0","#1a8fd6","#0b4fa0"],lm:true,eb:false,
+  hl:["First beach line, private pier","Aquapark and kids' club","Ultra all-inclusive 24h"],
+  days:["Arrive Antalya, 20 min transfer","Beach and aquapark","Optional Old Town Kaleiçi","Düden waterfalls trip","Spa day","Optional Pamukkale tour","Free day","Fly home"]},
+ {id:"dubai5",title:"Dubai skyline, desert & Abu Dhabi",dest:"Dubai",country:"UAE",region:"Middle East",kind:"package",themes:["family","city"],nights:5,stars:4,board:"BB",price:56700,was:62500,rating:8.6,reviews:4890,beach:600,flight:true,free:true,tm:false,visa:true,scene:"city",pal:["#ff8a5b","#ffd38a","#e89a3c","#b8601e"],lm:false,eb:false,
+  hl:["Burj Khalifa level 124","Dune bashing with BBQ dinner","Sheikh Zayed Grand Mosque"],
+  days:["Arrive, Dhow cruise dinner","City tour and Burj Khalifa","Desert safari","Abu Dhabi day trip","Free day: Dubai Mall","Fly home"]},
+ {id:"kashmir6",title:"Kashmir: Gulmarg, Pahalgam, Dal Lake",dest:"Kashmir",country:"India",region:"India",kind:"escorted",themes:["group","family","nature"],nights:6,stars:4,board:"FB",price:46800,was:null,rating:9.2,reviews:2650,beach:null,flight:true,free:false,tm:true,visa:true,scene:"mountain",pal:["#9bd7ff","#f2fbff","#5f6fd0","#2b8a4e"],lm:false,eb:true,
+  hl:["Gondola to Kongdoori","Shikara ride on Dal Lake","Houseboat night"],
+  days:["Arrive Srinagar, Mughal gardens","Gulmarg gondola","Pahalgam via saffron fields","Betaab and Aru valleys","Sonamarg day trip","Shikara ride, houseboat stay","Fly home"]},
+ {id:"maldives4",title:"Maldives water villa escape",dest:"Maldives",country:"Maldives",region:"Indian Ocean",kind:"hotel",themes:["honeymoon","beach","luxury"],nights:4,stars:5,board:"AI",price:142000,was:168000,rating:9.5,reviews:980,beach:0,flight:false,free:true,tm:false,visa:true,scene:"atoll",pal:["#6fd6ff","#e9fbff","#14c2c9","#0a8fb0"],lm:true,eb:false,
+  hl:["Overwater villa with slide","Seaplane transfer","Snorkel house reef"],
+  days:["Seaplane to resort","Snorkelling safari","Sandbank picnic","Spa and sunset cruise","Depart"]},
+ {id:"thai6",title:"Phuket & Krabi island hopper",dest:"Thailand",country:"Thailand",region:"South-East Asia",kind:"package",themes:["beach","family","honeymoon"],nights:6,stars:4,board:"BB",price:48900,was:54900,rating:8.5,reviews:6020,beach:250,flight:true,free:true,tm:false,visa:true,scene:"karst",pal:["#ffb4a2","#ffe5c4","#17b89a","#0e7a6a"],lm:true,eb:false,
+  hl:["Phi Phi by speedboat","Four-island tour, Krabi","Big Buddha viewpoint"],
+  days:["Arrive Phuket","Phi Phi islands","Phuket city tour","Ferry to Krabi","Four-island tour","Free day","Fly home"]},
+ {id:"crete8",title:"Crete family beach week",dest:"Crete",country:"Greece",region:"Mediterranean",kind:"package",themes:["family","beach"],nights:8,stars:4,board:"AI",price:96800,was:104000,rating:8.8,reviews:3380,beach:80,flight:true,free:true,tm:false,visa:false,scene:"village",pal:["#68b8ff","#eaf6ff","#2b5be0","#123a9e"],lm:false,eb:true,
+  hl:["Sandy beach 80 m away","Knossos palace trip","Kids eat free"],
+  days:["Arrive Heraklion","Beach","Knossos","Balos lagoon","Free","Chania old harbour","Free","Beach","Fly home"]},
+ {id:"rajasthan7",title:"Royal Rajasthan: Jaipur, Jodhpur, Udaipur",dest:"Rajasthan",country:"India",region:"India",kind:"escorted",themes:["group","heritage","family"],nights:7,stars:4,board:"HB",price:42900,was:48900,rating:8.9,reviews:2210,beach:null,flight:true,free:true,tm:true,visa:true,scene:"fort",pal:["#ff9e7a","#ffd9a0","#e0784a","#a3442a"],lm:false,eb:false,
+  hl:["Amber Fort","Mehrangarh at dusk","Lake Pichola boat ride"],
+  days:["Arrive Jaipur","Amber Fort, City Palace","Drive to Jodhpur","Mehrangarh Fort","Ranakpur temples to Udaipur","Lake Pichola cruise","City Palace Udaipur","Fly home"]},
+ {id:"egypt7",title:"Hurghada reef & Luxor temples",dest:"Egypt",country:"Egypt",region:"Middle East",kind:"package",themes:["beach","heritage","family"],nights:7,stars:5,board:"AI",price:68300,was:79900,rating:8.4,reviews:4410,beach:0,flight:true,free:false,tm:false,visa:true,scene:"desert",pal:["#ffb070","#ffe2a8","#f0a640","#c4741c"],lm:true,eb:false,
+  hl:["Private reef for snorkelling","Valley of the Kings","Karnak by night"],
+  days:["Arrive Hurghada","Reef day","Luxor day trip","Giftun island","Spa","Desert quad safari","Free","Fly home"]},
+ {id:"japan9",title:"Japan in cherry-blossom season",dest:"Japan",country:"Japan",region:"East Asia",kind:"escorted",themes:["group","city","heritage"],nights:9,stars:4,board:"BB",price:298000,was:null,rating:9.4,reviews:740,beach:null,flight:true,free:false,tm:true,visa:false,scene:"fuji",pal:["#ffc2d6","#fff0f5","#7b86e0","#ff6f9a"],lm:false,eb:true,
+  hl:["Mt Fuji 5th station","Bullet train to Kyoto","Hiroshima & Miyajima"],
+  days:["Arrive Tokyo","Asakusa, Shibuya","Mt Fuji and Hakone","Bullet train to Kyoto","Fushimi Inari, Kinkaku-ji","Nara deer park","Hiroshima, Miyajima","Osaka","Universal Studios or free","Fly home"]},
+ {id:"goa4",title:"North Goa beach break",dest:"Goa",country:"India",region:"India",kind:"hotel",themes:["beach","honeymoon"],nights:4,stars:5,board:"BB",price:24600,was:29800,rating:8.3,reviews:7020,beach:100,flight:false,free:true,tm:false,visa:true,scene:"beach",pal:["#ff7f6b","#ffc98a","#2aa4b8","#126a8a"],lm:true,eb:false,
+  hl:["Sea-view room","Sunset cruise on Mandovi","Late checkout"],
+  days:["Check in","Beaches of the north","Old Goa churches","Free","Check out"]},
+ {id:"medcruise7",title:"Western Mediterranean cruise",dest:"Mediterranean",country:"Spain · France · Italy",region:"Mediterranean",kind:"cruise",themes:["family","luxury"],nights:7,stars:5,board:"FB",price:154000,was:179000,rating:8.9,reviews:1530,beach:null,flight:false,free:true,tm:false,visa:false,scene:"cruise",pal:["#7fc8ff","#eaf6ff","#2a6fd6","#0d3f99"],lm:false,eb:true,
+  hl:["Barcelona, Marseille, Genoa, Rome","Balcony cabin","Broadway-style shows"],
+  days:["Embark Barcelona","Day at sea","Marseille","Genoa","Civitavecchia for Rome","Naples","Day at sea","Disembark"]},
+ {id:"vietnam8",title:"Vietnam: Hanoi, Ha Long, Hoi An",dest:"Vietnam",country:"Vietnam",region:"South-East Asia",kind:"escorted",themes:["group","nature","heritage"],nights:8,stars:4,board:"HB",price:89500,was:98000,rating:9.0,reviews:1120,beach:null,flight:true,free:true,tm:true,visa:true,scene:"karst",pal:["#b9e6d3","#f4fff9","#2f9e8a","#176b5e"],lm:false,eb:false,
+  hl:["Overnight Ha Long Bay cruise","Hoi An lantern town","Cu Chi tunnels"],
+  days:["Arrive Hanoi","Old Quarter","Ha Long cruise","Ha Long to Hanoi, fly Da Nang","Hoi An","Ba Na hills","Fly Ho Chi Minh","Cu Chi tunnels","Fly home"]},
+ {id:"andaman6",title:"Andaman: Havelock & Neil",dest:"Andaman",country:"India",region:"India",kind:"package",themes:["honeymoon","beach","nature"],nights:6,stars:4,board:"BB",price:52400,was:58800,rating:8.8,reviews:1860,beach:50,flight:true,free:true,tm:false,visa:true,scene:"atoll",pal:["#7ee0e8","#f0fffd","#11b3a8","#0a7f8c"],lm:false,eb:true,
+  hl:["Radhanagar beach","Scuba at Elephant beach","Cellular Jail light show"],
+  days:["Arrive Port Blair, light show","Ferry to Havelock","Elephant beach","Neil island","Return to Port Blair","Ross island","Fly home"]}
+];
+const BOARDS = {RO:"Room only",BB:"Breakfast",HB:"Half board",FB:"Full board",AI:"All inclusive"};
+const THEMES = [
+ ["honeymoon","Honeymoon","Private villas, couple extras","#ffd6c9","M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"],
+ ["family","Family","Kids' clubs, big rooms","#ffe7a1","M8 7a2 2 0 1 0 0-.1M16 7a2 2 0 1 0 0-.1M5 20v-6l3-4 3 4v6M13 20v-5l3-4 3 4v5"],
+ ["group","Group tours","Tour manager, fixed dates","#cfe9ff","M3 20v-2a5 5 0 0 1 10 0v2M8 9a3 3 0 1 0 0-.1M14 20v-2a4 4 0 0 1 7-2.6M17 10a2.5 2.5 0 1 0 0-.1"],
+ ["beach","Beach","Seafront, all-inclusive","#c8f3ff","M2 18c3-2 5-2 8 0s5 2 8 0 3-1 4 0M12 4v10M12 4c-4 0-7 3-7 5 2-1 5-1 7 0 2-1 5-1 7 0 0-2-3-5-7-5z"],
+ ["heritage","Heritage","Forts, temples, old towns","#ffdcb8","M4 20h16M6 20V10M10 20V10M14 20V10M18 20V10M3 10l9-6 9 6z"],
+ ["nature","Hills & nature","Valleys, lakes, wildlife","#d4f5e7","M2 20l7-12 4 6 3-4 6 10z"]
+];
+const FROM_ADJ = {Mumbai:0,Delhi:3000,Bengaluru:2000,Chennai:2500,Kolkata:4000,Ahmedabad:1500,Warsaw:9000,"Kraków":9500,Katowice:9000,"Gdańsk":10500};
+const RATES = {INR:1, EUR:1/98.4, PLN:1/23.1};
+const SYM = {INR:"₹",EUR:"€",PLN:"zł"};
+
+const S = {
+  kind:"all", from:"Mumbai", dest:"", date:"", flex:3, nights:"any", adults:2, children:[], cur:store.get("wz_cur","INR"),
+  budget:400000, regions:new Set(), stars:new Set(), boards:new Set(), theme:null,
+  free:false, flight:false, beach:false, tm:false, visa:false, sort:"rec", deal:"lm", calDay:null,
+  wish:new Set(store.get("wz_wish",[])), compare:[]
+};
+
+const fmt = inr => {
+  const v = inr * RATES[S.cur];
+  const loc = S.cur==="INR" ? "en-IN" : S.cur==="PLN" ? "pl-PL" : "de-DE";
+  const n = Math.round(v).toLocaleString(loc);
+  return S.cur==="PLN" ? n+" zł" : SYM[S.cur]+n;
+};
+const fmtK = inr => { const v=inr*RATES[S.cur]; const k=v>=10000?Math.round(v/1000)+"k":(v/1000).toFixed(1)+"k"; return S.cur==="PLN"?k+" zł":SYM[S.cur]+k; };
+const ppPrice = t => t.price + (t.flight ? FROM_ADJ[S.from]||0 : 0);
+const childFactor = age => age < 2 ? 0.1 : age < 6 ? 0.5 : 0.7;
+const tripTotal = t => { const pp = ppPrice(t); return pp*S.adults + S.children.reduce((a,age)=>a+pp*childFactor(age),0); };
+const emiOf = (amt,m) => m<=6 ? amt/m : (amt*(0.13/12)) / (1-Math.pow(1+0.13/12,-m));
+const seeded = s => { let h=2166136261; for (const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619)} return ((h>>>0)%1000)/1000; };
+const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const toast = msg => { const t=$("#toast"); t.hidden=true; void t.offsetWidth; t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>t.hidden=true,2800); };
+
+/* ---------- poster-style illustrations ---------- */
+let uid=0;
+const PHOTO={bali7:"bali",kerala6:"kerala",swiss10:"swiss",antalya7:"antalya",dubai5:"dubai",kashmir6:"kashmir",maldives4:"maldives",thai6:"thai",crete8:"crete",rajasthan7:"rajasthan",egypt7:"egypt",japan9:"japan",goa4:"goa",medcruise7:"cruise",vietnam8:"vietnam",andaman6:"andaman"};
+function scene(t){ return PHOTO[t.id] ? `<img class="ph" src="img/${PHOTO[t.id]}.jpg" alt="${esc(t.dest)}: ${esc(t.hl[0])}" loading="lazy" decoding="async">` : drawScene(t); }
+function drawScene(t){
+  const [sky1,sky2,c1,c2]=t.pal, id="s"+(uid++), r=k=>seeded(t.id+k);
+  const sx=200+r("x")*90|0, sy=60+r("y")*30|0;
+  let g=`<defs><linearGradient id="${id}a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${sky1}"/><stop offset="1" stop-color="${sky2}"/></linearGradient>
+  <radialGradient id="${id}b"><stop offset="0" stop-color="#fff6c8"/><stop offset=".45" stop-color="#ffd34d" stop-opacity=".9"/><stop offset="1" stop-color="#ffd34d" stop-opacity="0"/></radialGradient>
+  <linearGradient id="${id}c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs>
+  <rect width="320" height="240" fill="url(#${id}a)"/><circle cx="${sx}" cy="${sy}" r="58" fill="url(#${id}b)"/><circle cx="${sx}" cy="${sy}" r="20" fill="#ffd84d"/>
+  <path d="M${30+r("c")*60|0} 50c0-9 12-12 19-6 3-10 20-10 23 1 10-2 15 10 7 14H36c-5 0-6-9-6-9z" fill="#fff" opacity=".85"/>
+  <path d="M${40+r("b")*80|0} ${40+r("bb")*30|0} q5 -5 10 0 q5 -5 10 0" stroke="#0b1240" stroke-width="1.6" fill="none" opacity=".55"/>`;
+  const sea=(y)=>`<path d="M0 ${y} Q80 ${y-8} 160 ${y} T320 ${y} V240 H0Z" fill="url(#${id}c)"/><path d="M20 ${y+18} q15 -5 30 0 t30 0 M170 ${y+30} q15 -5 30 0 t30 0 M90 ${y+46} q15 -5 30 0" stroke="#fff" stroke-width="2" fill="none" opacity=".5" stroke-linecap="round"/>`;
+  const palm=(x,y,s=1)=>`<g transform="translate(${x} ${y}) scale(${s})"><path d="M0 0 q4 -46 -8 -80" stroke="#5a3418" stroke-width="5" fill="none" stroke-linecap="round"/><g fill="#1e8a5a"><path d="M-8 -80 q-38 -6 -54 20 q26 -18 54 -20z"/><path d="M-8 -80 q32 -24 60 -4 q-32 -6 -60 4z"/><path d="M-8 -80 q-12 -32 -42 -32 q26 8 42 32z"/><path d="M-8 -80 q20 -32 48 -26 q-28 4 -48 26z"/></g></g>`;
+  switch(t.scene){
+    case "beach": g+=sea(150)+`<path d="M0 205 Q140 185 320 200 V240 H0Z" fill="#ffe2b4"/>`+palm(52,205)+palm(84,212,.7)+`<g transform="translate(220 196)"><path d="M0 0 l26 -30 l26 30z" fill="#ff5a36"/><path d="M26 -30 v34" stroke="#fff" stroke-width="2"/></g>`;break;
+    case "atoll": g+=`<rect y="130" width="320" height="110" fill="url(#${id}c)"/><ellipse cx="160" cy="182" rx="110" ry="20" fill="#9ef0f0" opacity=".7"/><ellipse cx="160" cy="180" rx="54" ry="9" fill="#fff2cf"/>`+palm(150,180,.55)+[0,1,2,3].map(i=>`<g transform="translate(${30+i*72} 140)"><rect x="0" y="0" width="40" height="16" fill="#c98a5a"/><path d="M-4 0 l24 -14 l24 14z" fill="#8a4f2a"/><path d="M8 16v10M32 16v10" stroke="#8a4f2a" stroke-width="2"/></g>`).join("");break;
+    case "mountain": g+=`<path d="M0 160 L70 80 L110 120 L180 40 L250 115 L320 70 V240 H0Z" fill="${c1}" opacity=".85"/><path d="M180 40 L162 62 L174 58 L182 68 L192 56 L200 62Z M70 80 L58 94 L70 90 L80 96Z M320 70 L300 92 L312 90 L320 98Z" fill="#fff"/><path d="M0 190 Q100 160 180 180 T320 175 V240 H0Z" fill="${c2}"/>${[30,60,250,280].map((x,i)=>`<path d="M${x} ${200-i%2*6} l10 -30 l10 30z" fill="#14532d"/>`).join("")}<path d="M120 240 Q160 200 200 240" fill="#bfe6ff" opacity=".7"/>`;break;
+    case "fuji": g+=`<path d="M40 200 L160 70 L280 200Z" fill="${c1}"/><path d="M160 70 L134 98 L148 94 L160 104 L172 94 L186 98Z" fill="#fff"/><path d="M0 200 Q160 180 320 200 V240 H0Z" fill="#3b4aa8"/><g fill="${c2}">${[[30,150],[60,165],[270,155],[295,170],[250,175]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="16"/>`).join("")}</g><rect x="230" y="150" width="6" height="50" fill="#d6364a"/><rect x="262" y="150" width="6" height="50" fill="#d6364a"/><rect x="222" y="146" width="54" height="6" fill="#d6364a"/><rect x="226" y="158" width="46" height="4" fill="#d6364a"/>`;break;
+    case "desert": g+=`<path d="M0 160 Q90 120 180 155 T320 140 V240 H0Z" fill="${c1}"/><path d="M0 195 Q110 165 220 190 T320 180 V240 H0Z" fill="${c2}"/><path d="M180 160 L220 100 L260 160Z" fill="#d99a4a"/><path d="M220 100 L260 160 L240 160Z" fill="#b4742c"/><path d="M110 160 L136 124 L162 160Z" fill="#d99a4a" opacity=".85"/><g transform="translate(60 190)"><path d="M0 0 q8 -18 20 -10 q6 -12 16 -4 l6 14" stroke="#5a3418" stroke-width="3" fill="none"/></g>`;break;
+    case "city": g+=`<path d="M0 190 Q160 160 320 185 V240 H0Z" fill="${c2}"/>${[[30,120,22],[60,100,18],[86,135,26],[230,110,20],[258,90,22],[286,128,20]].map(([x,y,w])=>`<rect x="${x}" y="${y}" width="${w}" height="${200-y}" fill="${c1}" opacity=".9"/>`).join("")}<path d="M156 200 L156 70 L162 30 L168 70 L168 200Z" fill="#7a3d1a"/><path d="M146 200 L150 110 L174 110 L178 200Z" fill="#a3562a"/><path d="M0 210 Q160 196 320 210 V240 H0Z" fill="#ffd9a0"/>`;break;
+    case "fort": g+=`<path d="M0 170 Q160 150 320 170 V240 H0Z" fill="${c2}"/><path d="M50 170 V110 h20 v-10 h12 v10 h20 v-10 h12 v10 h20 v-10 h12 v10 h20 v-10 h12 v10 h20 v-10 h12 v10 h20 V170Z" fill="${c1}"/><g fill="#7a2f17">${[80,120,160,200,240].map(x=>`<path d="M${x} 170 v-22 a8 8 0 0 1 16 0 v22z"/>`).join("")}</g><circle cx="270" cy="96" r="14" fill="${c1}"/><rect x="256" y="96" width="28" height="74" fill="${c1}"/><rect y="200" width="320" height="40" fill="#4aa3c9"/><path d="M40 216 q20 -4 40 0 M180 226 q20 -4 40 0" stroke="#fff" stroke-width="2" opacity=".6" fill="none"/>`;break;
+    case "backwater": g+=`<path d="M0 140 Q160 120 320 138 V240 H0Z" fill="${c2}"/><rect y="165" width="320" height="75" fill="#3aa89b"/>`+palm(40,170,.8)+palm(270,168,.9)+palm(300,172,.6)+`<g transform="translate(110 178)"><path d="M0 0 q50 16 110 0 l-10 12 h-90z" fill="#6b3a1a"/><path d="M14 0 q40 -28 82 0z" fill="#e8c27a"/><path d="M30 -8 v8 M50 -14 v14 M70 -14 v14" stroke="#6b3a1a" stroke-width="2"/></g><path d="M0 222 h320" stroke="#bff3e8" stroke-width="1.5" opacity=".6"/>`;break;
+    case "karst": g+=`<rect y="160" width="320" height="80" fill="url(#${id}c)"/>${[[40,70,40],[110,50,46],[200,80,34],[260,60,44]].map(([x,top,w])=>`<path d="M${x} 170 C${x} ${top} ${x+w} ${top-10} ${x+w} 170Z" fill="#1f6f55" opacity="${.65+((x/40)%3)*.1}"/>`).join("")}<g transform="translate(150 196)"><path d="M0 0 h60 l-8 10 h-44z" fill="#fff"/><path d="M28 0 v-24 l18 22z" fill="#ff5a36"/></g>`;break;
+    case "village": g+=sea(160)+`<path d="M0 150 L70 90 L180 120 L320 80 V180 H0Z" fill="#f2e6d0"/>${[[40,118],[78,104],[118,120],[160,112],[210,100],[250,92]].map(([x,y])=>`<rect x="${x}" y="${y}" width="30" height="26" fill="#fff"/><rect x="${x+11}" y="${y+12}" width="8" height="14" fill="#2b5be0"/>`).join("")}<path d="M180 100 a12 12 0 0 1 24 0z" fill="#2b5be0"/><rect x="180" y="100" width="24" height="24" fill="#fff"/>`;break;
+    case "cruise": g+=`<rect y="150" width="320" height="90" fill="url(#${id}c)"/><g transform="translate(50 108)"><path d="M0 44 h220 l-24 30 h-176z" fill="#fff"/><path d="M0 60 h214" stroke="#ff5a36" stroke-width="4"/><rect x="30" y="20" width="160" height="24" fill="#f4f6ff"/><rect x="60" y="2" width="100" height="18" fill="#e6eaff"/><rect x="120" y="-14" width="16" height="18" fill="#ff5a36"/>${[0,1,2,3,4,5,6,7,8].map(i=>`<circle cx="${40+i*17}" cy="32" r="3" fill="#2a6fd6"/>`).join("")}</g><path d="M30 196 q20 -4 40 0 t40 0 M200 206 q20 -4 40 0" stroke="#fff" stroke-width="2" opacity=".5" fill="none"/>`;break;
+  }
+  return `<svg viewBox="0 0 320 240" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Illustration of ${esc(t.dest)}">${g}</svg>`;
+}
+
+/* ---------- filtering ---------- */
+function nightsOk(n){ if(S.nights==="any") return true; const [a,b]=S.nights.split("-").map(Number); return n>=a&&n<=b; }
+function matches(t, ignore){
+  if (S.kind!=="all" && t.kind!==S.kind) return false;
+  if (S.dest){ const q=S.dest.toLowerCase(); if(!(t.dest+" "+t.country+" "+t.region+" "+t.title).toLowerCase().includes(q)) return false; }
+  if (ignore!=="nights" && !nightsOk(t.nights)) return false;
+  if (ppPrice(t) > S.budget) return false;
+  if (ignore!=="region" && S.regions.size && !S.regions.has(t.region)) return false;
+  if (S.stars.size && !S.stars.has(t.stars)) return false;
+  if (ignore!=="board" && S.boards.size && !S.boards.has(t.board)) return false;
+  if (S.theme && !t.themes.includes(S.theme)) return false;
+  if (S.free && !t.free) return false;
+  if (S.flight && !t.flight) return false;
+  if (S.beach && !(t.beach!==null && t.beach<=300)) return false;
+  if (S.tm && !t.tm) return false;
+  if (S.visa && !t.visa) return false;
+  return true;
+}
+function sorted(list){
+  const save=t=>t.was?(t.was-t.price)/t.was:0;
+  const by = {
+    price:(a,b)=>ppPrice(a)-ppPrice(b), rating:(a,b)=>b.rating-a.rating, deal:(a,b)=>save(b)-save(a), nights:(a,b)=>a.nights-b.nights,
+    rec:(a,b)=>(b.rating*1000-ppPrice(b)/400+(b.lm?300:0))-(a.rating*1000-ppPrice(a)/400+(a.lm?300:0))
+  };
+  return [...list].sort(by[S.sort]);
+}
+
+/* ---------- render ---------- */
+function card(t){
+  const saving = t.was ? Math.round((1-t.price/t.was)*100) : 0;
+  const pp = ppPrice(t), on=S.wish.has(t.id);
+  return `<article class="card" data-id="${t.id}">
+    <div class="art"><div class="pic">${scene(t)}</div>
+      <div class="tagline">${t.lm?'<span class="tag lm">Last minute</span>':''}${t.eb?'<span class="tag eb">Early bird</span>':''}${t.tm?'<span class="tag tm">Tour manager</span>':''}</div>
+      <button class="heart ${on?"on":""}" data-wish="${t.id}" aria-label="${on?"Remove from":"Save to"} saved trips" aria-pressed="${on}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="${on?"currentColor":"none"}" stroke="currentColor" stroke-width="2.2"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/></svg>
+      </button>
+      ${saving?`<span class="save-badge">Save ${saving}%</span>`:''}
+    </div>
+    <div class="body">
+      <div class="loc">${esc(t.country)} · ${t.nights}N/${t.nights+1}D</div>
+      <h3>${esc(t.title)}</h3>
+      <div class="rating"><span class="score">${t.rating.toFixed(1)}</span> ${t.rating>=9?"Exceptional":t.rating>=8.5?"Excellent":"Very good"} <span style="color:var(--muted);font-weight:500">· ${t.reviews.toLocaleString("en-IN")}</span></div>
+      <div class="meta">
+        <span class="pill">${"★".repeat(t.stars)}</span>
+        <span class="pill">${BOARDS[t.board]}</span>
+        ${t.flight?'<span class="pill">✈ incl.</span>':''}
+        ${t.beach!==null?'<span class="pill">'+(t.beach===0?'On the beach':t.beach+' m to beach')+'</span>':''}
+        ${t.free?'<span class="pill good">Free cancellation</span>':''}
+      </div>
+      <div class="priceblock">
+        <div>
+          ${t.was?`<div class="was">${fmt(t.was+(t.flight?FROM_ADJ[S.from]||0:0))}</div>`:''}
+          <div class="price">${fmt(pp)} <small>/ person</small></div>
+          <div class="emi">${fmt(emiOf(pp,6))}/mo · 0% EMI</div>
+        </div>
+        <button class="go-btn" data-open="${t.id}" aria-label="View ${esc(t.title)}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </div>
+      <label class="cmp"><input type="checkbox" data-cmp="${t.id}" ${S.compare.includes(t.id)?"checked":""}> Add to compare</label>
+    </div>
+  </article>`;
+}
+
+function renderGrid(){
+  const list = sorted(TRIPS.filter(t=>matches(t)));
+  $("#grid").innerHTML = list.length ? list.map(card).join("") :
+    `<div class="empty" style="grid-column:1/-1"><h3 style="margin-bottom:8px">No trips match all of these</h3>Remove a filter or widen your dates to see more.<br><br><button class="btn primary" id="emptyReset">Clear all filters</button></div>`;
+  $("#resCount").textContent = `${list.length} ${list.length===1?"trip":"trips"} from ${S.from}`;
+  const chips=[];
+  if(S.kind!=="all") chips.push(["kind",{package:"Flight + hotel",escorted:"Group tours",hotel:"Hotel only",cruise:"Cruise"}[S.kind]]);
+  if(S.dest) chips.push(["dest",S.dest]);
+  if(S.theme) chips.push(["theme",THEMES.find(x=>x[0]===S.theme)[1]]);
+  if(S.nights!=="any") chips.push(["nights",S.nights.replace("-"," – ")+" nights"]);
+  if(S.calDay) chips.push(["calDay","Departs "+S.calDay]);
+  S.regions.forEach(r=>chips.push(["region:"+r,r]));
+  $("#activeChips").innerHTML = chips.map(([k,l])=>`<button data-chip="${esc(k)}" aria-label="Remove ${esc(l)}">${esc(l)} ✕</button>`).join("");
+  $("#budgetLbl").textContent = fmt(S.budget);
+}
+function renderFilters(){
+  const regions=[...new Set(TRIPS.map(t=>t.region))];
+  $("#fRegion").innerHTML = regions.map(r=>`<label class="chk"><input type="checkbox" data-region="${esc(r)}" ${S.regions.has(r)?"checked":""}> ${esc(r)}<span class="ct">${TRIPS.filter(t=>t.region===r&&matches(t,"region")).length}</span></label>`).join("");
+  $("#fStars").innerHTML = [3,4,5].map(s=>`<button data-star="${s}" class="${S.stars.has(s)?"on":""}" aria-pressed="${S.stars.has(s)}">${s}★</button>`).join("");
+  $("#fBoard").innerHTML = Object.entries(BOARDS).filter(([k])=>TRIPS.some(t=>t.board===k)).map(([k,v])=>`<label class="chk"><input type="checkbox" data-board="${k}" ${S.boards.has(k)?"checked":""}> ${v}<span class="ct">${TRIPS.filter(t=>t.board===k&&matches(t,"board")).length}</span></label>`).join("");
+}
+function renderDeals(){
+  const list = TRIPS.filter(t=>S.deal==="lm"?t.lm:t.eb).sort((a,b)=>ppPrice(a)-ppPrice(b));
+  $("#dealRail").innerHTML = list.map(card).join("");
+  $("#dealTitle").textContent = S.deal==="lm" ? "Last-minute seats" : "Early-bird fares";
+  $("#dealSub").textContent = S.deal==="lm" ? "Departures in the next 21 days, priced to fill the last rooms." : "Book next season now and lock today's price, with a free date change.";
+}
+function renderBento(){
+  const pick=["maldives4","bali7","swiss10","kashmir6","antalya7"].map(id=>TRIPS.find(t=>t.id===id));
+  $("#bento").innerHTML = pick.map(t=>`<button class="tile" data-open="${t.id}"><div class="art">${scene(t)}</div><span class="from"><em>from</em>${fmt(ppPrice(t))}</span><div class="t-in"><span class="sub">${esc(t.country)} · ${t.nights} nights</span><h3>${esc(t.dest)}</h3></div></button>`).join("");
+}
+function renderTicker(){
+  const items=[...TRIPS].sort((a,b)=>ppPrice(a)-ppPrice(b)).map(t=>`<span>${esc(t.dest)} <i>${fmt(ppPrice(t))}</i></span>`).join("");
+  $("#ticker").innerHTML = items+items;
+}
+function renderThemes(){
+  $("#themes").innerHTML = THEMES.map(([k,l,d,bg,path])=>`<button class="theme-tile ${S.theme===k?"on":""}" style="background:${bg}" data-theme-pick="${k}" aria-pressed="${S.theme===k}">
+    <span class="n">${TRIPS.filter(t=>t.themes.includes(k)).length} trips</span>
+    <span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0b1240" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${path}"/></svg></span>
+    <b>${l}</b><span>${d}</span></button>`).join("");
+}
+function renderCal(){
+  const base = S.date ? new Date(S.date+"T00:00") : new Date();
+  const days=[]; const pool=TRIPS.filter(t=>matches(t,"nights"));
+  for(let i=0;i<14;i++){
+    const d=new Date(base); d.setDate(base.getDate()+i);
+    const key=d.toISOString().slice(0,10);
+    let min=Infinity;
+    pool.forEach(t=>{ const f=0.85+seeded(t.id+key)*0.35+(d.getDay()===5||d.getDay()===6?0.06:0); min=Math.min(min,ppPrice(t)*f); });
+    days.push({d,key,min});
+  }
+  const finite=days.filter(x=>isFinite(x.min)); const lo=Math.min(...finite.map(x=>x.min)), hi=Math.max(...finite.map(x=>x.min));
+  $("#calSub").textContent = `Lowest per-person price across ${pool.length} matching trips from ${S.from}. Tap a day to set it as your departure.`;
+  const cheapest=[...finite].sort((a,b)=>a.min-b.min).slice(0,3).map(x=>x.key);
+  $("#cal").innerHTML = days.map(x=>`<button data-day="${x.key}" class="${cheapest.includes(x.key)?"cheap":""} ${S.calDay===x.key?"sel":""}" aria-pressed="${S.calDay===x.key}" aria-label="${x.d.toDateString()}, from ${isFinite(x.min)?fmt(x.min):"no trips"}">
+    <span class="p">${isFinite(x.min)?fmtK(x.min):"—"}</span>
+    <span class="col" style="height:120px;--h:${isFinite(x.min)&&hi>lo?30+65*(x.min-lo)/(hi-lo):40}%"></span>
+    <span class="n">${x.d.getDate()}</span>
+    <span class="d">${x.d.toLocaleDateString("en-GB",{weekday:"short"})}<br>${x.d.toLocaleDateString("en-GB",{month:"short"})}</span></button>`).join("");
+}
+function renderWish(){ $("#wishCount").textContent=S.wish.size; store.set("wz_wish",[...S.wish]); }
+function renderTray(){
+  $("#tray").hidden = S.compare.length===0;
+  $("#slots").innerHTML = S.compare.map(id=>{const t=TRIPS.find(x=>x.id===id);return `<span class="slot">${esc(t.dest)} · ${fmt(ppPrice(t))}<button data-uncmp="${id}" aria-label="Remove ${esc(t.dest)} from compare">✕</button></span>`}).join("") + (S.compare.length<3?`<span class="slot" style="opacity:.6">+ add ${3-S.compare.length} more</span>`:"");
+  $("#cmpGo").disabled = S.compare.length<2; $("#cmpGo").style.opacity = S.compare.length<2?.5:1;
+}
+function renderFx(){ $("#fxRate").textContent = `1 EUR = ₹${(1/RATES.EUR).toFixed(2)} · 1 PLN = ₹${(1/RATES.PLN).toFixed(2)} (indicative)`; }
+function renderAll(){ renderFilters(); renderGrid(); renderDeals(); renderBento(); renderTicker(); renderThemes(); renderCal(); renderTray(); renderWish(); renderFx(); }
+
+/* ---------- trip sheet ---------- */
+let sheetState={tab:"overview",emi:6,dep:0};
+function showSheet(){ $("#sheet").hidden=false; $("#scrim").hidden=false; document.body.style.overflow="hidden"; $("#sheet").scrollTop=0; }
+function openSheet(id){ if(!TRIPS.some(x=>x.id===id)) return; sheetState={id,tab:"overview",emi:6,dep:0}; drawSheet(); showSheet(); $("#sheet .close").focus(); }
+function closeSheet(){ $("#sheet").hidden=true; $("#scrim").hidden=true; document.body.style.overflow=""; sheetState.id=null; }
+function departures(t){
+  const base=S.date?new Date(S.date+"T00:00"):new Date(); const out=[];
+  for(let i=0;i<5;i++){ const d=new Date(base); d.setDate(base.getDate()+3+i*(t.kind==="escorted"?9:4)+(seeded(t.id+i)*3|0));
+    out.push({d,adj:Math.round((seeded(t.id+"p"+i)-.4)*0.12*ppPrice(t)/100)*100,seats:t.kind==="escorted"?2+(seeded(t.id+"s"+i)*14|0):null}); }
+  return out;
+}
+function drawSheet(){
+  const t=TRIPS.find(x=>x.id===sheetState.id); const deps=departures(t); const dep=deps[sheetState.dep];
+  const pp=ppPrice(t)+dep.adj;
+  const paxTotal = pp*S.adults + S.children.reduce((a,age)=>a+pp*childFactor(age),0);
+  const gst=paxTotal*0.05; const total=paxTotal+gst;
+  const tabs=[["overview","Overview"],["itinerary","Day by day"],["price","Price & EMI"],["reviews","Reviews"],["hold","Hold price"]];
+  const inc=[["Return flights from "+S.from,t.flight],["Airport transfers",t.kind!=="hotel"||t.id==="maldives4"],["Hotel, "+t.stars+"★",t.kind!=="cruise"],["Meals: "+BOARDS[t.board],true],["Sightseeing with guide",t.kind!=="hotel"],["Tour manager throughout",t.tm],["Visa fees",false],["Travel insurance",t.kind==="escorted"]];
+  let body="";
+  if(sheetState.tab==="overview"){
+    body=`<div class="meta" style="margin-bottom:16px"><span class="pill">${t.nights} nights</span><span class="pill">${"★".repeat(t.stars)}</span><span class="pill">${BOARDS[t.board]}</span>${t.beach!==null?`<span class="pill">${t.beach===0?"On the beach":t.beach+" m to beach"}</span>`:""}${t.free?'<span class="pill good">Free cancellation</span>':''}</div>
+    <h4 style="margin-bottom:10px;font-size:16px">Highlights</h4><ul style="margin:0 0 20px;padding-left:18px;font-weight:500">${t.hl.map(h=>`<li>${esc(h)}</li>`).join("")}</ul>
+    <h4 style="margin-bottom:10px;font-size:16px">What's included</h4><ul class="incl">${inc.map(([l,y])=>`<li class="${y?"":"no"}"><span class="${y?"y":""}">${y?"✓":"–"}</span> ${esc(l)}</li>`).join("")}</ul>
+    <h4 style="margin:22px 0 10px;font-size:16px">Pick a departure</h4><div class="dep-dates">${deps.map((x,i)=>`<button data-dep="${i}" class="${i===sheetState.dep?"on":""}" aria-pressed="${i===sheetState.dep}"><b>${x.d.toLocaleDateString("en-GB",{day:"numeric",month:"short",weekday:"short"})}</b><span class="mono">${fmt(ppPrice(t)+x.adj)}</span>${x.seats!==null?`<span class="seats">${x.seats} seats left</span>`:""}</button>`).join("")}</div>
+    <p style="font-size:13px;color:var(--muted);margin-top:14px">${t.free?"Free cancellation until 30 days before departure.":"A cancellation fee applies from booking. See the price tab."}</p>`;
+  } else if(sheetState.tab==="itinerary"){
+    body=t.days.map((d,i)=>`<div class="day"><div class="dn">D${i+1}</div><div><b>${esc(d)}</b><span style="color:var(--muted);font-size:13px">${i===0?"Arrival":i===t.days.length-1?"Departure":(t.board==="AI"||t.board==="FB")?"Breakfast, lunch, dinner":t.board==="HB"?"Breakfast, dinner":"Breakfast"}</span></div></div>`).join("");
+  } else if(sheetState.tab==="price"){
+    const rows=[[`${S.adults} adult${S.adults>1?"s":""} × ${fmt(pp)}`,pp*S.adults], ...S.children.map((a,i)=>[`Child ${i+1}, age ${a}`,pp*childFactor(a)]), ["GST 5%",gst]];
+    body=`<table class="breakdown">${rows.map(([l,v])=>`<tr><td>${esc(l)}</td><td>${fmt(v)}</td></tr>`).join("")}<tr class="total"><td>Total for ${S.adults+S.children.length} travellers</td><td>${fmt(total)}</td></tr></table>
+    ${t.region!=="India"?`<p style="font-size:13px;color:var(--muted)">TCS may be collected on overseas packages under Indian tax rules. You can claim it against your income tax.</p>`:""}
+    <h4 style="margin:20px 0 0;font-size:16px">Pay monthly</h4>
+    <div class="emi-grid">${[3,6,9,12].map(m=>`<button data-emi="${m}" class="${sheetState.emi===m?"on":""}" aria-pressed="${sheetState.emi===m}"><span class="m">${m} months</span><span class="v">${fmt(emiOf(total,m))}</span>${m<=6?'<span class="z">NO-COST</span>':'<span class="m">13% p.a.</span>'}</button>`).join("")}</div>
+    <p style="font-size:13px;color:var(--muted)">Book with ${fmt(Math.max(5000,total*0.1))} today. Pay the rest 30 days before you leave.</p>`;
+  } else if(sheetState.tab==="reviews"){
+    const cats=[["Hotel",t.rating+.2],["Food",t.rating-.3],["Guide & service",t.rating+.1],["Value",t.rating-.4]];
+    const names=["Priya & Arjun, Pune","Kasia, Wrocław","The Mehta family, Surat","Tomasz, Warsaw"];
+    const quotes=["Transfers were on time every day and the hotel upgraded us without asking.","Price matched exactly what we saw online. No surprises at check-in.","The tour manager sorted the kids' food requests at every stop.","Would book the same dates again. The cheapest-day calendar saved us a lot."];
+    body=`<div style="display:flex;gap:14px;align-items:center"><span class="score" style="font-size:22px;padding:8px 12px">${t.rating.toFixed(1)}</span><div><b>${t.reviews.toLocaleString("en-IN")} verified reviews</b><div style="color:var(--muted);font-size:13px">Only travellers who completed this trip can review</div></div></div>
+    <div class="bars">${cats.map(([l,v])=>`<div><span>${l}</span><i style="--w:${Math.min(100,v*10)}%"></i><span class="mono">${Math.min(10,v).toFixed(1)}</span></div>`).join("")}</div>
+    <div class="reviews">${names.map((n,i)=>`<div class="review"><b>${n}</b> <span class="mono" style="color:var(--muted);font-size:12px">· ${Math.min(10,t.rating-.4+seeded(t.id+i)*.8).toFixed(1)}/10 · example</span><p>${quotes[i]}</p></div>`).join("")}</div>`;
+  } else {
+    body=`<p style="margin-top:0">Pay ${fmt(2000)} to hold <b>${fmt(total)}</b> for 48 hours. If you book, the ${fmt(2000)} comes off the fare. If you don't, it's refunded.</p>
+    <form id="holdForm" class="form-grid">
+      <label>Full name<input id="hName" required autocomplete="name" placeholder="As on passport"></label>
+      <label>Mobile<input id="hPhone" required inputmode="tel" autocomplete="tel" placeholder="+91 98xxx xxxxx"></label>
+      <label style="grid-column:1/-1">Email<input id="hEmail" type="email" required autocomplete="email" placeholder="you@example.com"></label>
+      <button class="btn hot" type="submit" style="grid-column:1/-1;padding:14px">Request price hold</button>
+    </form><p style="font-size:12px;color:var(--muted)">Demo only. Nothing is charged or sent.</p>`;
+  }
+  $("#sheet").innerHTML = `<div class="art">${scene(t)}<button class="close" aria-label="Close">×</button></div>
+  <div class="inner">
+    <span class="kicker">${{package:"Flight + hotel",escorted:"Group tour",hotel:"Hotel only",cruise:"Cruise"}[t.kind]} · ${esc(t.dest)}</span>
+    <h2 id="sheetTitle">${esc(t.title)}</h2>
+    <div class="rating"><span class="score">${t.rating.toFixed(1)}</span> ${t.reviews.toLocaleString("en-IN")} reviews · ${esc(t.country)}</div>
+    <div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${sheetState.tab===k}">${l}</button>`).join("")}</div>
+    ${body}
+  </div>
+  <div class="sheet-foot">
+    <div><div class="price">${fmt(total)}</div><div style="font-size:12px;color:var(--muted);font-weight:600">${S.adults+S.children.length} travellers · incl. GST · leaves ${dep.d.toLocaleDateString("en-GB",{day:"numeric",month:"short"})}</div></div>
+    <div style="display:flex;gap:8px"><button class="btn" data-tab="hold">Hold 48h</button><button class="btn hot" data-book>Book now</button></div>
+  </div>`;
+}
+function openCompare(){
+  const ts=S.compare.map(id=>TRIPS.find(x=>x.id===id));
+  const rows=[
+    ["Price / person",t=>ppPrice(t),"min",v=>fmt(v)],
+    ["Total for your group",t=>tripTotal(t)*1.05,"min",v=>fmt(v)],
+    ["Nights",t=>t.nights,null,v=>v],
+    ["Price per night",t=>ppPrice(t)/t.nights,"min",v=>fmt(v)],
+    ["Guest rating",t=>t.rating,"max",v=>v.toFixed(1)],
+    ["Hotel",t=>t.stars,"max",v=>"★".repeat(v)],
+    ["Meals",t=>BOARDS[t.board],null,v=>v],
+    ["Flights included",t=>t.flight?"Yes":"No",null,v=>v],
+    ["Tour manager",t=>t.tm?"Yes":"No",null,v=>v],
+    ["Free cancellation",t=>t.free?"Yes":"No",null,v=>v],
+    ["To the beach",t=>t.beach===null?"—":t.beach===0?"On the beach":t.beach+" m",null,v=>v]
+  ];
+  sheetState.id=null;
+  $("#sheet").innerHTML=`<div class="inner" style="padding-top:28px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 id="sheetTitle">Side by side</h2><button class="btn" data-close aria-label="Close">Close</button></div>
+    <p style="color:var(--muted)">The best value in each row is green. Totals include 5% GST for ${S.adults+S.children.length} travellers from ${esc(S.from)}.</p>
+    <div class="cmp-table-wrap"><table class="cmp-table"><tr><th></th>${ts.map(t=>`<td><div style="border-radius:12px;overflow:hidden;aspect-ratio:4/3;margin-bottom:8px">${scene(t)}</div><b style="font-family:var(--f-display);font-size:15px">${esc(t.dest)}</b><br><span style="font-size:12px;color:var(--muted)">${esc(t.title)}</span></td>`).join("")}</tr>
+    ${rows.map(([l,f,best,show])=>{const vals=ts.map(f); const b=best==="min"?Math.min(...vals):best==="max"?Math.max(...vals):null;
+      return `<tr><th>${l}</th>${vals.map(v=>`<td class="${b!==null&&v===b?"best":""} ${typeof v==="number"?"mono":""}">${show(v)}</td>`).join("")}</tr>`}).join("")}
+    <tr><th></th>${ts.map(t=>`<td><button class="btn primary" data-open="${t.id}">View trip</button></td>`).join("")}</tr></table></div></div>`;
+  showSheet();
+}
+
+/* ---------- travellers ---------- */
+function paxLabel(){ const c=S.children.length; $("#paxBtn").textContent=`${S.adults} adult${S.adults>1?"s":""}${c?`, ${c} child${c>1?"ren":""}`:""}`; $("#adN").textContent=S.adults; $("#chN").textContent=c;
+  $("#childAges").innerHTML=S.children.map((a,i)=>`<label style="font-size:12px;color:var(--muted)">Child ${i+1}<br><select data-age="${i}" aria-label="Age of child ${i+1}">${Array.from({length:12},(_,n)=>`<option ${n===a?"selected":""}>${n}</option>`).join("")}</select></label>`).join(""); }
+
+const resetKind=k=>$$(".console-tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.kind===k));
+const toResults=()=>document.getElementById("search-results").scrollIntoView({behavior:"smooth"});
+
+/* ---------- events ---------- */
+document.addEventListener("click",e=>{
+  const el=e.target.closest("button,a"); if(!el) return;
+  const d=el.dataset;
+  if(d.kind){ S.kind=d.kind; resetKind(d.kind); renderAll(); }
+  else if(d.flex!==undefined){ S.flex=+d.flex; $$("#flexChips button").forEach(b=>b.classList.toggle("on",b===el)); }
+  else if(d.pax){ const w=d.pax.slice(0,2), op=d.pax.slice(2);
+    if(w==="ad") S.adults=Math.max(1,Math.min(9,S.adults+(op==="+"?1:-1)));
+    else { if(op==="+"&&S.children.length<6) S.children.push(6); if(op==="-") S.children.pop(); }
+    paxLabel(); }
+  else if(el.id==="paxBtn"){ const p=$("#paxPop"); p.hidden=!p.hidden; el.setAttribute("aria-expanded",!p.hidden); }
+  else if(el.id==="paxDone"){ $("#paxPop").hidden=true; $("#paxBtn").setAttribute("aria-expanded","false"); renderAll(); }
+  else if(d.quick){ S.dest=d.quick; $("#dest").value=d.quick; S.calDay=null; renderAll(); toResults(); }
+  else if(d.wish){ S.wish.has(d.wish)?S.wish.delete(d.wish):S.wish.add(d.wish); toast(S.wish.has(d.wish)?"♥ Saved to your trips":"Removed from saved trips"); renderAll(); }
+  else if(d.open){ openSheet(d.open); }
+  else if(d.deal){ S.deal=d.deal; $$("[data-deal]").forEach(b=>b.setAttribute("aria-pressed",b===el)); renderDeals(); }
+  else if(d.themePick){ S.theme = S.theme===d.themePick?null:d.themePick; renderAll(); toResults(); }
+  else if(d.day){ S.calDay = S.calDay===d.day?null:d.day; if(S.calDay){S.date=S.calDay;$("#date").value=S.calDay;} renderAll(); }
+  else if(d.star){ const s=+d.star; S.stars.has(s)?S.stars.delete(s):S.stars.add(s); renderAll(); }
+  else if(d.chip){ const k=d.chip; if(k==="kind"){S.kind="all";resetKind("all");} else if(k==="dest"){S.dest="";$("#dest").value="";} else if(k==="theme")S.theme=null; else if(k==="nights"){S.nights="any";$("#nights").value="any";} else if(k==="calDay")S.calDay=null; else if(k.startsWith("region:"))S.regions.delete(k.slice(7)); renderAll(); }
+  else if(el.id==="resetF"||el.id==="emptyReset"){ Object.assign(S,{budget:400000,theme:null,free:false,flight:false,beach:false,tm:false,visa:false,calDay:null,nights:"any",dest:"",kind:"all"}); S.regions.clear();S.stars.clear();S.boards.clear();
+    $("#budget").value=400000; $("#nights").value="any"; $("#dest").value=""; ["fFree","fFlight","fBeach","fTM","fVisa"].forEach(i=>$("#"+i).checked=false); resetKind("all"); renderAll(); }
+  else if(d.uncmp){ S.compare=S.compare.filter(x=>x!==d.uncmp); renderAll(); }
+  else if(el.id==="cmpGo"){ openCompare(); }
+  else if(el.classList.contains("close")||d.close!==undefined){ closeSheet(); }
+  else if(d.tab){ if(!sheetState.id) return; sheetState.tab=d.tab; drawSheet(); }
+  else if(d.emi){ sheetState.emi=+d.emi; drawSheet(); }
+  else if(d.dep){ sheetState.dep=+d.dep; drawSheet(); }
+  else if(d.book!==undefined){ sheetState.tab="hold"; drawSheet(); toast("Add your details to hold or book this price"); }
+  else if(el.id==="wishBtn"){ if(!S.wish.size){toast("Tap ♥ on any trip to save it here");return;} const list=TRIPS.filter(t=>S.wish.has(t.id)); $("#grid").innerHTML=list.map(card).join(""); $("#resCount").textContent=`${list.length} saved ${list.length===1?"trip":"trips"}`; $("#activeChips").innerHTML=`<button id="showAll">Show all trips ✕</button>`; toResults(); }
+  else if(el.id==="showAll"){ renderGrid(); }
+  else if(el.id==="customBtn"){ toast("A travel expert would call you within a day (demo)"); }
+  else if(d.nav){ if(d.nav==="escorted"){S.kind="escorted";resetKind("escorted");} else if(d.nav==="India"){S.regions=new Set(["India"]);} else {S.theme=d.nav;} renderAll(); }
+});
+document.addEventListener("change",e=>{
+  const el=e.target, d=el.dataset;
+  if(d.region){ el.checked?S.regions.add(d.region):S.regions.delete(d.region); renderAll(); }
+  else if(d.board){ el.checked?S.boards.add(d.board):S.boards.delete(d.board); renderAll(); }
+  else if(d.cmp){ if(el.checked){ if(S.compare.length>=3){el.checked=false;toast("Compare up to 3 trips at a time");return;} S.compare.push(d.cmp);} else S.compare=S.compare.filter(x=>x!==d.cmp); renderAll(); }
+  else if(d.age!==undefined){ S.children[+d.age]=+el.value; }
+  else if(el.id==="currency"){ S.cur=el.value; store.set("wz_cur",S.cur); renderAll(); if(!$("#sheet").hidden&&sheetState.id) drawSheet(); }
+  else if(el.id==="from"){ S.from=el.value; renderAll(); }
+  else if(el.id==="sort"){ S.sort=el.value; renderGrid(); }
+  else if(["fFree","fFlight","fBeach","fTM","fVisa"].includes(el.id)){ const m={fFree:"free",fFlight:"flight",fBeach:"beach",fTM:"tm",fVisa:"visa"}; S[m[el.id]]=el.checked; renderAll(); }
+});
+$("#budget").addEventListener("input",e=>{ S.budget=+e.target.value; renderGrid(); renderFilters(); });
+$("#searchForm").addEventListener("submit",e=>{ e.preventDefault(); S.dest=$("#dest").value.trim(); S.date=$("#date").value; S.nights=$("#nights").value; S.calDay=null; $("#paxPop").hidden=true; renderAll(); toResults(); });
+document.addEventListener("submit",e=>{
+  if(e.target.id==="holdForm"){ e.preventDefault(); const n=$("#hName").value.split(" ")[0]; closeSheet(); toast(`Thanks ${n}! Price hold saved (demo, nothing sent).`); }
+  if(e.target.id==="newsForm"){ e.preventDefault(); $("#newsEmail").value=""; toast("You're on the list (demo, nothing sent)"); }
+});
+$("#scrim").addEventListener("click",closeSheet);
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ if(!$("#sheet").hidden) closeSheet(); $("#paxPop").hidden=true; } });
+document.addEventListener("click",e=>{ if(!e.target.closest(".field")) $("#paxPop").hidden=true; },true);
+
+/* ---------- live bits ---------- */
+const slides=$$(".hero-art .slide"); let wi=0;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+$("#heroDots").innerHTML=slides.map((sl,i)=>`<button class="${i?"":"on"}" data-slide="${i}" aria-label="Show ${sl.dataset.w}"></button>`).join("");
+function showSlide(i){ wi=i; slides.forEach((sl,j)=>sl.classList.toggle("on",j===i)); $$("#heroDots button").forEach((b,j)=>b.classList.toggle("on",j===i)); $("#rot").innerHTML=`<span>${slides[i].dataset.w}</span>`; }
+const nextSlide=()=>showSlide((wi+1)%slides.length);
+let heroTimer = reduce ? null : setInterval(nextSlide,5000);
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-slide]"); if(!b) return; clearInterval(heroTimer); showSlide(+b.dataset.slide); if(!reduce) heroTimer=setInterval(nextSlide,5000); });
+function tick(){ const n=new Date(), end=new Date(n); end.setHours(24,0,0,0); let s=Math.max(0,(end-n)/1000|0);
+  $("#tH").textContent=String(s/3600|0).padStart(2,"0"); $("#tM").textContent=String((s%3600)/60|0).padStart(2,"0"); $("#tS").textContent=String(s%60).padStart(2,"0"); }
+tick(); setInterval(tick,1000);
+
+/* ---------- boot ---------- */
+$("#destList").innerHTML=[...new Set(TRIPS.flatMap(t=>[t.dest,t.country.split(" · ")[0]]))].map(x=>`<option value="${esc(x)}">`).join("");
+const start=new Date(); start.setDate(start.getDate()+10); $("#date").value=start.toISOString().slice(0,10); S.date=$("#date").value; $("#date").min=new Date().toISOString().slice(0,10);
+$("#currency").value=S.cur;
+paxLabel(); renderAll();
+})();
+</script>
