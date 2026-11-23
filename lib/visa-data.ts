@@ -24,8 +24,12 @@ export const getPassports = unstable_cache(
   { tags: [VISA_TAG], revalidate: 86400 },
 );
 
+/** Last refresh info. Dates are ISO strings: the cache stores JSON, which has no Date type. */
 export const getVisaSync = unstable_cache(
-  async () => prisma.visaSync.findUnique({ where: { id: 1 } }),
+  async (): Promise<{ sourceDate: string; syncedAt: string; rows: number } | null> => {
+    const s = await prisma.visaSync.findUnique({ where: { id: 1 } });
+    return s ? { sourceDate: s.sourceDate.toISOString(), syncedAt: s.syncedAt.toISOString(), rows: s.rows } : null;
+  },
   [`visa-sync-v${DATA_VERSION}`],
   { tags: [VISA_TAG], revalidate: 86400 },
 );

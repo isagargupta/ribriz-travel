@@ -25,7 +25,7 @@ export default async function VisaPage({ searchParams }: { searchParams: Promise
       </div>
       <section className="band" style={{ paddingTop: 20 }}>
         <div className="wrap">
-          <VisaChecker passports={passports} initial={{ passport: DEFAULT_PASSPORT, rules }} trips={byCountry} sourceDate={sync?.sourceDate.toISOString() ?? null} initialDest={initialDest} />
+          <VisaChecker passports={passports} initial={{ passport: DEFAULT_PASSPORT, rules }} trips={byCountry} sourceDate={sync?.sourceDate ?? null} initialDest={initialDest} />
         </div>
       </section>
     </>
