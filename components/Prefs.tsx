@@ -17,10 +17,14 @@ interface Prefs {
   recent: string[];
 }
 
+export interface Me { email: string; name: string | null; phone: string | null }
+
 interface Toast { id: number; msg: string; tone: "info" | "ok" | "err"; action?: { label: string; run: () => void } }
 
 interface PrefsApi extends Prefs {
   ready: boolean;
+  /** signed-in customer (undefined while loading) */
+  me: Me | null | undefined;
   set: (p: Partial<Prefs>) => void;
   toggleSaved: (id: string) => boolean;
   toggleCompare: (id: string) => "added" | "removed" | "full";
@@ -36,6 +40,7 @@ const Ctx = createContext<PrefsApi | null>(null);
 export function PrefsProvider({ children }: { children: React.ReactNode }) {
   const [p, setP] = useState<Prefs>(DEFAULTS);
   const [ready, setReady] = useState(false);
+  const [me, setMe] = useState<Me | null | undefined>(undefined);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const nextId = useRef(1);
 
@@ -45,6 +50,11 @@ export function PrefsProvider({ children }: { children: React.ReactNode }) {
       if (raw) setP({ ...DEFAULTS, ...JSON.parse(raw) });
     } catch { /* storage blocked: keep defaults */ }
     setReady(true);
+  }, []);
+
+  // who is signed in (pages stay static; this is fetched per visitor)
+  useEffect(() => {
+    fetch("/api/me", { cache: "no-store" }).then((r) => r.json()).then(setMe).catch(() => setMe(null));
   }, []);
 
   // keep tabs in sync
@@ -94,8 +104,8 @@ export function PrefsProvider({ children }: { children: React.ReactNode }) {
 
   const money = useCallback((inr: number) => fmt(inr, p.currency), [p.currency]);
 
-  const api = useMemo(() => ({ ...p, ready, set, toggleSaved, toggleCompare, addRecent, toast, money }),
-    [p, ready, set, toggleSaved, toggleCompare, addRecent, toast, money]);
+  const api = useMemo(() => ({ ...p, ready, me, set, toggleSaved, toggleCompare, addRecent, toast, money }),
+    [p, ready, me, set, toggleSaved, toggleCompare, addRecent, toast, money]);
 
   return (
     <Ctx.Provider value={api}>

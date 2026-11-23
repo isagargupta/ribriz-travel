@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
+import { notifyHold } from "@/lib/notify";
 import { createHold } from "@/lib/bookings";
 import { clientIp, fail, rateLimited, readJson } from "@/lib/http";
 import { holdSchema } from "@/lib/schemas";
@@ -10,5 +11,6 @@ export async function POST(req: Request) {
   if ("res" in parsed) return parsed.res;
   const r = await createHold(parsed.data);
   if (!r.ok) return fail(r.message, r.code === "price_changed" ? 409 : 410, { code: r.code, total: r.total });
+  after(() => notifyHold(r.ref)); // emails go out after the customer has their answer
   return NextResponse.json(r, { status: 201 });
 }

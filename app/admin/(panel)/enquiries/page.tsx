@@ -50,6 +50,7 @@ export default async function Enquiries({ searchParams }: { searchParams: Promis
                 <label className="lab" style={{ flex: 1, minWidth: 200 }}>Internal note
                   <input className="in" name="note" defaultValue={e.note ?? ""} placeholder="e.g. Called, sending quote by email" />
                 </label>
+                <label className="chk" style={{ fontSize: 13 }} title="Sends the customer an email when the status changes"><input type="checkbox" name="notify" defaultChecked /> Email customer</label>
                 <button className="btn blue" type="submit">Save</button>
               </form>
               <form action={deleteEnquiry} style={{ marginTop: 8 }}>

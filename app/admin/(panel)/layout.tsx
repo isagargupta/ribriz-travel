@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireAdmin } from "@/lib/auth";
+import { currentAdmin, requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { logout } from "../actions";
 
@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   await requireAdmin();
+  const who = await currentAdmin();
   const fresh = await prisma.enquiry.count({ where: { status: "new" } });
   return (
     <div className="admin-shell">
@@ -20,7 +21,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         <Link href="/admin/trips/new">+ Add trip</Link>
         <Link href="/admin/subscribers">Subscribers</Link>
         <a href="/" target="_blank" rel="noopener noreferrer">View site ↗</a>
-        <form action={logout} style={{ marginTop: "auto" }}><button type="submit">Sign out</button></form>
+        <form action={logout} style={{ marginTop: "auto", display: "grid", gap: 4 }}>{who && who !== "password" && <small style={{ color: "#a3a9d6", padding: "0 12px", overflow: "hidden", textOverflow: "ellipsis" }}>{who}</small>}<button type="submit">Sign out</button></form>
       </aside>
       <div className="admin-main">{children}</div>
     </div>

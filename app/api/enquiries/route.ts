@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
+import { notifyEnquiry } from "@/lib/notify";
 import { createEnquiry } from "@/lib/bookings";
 import { clientIp, fail, rateLimited, readJson } from "@/lib/http";
 import { enquirySchema } from "@/lib/schemas";
@@ -9,5 +10,6 @@ export async function POST(req: Request) {
   const parsed = await readJson(req, enquirySchema);
   if ("res" in parsed) return parsed.res;
   const ref = await createEnquiry(parsed.data);
+  after(() => notifyEnquiry(ref));
   return NextResponse.json({ ok: true, ref }, { status: 201 });
 }

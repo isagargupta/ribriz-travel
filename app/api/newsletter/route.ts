@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
+import { notifyWelcome } from "@/lib/notify";
 import { prisma } from "@/lib/db";
 import { clientIp, fail, rateLimited, readJson } from "@/lib/http";
 import { newsletterSchema } from "@/lib/schemas";
@@ -8,6 +9,10 @@ export async function POST(req: Request) {
   const parsed = await readJson(req, newsletterSchema);
   if ("res" in parsed) return parsed.res;
   const { email } = parsed.data;
-  await prisma.subscriber.upsert({ where: { email }, update: {}, create: { email } });
+  const existing = await prisma.subscriber.findUnique({ where: { email } });
+  if (!existing) {
+    await prisma.subscriber.create({ data: { email } });
+    after(() => notifyWelcome(email));
+  }
   return NextResponse.json({ ok: true });
 }

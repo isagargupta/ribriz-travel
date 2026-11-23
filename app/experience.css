@@ -350,3 +350,38 @@ kbd { font-family: var(--f-mono); font-size: 11px; background: var(--surface); b
 @media (max-width: 980px) { body:has(.sticky-book) footer.site { padding-bottom: 90px } }
 .admin-side .logo { flex: none !important }
 .inline-form .in { width: auto }
+
+/* ---------- accounts and sign-in ---------- */
+.acct-slot { width: 38px; height: 38px }
+.acct { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--blue); color: #fff; font-weight: 800; text-decoration: none; font-family: var(--f-display); font-size: 15px; transition: transform var(--t-fast) var(--ease) }
+.acct:hover { transform: scale(1.06) }
+.signin { font-weight: 700 }
+@media (max-width: 420px) { .signin { padding: 8px 10px } }
+.auth-wrap { max-width: 520px; padding-bottom: 40px }
+.otp-card { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 24px; display: grid; gap: 16px; box-shadow: var(--shadow-sm) }
+.in.big { font-size: 17px; padding: 14px 16px; border: 2px solid var(--line); border-radius: 14px; width: 100% }
+.in.big:focus { border-color: var(--blue); outline: none }
+.otp-boxes { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; max-width: 360px; width: 100%; justify-self: center }
+.otp-box { width: 100%; aspect-ratio: 1 / 1.15; text-align: center; font-family: var(--f-mono); font-size: 26px; font-weight: 500; border: 2px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--fg); transition: border-color var(--t-fast), transform var(--t-fast) var(--ease) }
+.otp-box:focus { outline: none; border-color: var(--blue); transform: translateY(-2px); box-shadow: 0 6px 16px -10px var(--blue) }
+.otp-links { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap }
+.link-btn:disabled { color: var(--muted); text-decoration: none; cursor: default }
+.spinner.dark { border-color: var(--line); border-top-color: var(--fg) }
+.acc-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap }
+.acc-grid { display: grid; grid-template-columns: 1fr 340px; gap: 22px; align-items: start; padding-bottom: 40px }
+.acc-grid > * { min-width: 0 }
+.acc-grid > div { display: grid; gap: 18px }
+@media (max-width: 900px) { .acc-grid { grid-template-columns: 1fr } }
+.acc-list { display: grid; gap: 12px }
+.acc-item { display: grid; grid-template-columns: 96px 1fr auto; gap: 14px; align-items: center; border: 1px solid var(--line); border-radius: 16px; padding: 10px; transition: box-shadow var(--t-med), transform var(--t-med) var(--ease) }
+.acc-item:hover { box-shadow: var(--shadow-sm); transform: translateY(-1px) }
+.acc-img { position: relative; width: 96px; height: 72px; border-radius: 12px; overflow: hidden; background: var(--surface-2); display: grid; place-items: center }
+.acc-img img { object-fit: cover }
+.acc-ph { font-size: 22px; color: var(--blue) }
+.acc-body { display: grid; gap: 3px; min-width: 0 }
+.acc-top { display: flex; gap: 8px; align-items: center; font-size: 12px }
+.acc-side { display: grid; gap: 8px; justify-items: end; text-align: right }
+.acc-links { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end }
+@media (max-width: 560px) { .acc-item { grid-template-columns: 72px 1fr } .acc-img { width: 72px; height: 60px } .acc-side { grid-column: 1 / -1; justify-items: start; text-align: left; grid-auto-flow: column; justify-content: space-between; align-items: center } }
+.or-line { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 13px; font-weight: 700 }
+.or-line::before, .or-line::after { content: ""; flex: 1; height: 1px; background: var(--line) }

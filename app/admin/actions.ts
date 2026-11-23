@@ -1,9 +1,12 @@
 "use server";
 import { randomBytes } from "node:crypto";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { after } from "next/server";
+import { notifyStatus } from "@/lib/notify";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { endSession, passwordMatches, requireAdmin, startSession } from "@/lib/auth";
+import { adminEmails, endSession, passwordLoginEnabled, passwordMatches, requireAdmin, startSession } from "@/lib/auth";
+import { sendLoginCode, verifyLoginCode } from "@/lib/otp";
 import { BOARDS, KINDS, isoDate } from "@/lib/pricing";
 import { setEnquiryStatus } from "@/lib/bookings";
 import { uploadPhoto } from "@/lib/supabase";
@@ -21,9 +24,30 @@ export async function login(_: { error?: string } | undefined, fd: FormData) {
   const pw = String(fd.get("password") ?? "");
   // small delay makes guessing slower
   await new Promise((r) => setTimeout(r, 400));
-  if (!passwordMatches(pw)) return { error: "Wrong password. Check ADMIN_PASSWORD in your .env file." };
-  await startSession();
+  if (!passwordLoginEnabled() || !passwordMatches(pw)) return { error: "Wrong password." };
+  await startSession("password");
   redirect("/admin");
+}
+
+/* Email-code sign-in for addresses listed in ADMIN_EMAILS. The answer is the
+   same whether or not an address is allowed, so the list can't be guessed. */
+export async function requestAdminCode(rawEmail: string) {
+  const email = String(rawEmail).trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return { ok: false, error: "Enter a valid email address." };
+  if (!adminEmails().includes(email)) {
+    await new Promise((r) => setTimeout(r, 600));
+    return { ok: true };
+  }
+  return sendLoginCode(email, "admin");
+}
+
+export async function verifyAdminCode(rawEmail: string, code: string) {
+  const email = String(rawEmail).trim().toLowerCase();
+  if (!adminEmails().includes(email)) return { ok: false, error: "That code isn't right." };
+  const r = await verifyLoginCode(email, "admin", String(code).trim());
+  if (!r.ok) return r;
+  await startSession(email);
+  return { ok: true, redirect: "/admin" };
 }
 
 export async function logout() {
@@ -40,7 +64,9 @@ export async function updateEnquiry(fd: FormData) {
   const status = String(fd.get("status"));
   const note = String(fd.get("note") ?? "").slice(0, 2000);
   if (!STATUSES.includes(status)) return;
+  const before = await prisma.enquiry.findUnique({ where: { id }, select: { status: true } });
   await setEnquiryStatus(id, status, note || null);
+  if (before && before.status !== status && fd.get("notify") === "on") after(() => notifyStatus(id));
   refreshSite();
 }
 

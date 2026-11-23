@@ -17,7 +17,7 @@ interface Contact { name: string; phone: string; email: string; others: string[]
 
 export default function CheckoutSheet() {
   const { trip, selected, q, checkout, setCheckout } = useBooking();
-  const { from, adults, childAges, toast } = usePrefs();
+  const { from, adults, childAges, toast, me } = usePrefs();
   const [step, setStep] = useState<Step>(0);
   const [c, setC] = useState<Contact>({ name: "", phone: "", email: "", others: [], message: "" });
   const [agree, setAgree] = useState(false);
@@ -30,6 +30,10 @@ export default function CheckoutSheet() {
   useEffect(() => {
     try { const d = sessionStorage.getItem(DRAFT); if (d) setC((x) => ({ ...x, ...JSON.parse(d), others: [] })); } catch {}
   }, []);
+  // signed-in customers get their saved details filled in
+  useEffect(() => {
+    if (me) setC((x) => ({ ...x, name: x.name || me.name || "", phone: x.phone || me.phone || "", email: x.email || me.email }));
+  }, [me]);
   useEffect(() => {
     try { sessionStorage.setItem(DRAFT, JSON.stringify({ name: c.name, phone: c.phone, email: c.email })); } catch {}
   }, [c.name, c.phone, c.email]);
@@ -172,7 +176,7 @@ export default function CheckoutSheet() {
           <div className="co-done">
             <div className="tick" aria-hidden="true"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24" /><path d="M15 27l7 7 15-16" /></svg></div>
             <h3>Your price is held for {HOLD_HOURS} hours</h3>
-            <p className="muted">We&apos;ve saved it under reference</p>
+            <p className="muted">We&apos;ve emailed the details to {c.email}. Your reference is</p>
             <button className="ref" onClick={() => navigator.clipboard?.writeText(done.ref).then(() => toast("Reference copied", { tone: "ok" })).catch(() => {})} title="Copy reference">{done.ref} <small>copy</small></button>
             {summary}
             <ol className="timeline">
@@ -182,7 +186,7 @@ export default function CheckoutSheet() {
             </ol>
             <div className="co-btns" style={{ justifyContent: "center", flexWrap: "wrap" }}>
               <button className="btn" onClick={downloadIcs}>Add to calendar</button>
-              <Link className="btn blue" href={`/booking?ref=${done.ref}`} onClick={close}>View my booking</Link>
+              <Link className="btn blue" href={me ? "/account" : `/booking?ref=${done.ref}`} onClick={close}>{me ? "See my trips" : "View my booking"}</Link>
             </div>
           </div>
         )}

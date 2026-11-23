@@ -1,0 +1,152 @@
+import "server-only";
+import { HOLD_HOURS, addDays, fmt, fmtDate } from "./pricing";
+
+const site = () => (process.env.NEXT_PUBLIC_SITE_URL || "https://www.ribriztravel.com").replace(/\/$/, "");
+const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+const phone = () => process.env.NEXT_PUBLIC_PHONE || "";
+
+interface Built { subject: string; html: string; text: string }
+
+/** Shared layout: table-based so it renders the same in Gmail, Outlook and Apple Mail. */
+function layout(opts: { preheader: string; heading: string; body: string; cta?: { label: string; url: string } }): string {
+  const s = site();
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${esc(opts.heading)}</title></head>
+<body style="margin:0;background:#f6f7ff;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#0b1240">
+<span style="display:none;max-height:0;overflow:hidden;opacity:0">${esc(opts.preheader)}</span>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f7ff;padding:28px 12px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #dfe3fb">
+<tr><td style="padding:22px 28px;border-bottom:1px solid #eef0ff"><a href="${s}"><img src="${s}/img/logo.png" alt="Ribriz Travel" height="36" style="height:36px;border:0;display:block"></a></td></tr>
+<tr><td style="padding:28px">
+<h1 style="margin:0 0 14px;font-size:22px;line-height:1.25;color:#0b1240">${esc(opts.heading)}</h1>
+${opts.body}
+${opts.cta ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:22px 0 4px"><tr><td style="background:#ff5a36;border-radius:999px"><a href="${opts.cta.url}" style="display:inline-block;padding:12px 24px;color:#ffffff;font-weight:700;text-decoration:none;font-size:15px">${esc(opts.cta.label)}</a></td></tr></table>` : ""}
+</td></tr>
+<tr><td style="padding:18px 28px;background:#eef0ff;font-size:12px;color:#5b628a;line-height:1.6">
+Ribriz Travel${phone() ? ` · ${esc(phone())}` : ""} · <a href="${s}" style="color:#0b4fc4">ribriztravel.com</a><br>
+You're receiving this because you used Ribriz Travel. Reply to this email to reach our team.
+</td></tr></table></td></tr></table></body></html>`;
+}
+
+const p = (t: string) => `<p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#1c2558">${t}</p>`;
+const box = (rows: [string, string][]) =>
+  `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:14px 0;border:1px solid #dfe3fb;border-radius:12px">${rows
+    .map(([k, v], i) => `<tr><td style="padding:10px 14px;font-size:13px;color:#5b628a;${i ? "border-top:1px solid #eef0ff;" : ""}width:38%">${esc(k)}</td><td style="padding:10px 14px;font-size:14px;font-weight:600;${i ? "border-top:1px solid #eef0ff;" : ""}">${v}</td></tr>`)
+    .join("")}</table>`;
+
+/* ---------------- templates ---------------- */
+
+export function loginCodeEmail(code: string, forAdmin = false): Built {
+  const heading = forAdmin ? "Your admin sign-in code" : "Your sign-in code";
+  return {
+    subject: `${code} is your Ribriz ${forAdmin ? "admin " : ""}sign-in code`,
+    html: layout({
+      preheader: `Your code is ${code}. It expires in 10 minutes.`,
+      heading,
+      body: p("Enter this code to sign in. It expires in 10 minutes.") +
+        `<div style="margin:18px 0;padding:16px;text-align:center;background:#eef0ff;border-radius:14px;font-family:Menlo,Consolas,monospace;font-size:34px;letter-spacing:10px;font-weight:700;color:#0b4fc4">${code}</div>` +
+        p("If you didn't ask for this, you can ignore this email. Nobody can sign in without the code."),
+    }),
+    text: `${heading}: ${code}\n\nIt expires in 10 minutes. If you didn't ask for this, ignore this email.`,
+  };
+}
+
+export interface HoldInfo { ref: string; name: string; tripTitle: string; tripSlug?: string | null; date: string; nights: number; adults: number; children: number; total: number; from?: string | null; deposit?: number }
+
+export function holdConfirmationEmail(h: HoldInfo): Built {
+  const ret = addDays(h.date, h.nights);
+  const party = `${h.adults} adult${h.adults > 1 ? "s" : ""}${h.children ? `, ${h.children} child${h.children > 1 ? "ren" : ""}` : ""}`;
+  const url = `${site()}/booking?ref=${h.ref}`;
+  return {
+    subject: `Price held: ${h.tripTitle} (${h.ref})`,
+    html: layout({
+      preheader: `We're holding ${fmt(h.total)} for ${HOLD_HOURS} hours. Reference ${h.ref}.`,
+      heading: `Your price is held for ${HOLD_HOURS} hours`,
+      body: p(`Hi ${esc(h.name.split(" ")[0])}, thanks for choosing Ribriz. We've reserved this price for you. There's nothing to pay yet.`) +
+        box([
+          ["Reference", `<span style="font-family:Menlo,Consolas,monospace;color:#0b4fc4">${h.ref}</span>`],
+          ["Trip", esc(h.tripTitle)],
+          ["Dates", `${fmtDate(h.date)} – ${fmtDate(ret, { weekday: "short", day: "numeric", month: "short", year: "numeric" })}`],
+          ["Travellers", `${party}${h.from ? ` · from ${esc(h.from)}` : ""}`],
+          ["Total incl. GST", fmt(h.total)],
+          ...(h.deposit ? [["Deposit to book", fmt(h.deposit)] as [string, string]] : []),
+        ]) +
+        p("<b>What happens next:</b> a travel expert will call you within 2 hours to confirm flights and rooms. Pay the deposit to book; the rest is due 30 days before you leave."),
+      cta: { label: "View my booking", url },
+    }),
+    text: `Your price is held for ${HOLD_HOURS} hours.\n\nReference: ${h.ref}\nTrip: ${h.tripTitle}\nDates: ${h.date} to ${ret}\nTravellers: ${party}\nTotal incl. GST: ${fmt(h.total)}\n\nA travel expert will call you within 2 hours.\nView your booking: ${url}`,
+  };
+}
+
+export function enquiryReceivedEmail(e: { ref: string; name: string; type: "enquiry" | "custom"; tripTitle?: string | null; message?: string | null }): Built {
+  const custom = e.type === "custom";
+  return {
+    subject: custom ? `We're planning your trip (${e.ref})` : `We got your question${e.tripTitle ? ` about ${e.tripTitle}` : ""} (${e.ref})`,
+    html: layout({
+      preheader: custom ? "A travel expert will send a costed plan within one working day." : "A travel expert usually replies within a few hours.",
+      heading: custom ? "Your trip request is with our experts" : "Thanks, we got your question",
+      body: p(`Hi ${esc(e.name.split(" ")[0])}, ${custom ? "a travel expert will send you a day-by-day plan with a full price within one working day." : "a travel expert will reply within a few hours, usually sooner."}`) +
+        box([["Reference", `<span style="font-family:Menlo,Consolas,monospace;color:#0b4fc4">${e.ref}</span>`], ...(e.tripTitle ? [["Trip", esc(e.tripTitle)] as [string, string]] : [])]) +
+        (e.message ? `<div style="margin:12px 0;padding:12px 14px;background:#f6f7ff;border-radius:12px;font-size:14px;white-space:pre-wrap;color:#1c2558">${esc(e.message)}</div>` : ""),
+      cta: { label: "Check status", url: `${site()}/booking?ref=${e.ref}` },
+    }),
+    text: `Thanks ${e.name.split(" ")[0]}, we got your ${custom ? "trip request" : "question"}. Reference ${e.ref}.\n${site()}/booking?ref=${e.ref}`,
+  };
+}
+
+const STATUS_COPY: Record<string, { heading: string; line: string }> = {
+  contacted: { heading: "We're working on your trip", line: "Our travel expert has started confirming flights and rooms for you and will be in touch shortly." },
+  booked: { heading: "You're booked!", line: "Your deposit is received and your trip is confirmed. We'll send your vouchers and final details before you leave." },
+  closed: { heading: "Your request is closed", line: "This request is now closed. If you'd like to pick it up again, just reply to this email." },
+};
+
+export function statusUpdateEmail(e: { ref: string; name: string; status: string; tripTitle?: string | null; date?: string | null }): Built | null {
+  const c = STATUS_COPY[e.status];
+  if (!c) return null;
+  return {
+    subject: `${c.heading}${e.tripTitle ? `: ${e.tripTitle}` : ""} (${e.ref})`,
+    html: layout({
+      preheader: c.line,
+      heading: c.heading,
+      body: p(`Hi ${esc(e.name.split(" ")[0])}, ${c.line.charAt(0).toLowerCase() + c.line.slice(1)}`) +
+        box([["Reference", `<span style="font-family:Menlo,Consolas,monospace;color:#0b4fc4">${e.ref}</span>`], ...(e.tripTitle ? [["Trip", esc(e.tripTitle)] as [string, string]] : []), ...(e.date ? [["Departure", fmtDate(e.date, { weekday: "short", day: "numeric", month: "short", year: "numeric" })] as [string, string]] : [])]),
+      cta: { label: "View my booking", url: `${site()}/booking?ref=${e.ref}` },
+    }),
+    text: `${c.heading}\n${c.line}\nReference ${e.ref}\n${site()}/booking?ref=${e.ref}`,
+  };
+}
+
+export function teamAlertEmail(e: { ref: string; type: string; name: string; phone: string; email: string; tripTitle?: string | null; date?: string | null; total?: number | null; travellers: string; message?: string | null }): Built {
+  const label = e.type === "hold" ? "Price hold" : e.type === "custom" ? "Custom trip request" : "Question";
+  return {
+    subject: `New ${label.toLowerCase()}: ${e.name}${e.tripTitle ? ` · ${e.tripTitle}` : ""} (${e.ref})`,
+    html: layout({
+      preheader: `${label} from ${e.name}. Call ${e.phone}.`,
+      heading: `New ${label.toLowerCase()}`,
+      body: box([
+        ["Reference", e.ref],
+        ["Customer", esc(e.name)],
+        ["Phone", `<a href="tel:${esc(e.phone)}">${esc(e.phone)}</a>`],
+        ["Email", `<a href="mailto:${esc(e.email)}">${esc(e.email)}</a>`],
+        ...(e.tripTitle ? [["Trip", esc(e.tripTitle)] as [string, string]] : []),
+        ...(e.date ? [["Departure", e.date] as [string, string]] : []),
+        ["Travellers", esc(e.travellers)],
+        ...(e.total ? [["Quoted", fmt(e.total)] as [string, string]] : []),
+      ]) + (e.message ? `<div style="padding:12px 14px;background:#f6f7ff;border-radius:12px;font-size:14px;white-space:pre-wrap">${esc(e.message)}</div>` : ""),
+      cta: { label: "Open in admin", url: `${site()}/admin/enquiries` },
+    }),
+    text: `New ${label}: ${e.ref}\n${e.name} · ${e.phone} · ${e.email}\n${e.tripTitle ?? ""} ${e.date ?? ""}\n${e.message ?? ""}`,
+  };
+}
+
+export function welcomeEmail(): Built {
+  return {
+    subject: "You're on the Ribriz price-drop list",
+    html: layout({
+      preheader: "One email a week with flash sales from your city.",
+      heading: "You're in",
+      body: p("Every Friday we'll send the week's best price drops and last-minute seats from your city. No spam, and you can unsubscribe any time by replying “unsubscribe”."),
+      cta: { label: "See this week's deals", url: `${site()}/trips?deal=lm` },
+    }),
+    text: `You're on the Ribriz price-drop list. See this week's deals: ${site()}/trips?deal=lm`,
+  };
+}

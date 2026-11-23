@@ -110,3 +110,29 @@ model Subscriber {
   email     String   @unique
   createdAt DateTime @default(now())
 }
+
+/// A customer who has signed in with an email code. Their bookings are the
+/// enquiries made with the same email address.
+model Customer {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  name        String?
+  phone       String?
+  createdAt   DateTime  @default(now())
+  lastLoginAt DateTime?
+}
+
+/// One-time sign-in codes. Only a keyed hash of the code is stored.
+model LoginCode {
+  id        String    @id @default(cuid())
+  email     String
+  /// customer | admin
+  purpose   String
+  codeHash  String
+  expiresAt DateTime
+  attempts  Int       @default(0)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email, purpose, createdAt])
+}
