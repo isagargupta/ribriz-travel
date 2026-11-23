@@ -7,6 +7,10 @@ import { ownsRecord, type Owner } from "./owner";
 import { addDays, fmt, fmtDate, quote } from "./pricing";
 import { getDepartures, getPublishedTrips } from "./trips";
 import { contactSchema, firstError } from "./schemas";
+import { acceptOffer, declineOffer } from "./offers";
+import { detailLines, type ServiceKind } from "./service-fields";
+import { prepareDetails } from "./services";
+import { inrFor } from "./fx";
 
 /**
  * The agent prepares actions; only the traveller can approve them. Execution is
@@ -37,9 +41,8 @@ function cardFor(owner: Owner, a: Parameters<typeof approvalView>[0], lines: str
 
 /** Lines shown on the card, rebuilt from the stored payload so every view matches. */
 export function linesFor(action: string, payload: Record<string, unknown>): string[] {
-  if (action === "price_hold") return (payload.lines as string[]) ?? [];
-  const d = (payload.details ?? {}) as Record<string, unknown>;
-  return Object.entries(d).filter(([, v]) => v !== undefined && v !== null && v !== "").map(([k, v]) => `${k.replace(/_/g, " ")}: ${Array.isArray(v) ? v.join(", ") : String(v)}`);
+  if (action === "price_hold" || action === "accept_offer") return (payload.lines as string[]) ?? [];
+  return [...detailLines(String(payload.service), (payload.details ?? {}) as Record<string, unknown>), ...((payload.extra as string[]) ?? [])];
 }
 
 export async function proposePriceHold(owner: Owner, i: { missionId?: string | null; slug: string; date: string; adults: number; childAges: number[]; from: string }) {
@@ -73,6 +76,13 @@ export async function proposePriceHold(owner: Owner, i: { missionId?: string | n
 
 export async function proposeService(owner: Owner, i: { missionId?: string | null; service: Service; details: Record<string, string | number | string[]> }) {
   const s = SERVICES[i.service];
+  // fills dates, travellers and places from the trip; throws MissingDetails if something's still unknown
+  i.details = await prepareDetails(i.service as ServiceKind, i.details, i.missionId);
+  const extra: string[] = [];
+  if (i.service === "forex") {
+    const fx = await inrFor(String(i.details.currency), Number(String(i.details.amount).replace(/[^\d.]/g, "")));
+    if (fx) extra.push(`About ${fmt(fx.inr)} at today's market rate; our forex partner confirms the final rate`);
+  }
   if (i.service === "visa" && i.missionId) {
     // the visa team gets the checked document list with the request
     const { visaChecklist } = await import("./documents");
@@ -82,14 +92,14 @@ export async function proposeService(owner: Owner, i: { missionId?: string | nul
   const a = await prisma.approval.create({
     data: {
       missionId: i.missionId ?? null, customerId: owner.customerId, anonId: owner.anonId, action: "service_request",
-      payload: JSON.stringify({ service: i.service, details: i.details }), summary: s.label, expiresAt: new Date(Date.now() + TTL_MS),
+      payload: JSON.stringify({ service: i.service, details: i.details, extra }), summary: s.label, expiresAt: new Date(Date.now() + TTL_MS),
     },
   });
   if (i.missionId) {
     await setTask(i.missionId, s.task, { status: "needs_approval", note: `${s.label} request ready. Waiting for your OK.` });
     await logEvent(i.missionId, "agent", `Prepared a ${s.label.toLowerCase()} request.`);
   }
-  return cardFor(owner, a, [...linesFor("service_request", { details: i.details }), s.promise]);
+  return cardFor(owner, a, [...linesFor("service_request", { service: i.service, details: i.details, extra }), s.promise]);
 }
 
 const Decision = z.object({
@@ -97,7 +107,7 @@ const Decision = z.object({
   contact: contactSchema.partial().optional(),
 });
 
-export type DecisionResult = { ok: true; status: string; message: string; ref?: string } | { ok: false; error: string };
+export type DecisionResult = { ok: true; status: string; message: string; ref?: string; chose?: string } | { ok: false; error: string };
 
 /** Runs (or declines) an approval. Safe against double clicks and replays. */
 export async function decide(owner: Owner, id: string, body: unknown): Promise<DecisionResult> {
@@ -105,7 +115,10 @@ export async function decide(owner: Owner, id: string, body: unknown): Promise<D
   if (!parsed.success) return { ok: false, error: firstError(parsed.error) };
   const a = await prisma.approval.findUnique({ where: { id } });
   if (!a || !ownsRecord(owner, a)) return { ok: false, error: "We couldn't find that request." };
-  if (a.status !== "pending") return { ok: false, error: a.status === "done" ? "This was already done." : `This request is ${a.status}.` };
+  if (a.status !== "pending") {
+    if (a.action === "accept_offer" && a.status === "declined") return { ok: false, error: "This option is no longer available: you chose another one, or our team sent new options." };
+    return { ok: false, error: a.status === "done" ? "This was already done." : `This request is ${a.status}.` };
+  }
   if (a.expiresAt < new Date()) {
     await prisma.approval.update({ where: { id }, data: { status: "expired" } });
     return { ok: false, error: "This expired. Ask Riya to prepare it again with today's price." };
@@ -114,6 +127,10 @@ export async function decide(owner: Owner, id: string, body: unknown): Promise<D
 
   if (parsed.data.decision === "decline") {
     await prisma.approval.update({ where: { id }, data: { status: "declined", decidedAt: new Date() } });
+    if (a.action === "accept_offer") {
+      await declineOffer(String(payload.offerId));
+      return { ok: true, status: "declined", message: "Noted, you passed on this option." };
+    }
     if (a.missionId) {
       const kind: TaskKind = a.action === "price_hold" ? "price_hold" : SERVICES[payload.service as Service].task;
       await setTask(a.missionId, kind, { status: "todo", note: "You said not now. Ask Riya whenever you're ready." });
@@ -135,6 +152,14 @@ export async function decide(owner: Owner, id: string, body: unknown): Promise<D
   }
 
   try {
+    if (a.action === "accept_offer") {
+      const r = await acceptOffer(id, String(payload.offerId));
+      if (!r.ok) {
+        await prisma.approval.update({ where: { id }, data: { status: "failed", result: JSON.stringify({ error: r.error }) } });
+        return { ok: false, error: r.error };
+      }
+      return { ok: true, status: "done", ref: r.ref, chose: r.offer.id, message: r.message };
+    }
     if (a.action === "price_hold") {
       const r = await createHold({
         departureId: String(payload.departureId), adults: Number(payload.adults), childAges: payload.childAges as number[], from: String(payload.from),

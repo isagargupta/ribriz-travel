@@ -20,6 +20,7 @@ ALTER TABLE "Notification" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "PriceWatch"   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "AgentRun"     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "EmailOptOut"  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "ServiceOffer" ENABLE ROW LEVEL SECURITY;
 
 -- Belt and braces: the public API roles get no table privileges at all.
-REVOKE ALL ON "Trip", "Departure", "Enquiry", "Subscriber", "Customer", "LoginCode", "VisaRule", "VisaSync", "Mission", "MissionTask", "Approval", "MissionEvent", "TravelDoc", "Notification", "PriceWatch", "AgentRun", "EmailOptOut" FROM anon, authenticated;
+REVOKE ALL ON "Trip", "Departure", "Enquiry", "Subscriber", "Customer", "LoginCode", "VisaRule", "VisaSync", "Mission", "MissionTask", "Approval", "MissionEvent", "TravelDoc", "Notification", "PriceWatch", "AgentRun", "EmailOptOut", "ServiceOffer" FROM anon, authenticated;

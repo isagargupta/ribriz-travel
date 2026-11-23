@@ -106,6 +106,7 @@ export async function POST(req: Request) {
           for (const o of outcomes) {
             if (o.mission) send({ t: "mission", v: o.mission });
             if (o.approval) send({ t: "approval", v: o.approval });
+            for (const a of o.approvals ?? []) send({ t: "approval", v: a });
           }
           // all results for this round go back together in one user message
           messages.push({

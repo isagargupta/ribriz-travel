@@ -38,12 +38,13 @@ export default function ApprovalCard({ card, onDecided, compact = false }: { car
     }
   }
 
-  const icon = card.action === "price_hold" ? "🔒" : "🧾";
+  const offer = card.action === "accept_offer";
+  const icon = card.action === "price_hold" ? "🔒" : offer ? "✨" : "🧾";
   return (
     <div className={`appr ${state} ${compact ? "compact" : ""}`}>
       <div className="appr-head">
         <span className="appr-ico" aria-hidden="true">{icon}</span>
-        <div><small>{state === "done" ? "Done" : state === "declined" ? "Not now" : expired ? "Expired" : "Needs your OK"}</small><b>{card.summary}</b></div>
+        <div><small>{state === "done" ? (offer ? "Chosen" : "Done") : state === "declined" ? (offer ? "Passed" : "Not now") : expired ? "Expired" : offer ? "Option from our team" : "Needs your OK"}</small><b>{card.summary}</b></div>
         {card.amountInr ? <span className="appr-amt">{money(card.amountInr)}</span> : null}
       </div>
       <ul className="appr-lines">{card.lines.map((l, i) => <li key={i}>{l}</li>)}</ul>
@@ -51,7 +52,7 @@ export default function ApprovalCard({ card, onDecided, compact = false }: { car
       {state === "done" || state === "declined" ? (
         <p className={`appr-msg ${state}`}>{state === "done" ? "✓ " : ""}{msg ?? (state === "done" ? "Done." : "Skipped.")}</p>
       ) : expired ? (
-        <p className="appr-msg">This expired. Ask Riya to prepare it again with today&apos;s price.</p>
+        <p className="appr-msg">{offer ? "This option expired. Ask Riya and our team will refresh it." : <>This expired. Ask Riya to prepare it again with today&apos;s price.</>}</p>
       ) : (
         <>
           {card.needsContact && (
@@ -63,8 +64,8 @@ export default function ApprovalCard({ card, onDecided, compact = false }: { car
           )}
           {err && <p className="appr-err" role="alert">{err}</p>}
           <div className="appr-btns">
-            <button className="btn sm" disabled={state === "busy"} onClick={() => decide("decline")}>Not now</button>
-            <button className="btn hot" disabled={state === "busy"} onClick={() => decide("approve")}>{state === "busy" ? <span className="spinner" aria-label="Working" /> : "Approve"}</button>
+            <button className="btn sm" disabled={state === "busy"} onClick={() => decide("decline")}>{offer ? "Pass" : "Not now"}</button>
+            <button className="btn hot" disabled={state === "busy"} onClick={() => decide("approve")}>{state === "busy" ? <span className="spinner" aria-label="Working" /> : offer ? "Choose this" : "Approve"}</button>
           </div>
         </>
       )}

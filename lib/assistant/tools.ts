@@ -13,6 +13,12 @@ import { chooseTrip, createMission, getOwnedMission, logEvent, missionView, setT
 import { proposePriceHold, proposeService, SERVICES, type ApprovalCard, type Service } from "../approvals";
 import { visaChecklist } from "../documents";
 import { WatchError, watchPrice } from "../watches";
+import { MissingDetails } from "../services";
+import { SERVICE_FIELDS } from "../service-fields";
+import { bookingsFor } from "../offers";
+import { pendingCard } from "../approvals";
+import { FX_ATTRIBUTION, getFxRates } from "../fx";
+import { prisma } from "../db";
 
 /** Who is asking: set by the server from the visitor's saved preferences, never by the model. */
 export interface VisitorContext { from: string; passport: string; adults: number; childAges: number[]; currency: string; name?: string | null; owner: Owner }
@@ -20,7 +26,7 @@ export interface VisitorContext { from: string; passport: string; adults: number
 /** Compact trip card the chat UI renders under a reply. Prices in INR per adult. */
 export interface CardTrip { slug: string; title: string; image: string; dest: string; country: string; nights: number; price: number; date?: string | null; seats?: number | null; visa?: string }
 
-export interface ToolOutcome { result: unknown; cards?: CardTrip[]; status: string; approval?: ApprovalCard; mission?: { id: string; title: string } }
+export interface ToolOutcome { result: unknown; cards?: CardTrip[]; status: string; approval?: ApprovalCard; approvals?: ApprovalCard[]; mission?: { id: string; title: string } }
 
 const THEME_KEYS = ["honeymoon", "family", "group", "beach", "heritage", "nature", "city", "luxury"] as const;
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD");
@@ -82,6 +88,8 @@ const TaskInput = z.object({
 }).strict();
 const MissionInput = z.object({ mission_id: z.string().max(40).optional() }).strict();
 const ChecklistInput = z.object({ mission_id: z.string().max(40).optional() }).strict();
+const OptionsInput = z.object({ mission_id: z.string().max(40).optional() }).strict();
+const FxInput = z.object({ currency: z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/, "Use a 3-letter code like USD"), amount: z.number().positive().max(1e9).optional() }).strict();
 const WatchInput = z.object({ slug: z.string().min(1).max(120), date: date.optional(), email: z.string().trim().toLowerCase().email().max(160).optional() }).strict();
 
 /* ---------------- definitions sent to Claude ---------------- */
@@ -192,7 +200,7 @@ export const TOOLS: Anthropic.Beta.BetaTool[] = [
   },
   {
     name: "request_service",
-    description: "Prepare a request to Ribriz's team for a visa application, forex, travel insurance, flights or hotels. Shows the traveller an approval card; only sent if they approve. Put everything you already know in `details` (destination, dates, travellers, preferences) so the team needn't ask again. Visa: countries, travel dates, purpose. Forex: currencies, amounts, card or cash, delivery city and date. Insurance: countries, dates, ages, any medical conditions mentioned. Flight: from, to, dates, class, travellers. Hotel: city, dates, rooms, budget, style.",
+    description: `Prepare a request to Ribriz's team for a visa application, forex, travel insurance, flights or hotels. Shows the traveller an approval card; only sent if they approve. Dates, travellers, destinations and the home city are filled in from the mission automatically, so only pass what the traveller told you. If the result lists missing details, ask for just those (in one short question) and call again. Detail keys: ${Object.entries(SERVICE_FIELDS).map(([k, fs]) => `${k}: ${fs.map((f) => f.key + (f.required ? "*" : "")).join(", ")}`).join("; ")} (* required). After approval the team sends options, which the traveller picks with one tap; show_options shows them in chat.`,
     eager_input_streaming: true,
     input_schema: {
       type: "object", additionalProperties: false, required: ["service", "details"],
@@ -226,6 +234,18 @@ export const TOOLS: Anthropic.Beta.BetaTool[] = [
       type: "object", additionalProperties: false, required: ["slug"],
       properties: { slug: { type: "string" }, date: { type: "string", description: "YYYY-MM-DD departure; omit to watch the trip's cheapest date" }, email: { type: "string", description: "Only an address the traveller typed in this chat" } },
     },
+  },
+  {
+    name: "show_options",
+    description: "Show the options our team has sent for the traveller's requests (flights, hotels, insurance, forex, visa service) as cards they can choose from right here in the chat, plus what's already booked. Use when they ask about their options or bookings, or when a mission step says options are ready.",
+    eager_input_streaming: true,
+    input_schema: { type: "object", additionalProperties: false, properties: { mission_id: { type: "string" } } },
+  },
+  {
+    name: "forex_rate",
+    description: "Today's market exchange rate for a currency against the rupee, and optionally what an amount costs in INR. Indicative only: the forex partner's rate is usually a little higher. Use to help the traveller decide how much forex to take before preparing a forex request.",
+    eager_input_streaming: true,
+    input_schema: { type: "object", additionalProperties: false, required: ["currency"], properties: { currency: { type: "string", description: "ISO code, e.g. JPY" }, amount: { type: "number" } } },
   },
   {
     name: "get_mission",
@@ -446,7 +466,13 @@ async function proposeHoldTool(i: z.infer<typeof HoldInput>, ctx: VisitorContext
 
 async function requestServiceTool(i: z.infer<typeof ServiceInput>, ctx: VisitorContext): Promise<ToolOutcome> {
   const m = await resolveMission(ctx, i.mission_id);
-  const card = await proposeService(ctx.owner, { missionId: m?.id ?? null, service: i.service as Service, details: i.details as Record<string, string | number | string[]> });
+  let card;
+  try {
+    card = await proposeService(ctx.owner, { missionId: m?.id ?? null, service: i.service as Service, details: i.details as Record<string, string | number | string[]> });
+  } catch (e) {
+    if (e instanceof MissingDetails) return { status: "Preparing your request…", result: { error: "Some details are still needed. Ask the traveller for these, then call again.", missing: e.missing } };
+    throw e;
+  }
   return { status: `Preparing your ${SERVICES[i.service as Service].label.toLowerCase()}…`, approval: card, result: { approval_id: card.id, shown_to_traveller: true, note: "Waiting for the traveller to approve the card. Don't say it's sent yet." } };
 }
 
@@ -479,7 +505,7 @@ async function getMissionTool(i: z.infer<typeof MissionInput>, ctx: VisitorConte
   const m = await resolveMission(ctx, i.mission_id);
   if (!m) return { status: "Checking your trip…", result: { mission: null, note: "The traveller has no open mission." } };
   const v = await missionView(ctx.owner, m.id);
-  return { status: "Checking your trip…", result: v && { ...v, events: v.events.slice(0, 8), hub_url: `${site()}/hub/${m.id}` } };
+  return { status: "Checking your trip…", result: v && { ...v, events: v.events.slice(0, 8), bookings: await bookingsFor(m.id), hub_url: `${site()}/hub/${m.id}` } };
 }
 
 async function watchPriceTool(i: z.infer<typeof WatchInput>, ctx: VisitorContext): Promise<ToolOutcome> {
@@ -490,6 +516,35 @@ async function watchPriceTool(i: z.infer<typeof WatchInput>, ctx: VisitorContext
     if (e instanceof WatchError) return { status: "Setting a price alert…", result: { error: e.message, need_email: e.message.startsWith("Add your email") } };
     throw e;
   }
+}
+
+async function showOptionsTool(i: z.infer<typeof OptionsInput>, ctx: VisitorContext): Promise<ToolOutcome> {
+  const m = await resolveMission(ctx, i.mission_id);
+  if (!m) return { status: "Getting your options…", result: { error: "No mission yet." } };
+  const pending = await prisma.approval.findMany({ where: { missionId: m.id, action: "accept_offer", status: "pending", expiresAt: { gt: new Date() } }, orderBy: { createdAt: "asc" }, select: { id: true } });
+  const cards = (await Promise.all(pending.map((p) => pendingCard(ctx.owner, p.id)))).filter((c): c is ApprovalCard => !!c);
+  const booked = await bookingsFor(m.id);
+  return {
+    status: "Getting your options…", approvals: cards,
+    result: {
+      options_shown_as_cards: cards.map((c) => ({ summary: c.summary, price_inr: c.amountInr, details: c.lines })),
+      chosen_or_booked: booked.map((b) => ({ service: b.label, title: b.title, status: b.status, confirmation: b.confirmation })),
+      note: cards.length ? "The cards are shown under your message. Briefly compare them and recommend one; the traveller taps to choose." : "No options are waiting right now.",
+    },
+  };
+}
+
+async function fxTool(i: z.infer<typeof FxInput>): Promise<ToolOutcome> {
+  const rates = await getFxRates();
+  const per = rates?.perInr[i.currency];
+  if (!rates || !per) return { status: "Checking exchange rates…", result: { error: rates ? `No rate for ${i.currency}.` : "Rates are unavailable right now." } };
+  return {
+    status: "Checking exchange rates…",
+    result: {
+      currency: i.currency, inr_per_unit: +(1 / per).toFixed(4), ...(i.amount ? { amount: i.amount, approx_inr: Math.round(i.amount / per) } : {}),
+      as_of: rates.updated.slice(0, 10), note: "Mid-market rate. The forex partner confirms the actual rate, usually 1–3% higher.", source: FX_ATTRIBUTION.label,
+    },
+  };
 }
 
 /* ---------------- dispatcher ---------------- */
@@ -508,6 +563,8 @@ const REGISTRY = {
   get_mission: { schema: MissionInput, run: getMissionTool },
   get_visa_checklist: { schema: ChecklistInput, run: visaChecklistTool },
   watch_price: { schema: WatchInput, run: watchPriceTool },
+  show_options: { schema: OptionsInput, run: showOptionsTool },
+  forex_rate: { schema: FxInput, run: fxTool },
 } as const;
 
 export const TOOL_STATUS: Record<string, string> = {
@@ -516,6 +573,7 @@ export const TOOL_STATUS: Record<string, string> = {
   start_mission: "Setting up your trip plan…", choose_trip: "Saving your choice…", propose_price_hold: "Preparing your price hold…",
   request_service: "Preparing your request…", update_mission_task: "Updating your plan…", get_mission: "Checking your trip…",
   get_visa_checklist: "Checking your documents…", watch_price: "Setting a price alert…",
+  show_options: "Getting your options…", forex_rate: "Checking exchange rates…",
 };
 
 /** Validates the model's input against the schema, then runs the tool. Errors come back as results, never throws. */

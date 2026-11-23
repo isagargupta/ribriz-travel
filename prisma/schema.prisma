@@ -103,6 +103,7 @@ model Enquiry {
   details     String?
   missionId   String?
   mission     Mission?   @relation(fields: [missionId], references: [id], onDelete: SetNull)
+  offers      ServiceOffer[]
   /// new | contacted | booked | closed
   status      String     @default("new")
   note        String?
@@ -340,4 +341,31 @@ model AgentRun {
 model EmailOptOut {
   email     String   @id
   createdAt DateTime @default(now())
+}
+
+/// An option the team (or later, a partner API) offers for a service request:
+/// a flight, hotel, insurance plan or forex rate. The traveller picks one with
+/// a one-tap approval; the team books it and records the confirmation.
+model ServiceOffer {
+  id           String    @id @default(cuid())
+  enquiryId    String
+  enquiry      Enquiry   @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
+  missionId    String?
+  /// forex | insurance | flight | hotel | visa
+  service      String
+  title        String
+  /// JSON array of short detail lines shown to the traveller
+  lines        String    @default("[]")
+  /// total in INR, when known
+  priceInr     Int?
+  validUntil   DateTime
+  /// offered | chosen | declined | expired | booked | cancelled
+  status       String    @default("offered")
+  /// booking reference, PNR, policy or voucher number from the supplier
+  confirmation String?
+  bookedAt     DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([enquiryId])
+  @@index([missionId])
 }

@@ -11,6 +11,8 @@ import { getOwner } from "@/lib/owner";
 import { addDays, daysBetween, fmtDate, isoDate } from "@/lib/pricing";
 import { countryName } from "@/lib/visa";
 import Notices from "@/components/hub/Notices";
+import Bookings from "@/components/hub/Bookings";
+import { bookingsFor } from "@/lib/offers";
 import { markSeen, noticesFor } from "@/lib/notifications";
 
 export const metadata: Metadata = { title: "Trip hub", robots: { index: false } };
@@ -30,7 +32,7 @@ export default async function MissionPage({ params }: { params: Promise<{ id: st
   const pending = (await Promise.all(m.approvals.filter((a) => a.status === "pending").map((a) => pendingCard(owner, a.id)))).filter((c) => c !== null);
   const days = m.date ? daysBetween(isoDate(new Date()), m.date) : null;
   const visa = m.trip ? await visaChecklist(owner, m.id) : null;
-  const notices = await noticesFor(owner, { missionId: m.id, take: 6 });
+  const [notices, bookings] = await Promise.all([noticesFor(owner, { missionId: m.id, take: 6 }), bookingsFor(m.id)]);
   await markSeen(owner, notices.filter((n) => n.unread).map((n) => n.id)); // shown as new this once
 
   return (
@@ -54,11 +56,12 @@ export default async function MissionPage({ params }: { params: Promise<{ id: st
         <div className="hub-main">
           {pending.length > 0 && (
             <section className="panel">
-              <h2>Waiting for your OK</h2>
+              <h2>{pending.some((c) => c.action === "accept_offer") ? "Choose and approve" : "Waiting for your OK"}</h2>
               <HubApprovals cards={pending} />
             </section>
           )}
           <Notices items={notices} />
+          <Bookings items={bookings} />
           {visa && (
             <section className="panel" id="visa">
               <div className="hub-sec-head"><h2>Visa</h2></div>

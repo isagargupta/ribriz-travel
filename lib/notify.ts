@@ -1,7 +1,8 @@
 import "server-only";
 import { prisma } from "./db";
 import { sendEmail, teamInbox } from "./email";
-import { enquiryReceivedEmail, holdConfirmationEmail, statusUpdateEmail, teamAlertEmail, welcomeEmail } from "./email-templates";
+import { bookingConfirmedEmail, enquiryReceivedEmail, holdConfirmationEmail, offerChosenTeamEmail, offersReadyEmail, statusUpdateEmail, teamAlertEmail, welcomeEmail } from "./email-templates";
+import { OFFER_LABEL } from "./offers";
 import { quote } from "./pricing";
 
 async function load(ref: string) {
@@ -57,4 +58,35 @@ export async function notifyStatus(enquiryId: string) {
 
 export async function notifyWelcome(email: string) {
   await sendEmail({ to: email, idempotencyKey: `welcome-${email}`, ...welcomeEmail() });
+}
+
+const offerLine = (o: { title: string; lines: string; priceInr: number | null }) => ({ title: o.title, lines: JSON.parse(o.lines) as string[], priceInr: o.priceInr });
+
+/** Traveller: the team's options are ready to pick. */
+export async function notifyOffers(enquiryId: string) {
+  const e = await prisma.enquiry.findUnique({ where: { id: enquiryId }, include: { offers: { where: { status: "offered" }, orderBy: { createdAt: "asc" } } } });
+  if (!e?.missionId || !e.offers.length) return;
+  await sendEmail({
+    to: e.email, idempotencyKey: `offers-${e.offers.map((o) => o.id).join("-")}`,
+    ...offersReadyEmail({ name: e.name, label: OFFER_LABEL[e.type] ?? "Travel", ref: e.ref, offers: e.offers.map(offerLine), validUntil: e.offers[0].validUntil, missionId: e.missionId }),
+  });
+}
+
+/** Team: the traveller chose an option, so book it. */
+export async function notifyOfferChosen(offerId: string) {
+  const o = await prisma.serviceOffer.findUnique({ where: { id: offerId }, include: { enquiry: true } });
+  const to = teamInbox();
+  if (!o || !to.length) return;
+  const e = o.enquiry;
+  await sendEmail({ to, replyTo: e.email, idempotencyKey: `chosen-${o.id}`, ...offerChosenTeamEmail({ ref: e.ref, name: e.name, phone: e.phone, email: e.email, label: OFFER_LABEL[o.service] ?? "Service", offer: offerLine(o), enquiryId: e.id }) });
+}
+
+/** Traveller: booked, with the confirmation number. */
+export async function notifyBooked(offerId: string) {
+  const o = await prisma.serviceOffer.findUnique({ where: { id: offerId }, include: { enquiry: true } });
+  if (!o?.confirmation) return;
+  await sendEmail({
+    to: o.enquiry.email, idempotencyKey: `booked-${o.id}-${o.confirmation}`,
+    ...bookingConfirmedEmail({ name: o.enquiry.name, label: OFFER_LABEL[o.service] ?? "Service", ref: o.enquiry.ref, offer: offerLine(o), confirmation: o.confirmation, missionId: o.missionId }),
+  });
 }

@@ -88,7 +88,8 @@ export async function setEnquiryStatus(id: string, status: string, note: string 
     const e = await tx.enquiry.findUnique({ where: { id } });
     if (!e) return;
     const party = e.adults + e.children;
-    if (e.departureId && e.status !== status) {
+    // only price holds reserve seats; service requests (forex, insurance…) just reference the trip
+    if (e.type === "hold" && e.departureId && e.status !== status) {
       const dep = await tx.departure.findUnique({ where: { id: e.departureId } });
       if (dep && dep.seatsLeft !== null) {
         if (status === "booked") await tx.departure.update({ where: { id: dep.id }, data: { seatsLeft: Math.max(0, dep.seatsLeft - party) } });

@@ -199,3 +199,59 @@ export function digestEmail(d: { name: string | null; subject: string; intro: st
     text: `${hi} ${d.intro}\n\n${d.items.map((i) => `• ${i.title}\n  ${i.body}\n  ${abs(i.url)}`).join("\n\n")}\n\n— Riya, Ribriz Travel\nStop these updates: ${d.unsubscribe}`,
   };
 }
+
+export interface OfferLine { title: string; lines: string[]; priceInr: number | null }
+const offerBox = (o: OfferLine) =>
+  `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 12px;border:1px solid #dfe3fb;border-radius:14px"><tr><td style="padding:14px 16px">
+<div style="font-size:15px;font-weight:700;color:#0b1240">${esc(o.title)}${o.priceInr ? `<span style="float:right;color:#0b4fc4">${fmt(o.priceInr)}</span>` : ""}</div>
+${o.lines.length ? `<div style="margin-top:6px;font-size:14px;line-height:1.55;color:#1c2558">${o.lines.map(esc).join("<br>")}</div>` : ""}
+</td></tr></table>`;
+
+/** The team's options for a request, ready to pick in the trip hub. */
+export function offersReadyEmail(d: { name: string; label: string; ref: string; offers: OfferLine[]; validUntil: Date; missionId: string }): Built {
+  const url = `${site()}/hub/${d.missionId}`;
+  const until = d.validUntil.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" });
+  const n = d.offers.length;
+  return {
+    subject: `Your ${d.label.toLowerCase()} option${n > 1 ? "s are" : " is"} ready (${d.ref})`,
+    html: layout({
+      preheader: `${n} option${n > 1 ? "s" : ""} to choose from. One tap in your trip hub and we'll book it.`,
+      heading: `Your ${d.label.toLowerCase()} option${n > 1 ? "s are" : " is"} ready`,
+      body: p(`Hi ${esc(d.name.split(" ")[0])}, here ${n > 1 ? `are ${n} options` : "is the option"} our team found. Choose in your trip hub and we'll book it for you.`) +
+        d.offers.map(offerBox).join("") + p(`Prices are held until <b>${until}</b>.`),
+      cta: { label: n > 1 ? "Choose an option" : "Review and approve", url },
+    }),
+    text: `Your ${d.label.toLowerCase()} options (${d.ref}):\n\n${d.offers.map((o) => `• ${o.title}${o.priceInr ? ` — ${fmt(o.priceInr)}` : ""}\n  ${o.lines.join("\n  ")}`).join("\n\n")}\n\nValid until ${until}. Choose here: ${url}`,
+  };
+}
+
+/** Booked with the supplier: the confirmation the traveller keeps. */
+export function bookingConfirmedEmail(d: { name: string; label: string; ref: string; offer: OfferLine; confirmation: string; missionId: string | null }): Built {
+  const url = d.missionId ? `${site()}/hub/${d.missionId}` : `${site()}/booking?ref=${d.ref}`;
+  return {
+    subject: `Booked: ${d.offer.title} (${d.confirmation})`,
+    html: layout({
+      preheader: `Confirmation ${d.confirmation}. Everything is in your trip hub.`,
+      heading: `Your ${d.label.toLowerCase()} is booked`,
+      body: p(`Hi ${esc(d.name.split(" ")[0])}, it's done. Keep this confirmation handy; it's also saved in your trip hub.`) +
+        box([["Confirmation", `<span style="font-family:Menlo,Consolas,monospace;color:#0b4fc4">${esc(d.confirmation)}</span>`], ["Our reference", d.ref]]) + offerBox(d.offer),
+      cta: { label: "Open my trip hub", url },
+    }),
+    text: `Your ${d.label.toLowerCase()} is booked.\nConfirmation: ${d.confirmation}\n${d.offer.title}\n${d.offer.lines.join("\n")}\nOur reference: ${d.ref}\n${url}`,
+  };
+}
+
+/** Team alert: the traveller picked an option, book it now. */
+export function offerChosenTeamEmail(d: { ref: string; name: string; phone: string; email: string; label: string; offer: OfferLine; enquiryId: string }): Built {
+  return {
+    subject: `Book now: ${d.name} chose ${d.offer.title} (${d.ref})`,
+    html: layout({
+      preheader: `${d.name} chose an option. Book it and add the confirmation.`,
+      heading: `${d.label}: option chosen`,
+      body: box([["Reference", d.ref], ["Customer", esc(d.name)], ["Phone", `<a href="tel:${esc(d.phone)}">${esc(d.phone)}</a>`], ["Email", esc(d.email)]]) + offerBox(d.offer) +
+        p("Book it with the supplier, then add the confirmation in the admin. The traveller sees it straight away."),
+      cta: { label: "Open in admin", url: `${site()}/admin/enquiries#${d.enquiryId}` },
+    }),
+    text: `${d.name} chose ${d.offer.title} (${d.ref}). Book it and add the confirmation: ${site()}/admin/enquiries#${d.enquiryId}`,
+  };
+}

@@ -1,7 +1,7 @@
 import { NextResponse, after } from "next/server";
 import { decide, pendingCard } from "@/lib/approvals";
 import { clientIp, fail, rateLimited } from "@/lib/http";
-import { notifyEnquiry, notifyHold } from "@/lib/notify";
+import { notifyEnquiry, notifyHold, notifyOfferChosen } from "@/lib/notify";
 import { getOwner } from "@/lib/owner";
 import { prisma } from "@/lib/db";
 
@@ -22,7 +22,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const owner = await getOwner();
   const r = await decide(owner, id, body);
   if (!r.ok) return fail(r.error, 409);
-  if (r.status === "done" && r.ref) {
+  if (r.status === "done" && r.chose) {
+    const offerId = r.chose;
+    after(() => notifyOfferChosen(offerId));
+  } else if (r.status === "done" && r.ref) {
     const ref = r.ref;
     const e = await prisma.enquiry.findUnique({ where: { ref }, select: { type: true } });
     after(() => (e?.type === "hold" ? notifyHold(ref) : notifyEnquiry(ref)));

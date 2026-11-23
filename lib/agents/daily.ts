@@ -15,6 +15,7 @@ export async function daily(now = new Date()) {
   const cleanup = await part("cleanup", async () => ({
     docsDeleted: await purgeExpiredDocs(),
     approvalsExpired: (await prisma.approval.updateMany({ where: { status: "pending", expiresAt: { lt: now } }, data: { status: "expired" } })).count,
+    optionsExpired: (await prisma.serviceOffer.updateMany({ where: { status: "offered", validUntil: { lt: now } }, data: { status: "expired" } })).count,
     oldCodesDeleted: (await prisma.loginCode.deleteMany({ where: { createdAt: { lt: new Date(now.getTime() - 7 * 864e5) } } })).count,
     oldRunsDeleted: (await prisma.agentRun.deleteMany({ where: { startedAt: { lt: new Date(now.getTime() - 90 * 864e5) } } })).count,
   }));

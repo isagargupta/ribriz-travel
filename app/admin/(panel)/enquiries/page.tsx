@@ -2,6 +2,19 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { fmt } from "@/lib/pricing";
 import { deleteEnquiry, updateEnquiry } from "../../actions";
+import OffersPanel from "@/components/admin/OffersPanel";
+import { inrFor } from "@/lib/fx";
+import { detailLines } from "@/lib/service-fields";
+
+const SERVICE_TYPES = ["visa", "forex", "insurance", "flight", "hotel"];
+
+/** Market-rate hint for the team when quoting forex. */
+async function forexHint(details: string | null) {
+  const d = details ? (JSON.parse(details) as Record<string, unknown>) : {};
+  const amount = Number(String(d.amount ?? "").replace(/[^\d.]/g, ""));
+  const fx = d.currency ? await inrFor(String(d.currency), amount || 1) : null;
+  return fx ? `Market rate today: 1 ${String(d.currency).toUpperCase()} = ₹${fx.rate.toFixed(fx.rate < 1 ? 4 : 2)}${amount ? ` · ${amount.toLocaleString("en-IN")} ≈ ₹${fx.inr.toLocaleString("en-IN")}` : ""} (before partner margin)` : null;
+}
 
 const FILTERS = ["all", "new", "contacted", "booked", "closed"];
 const TYPE_LABELS: Record<string, string> = { hold: "48-hour price hold", enquiry: "Question about a trip", custom: "Custom trip request", visa: "Visa application help", forex: "Forex order", insurance: "Travel insurance", flight: "Flight booking", hotel: "Hotel booking" };
@@ -11,9 +24,10 @@ export default async function Enquiries({ searchParams }: { searchParams: Promis
   const where = FILTERS.includes(status) && status !== "all" ? { status } : {};
   const list = await prisma.enquiry.findMany({
     where, orderBy: { createdAt: "desc" }, take: 200,
-    include: { mission: { select: { id: true, documents: { orderBy: { createdAt: "desc" }, select: { id: true, kind: true, fileName: true, status: true, findings: true } } } } },
+    include: { offers: { orderBy: { createdAt: "asc" } }, mission: { select: { id: true, documents: { orderBy: { createdAt: "desc" }, select: { id: true, kind: true, fileName: true, status: true, findings: true } } } } },
   });
   const wa = (phone: string) => phone.replace(/[^\d]/g, "");
+  const hints = new Map(await Promise.all(list.filter((e) => e.type === "forex").map(async (e) => [e.id, await forexHint(e.details)] as const)));
 
   return (
     <>
@@ -43,7 +57,15 @@ export default async function Enquiries({ searchParams }: { searchParams: Promis
               </div>
               {e.travellers && <p style={{ fontSize: 14, margin: "8px 0 0" }}><b>Also travelling:</b> {(JSON.parse(e.travellers) as string[]).join(", ")}</p>}
               {e.childAges && e.children > 0 && <p style={{ fontSize: 14, margin: "4px 0 0" }}><b>Child ages:</b> {(JSON.parse(e.childAges) as number[]).join(", ")}</p>}
-              {e.message && <p style={{ whiteSpace: "pre-wrap", background: "var(--surface-2)", padding: 12, borderRadius: 12, fontSize: 14 }}>{e.message}</p>}
+              {e.details && SERVICE_TYPES.includes(e.type) ? (
+                <ul className="admin-details">{detailLines(e.type, JSON.parse(e.details)).map((l) => <li key={l}>{l}</li>)}</ul>
+              ) : e.message && <p style={{ whiteSpace: "pre-wrap", background: "var(--surface-2)", padding: 12, borderRadius: 12, fontSize: 14 }}>{e.message}</p>}
+              {SERVICE_TYPES.includes(e.type) && (
+                <OffersPanel
+                  enquiryId={e.id} canSend={!!e.missionId && e.status !== "closed"} hint={hints.get(e.id) ?? null}
+                  offers={e.offers.map((o) => ({ id: o.id, title: o.title, lines: JSON.parse(o.lines), priceInr: o.priceInr, status: o.status === "offered" && o.validUntil < new Date() ? "expired" : o.status, confirmation: o.confirmation, validUntil: o.validUntil.toISOString() }))}
+                />
+              )}
               {e.type === "visa" && e.mission && (
                 <div className="admin-docs">
                   <b>Traveller&apos;s documents ({e.mission.documents.length})</b>

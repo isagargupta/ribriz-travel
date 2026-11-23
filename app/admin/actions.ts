@@ -248,3 +248,43 @@ export async function runAgentsNow() {
   await runAgents();
   revalidatePath("/admin");
 }
+
+/* ---------- service options ---------- */
+export type OfferFormState = { ok?: string; error?: string } | undefined;
+
+export async function sendOffersAction(_: OfferFormState, fd: FormData): Promise<OfferFormState> {
+  await requireAdmin();
+  const { sendOffers, OfferError } = await import("@/lib/offers");
+  const { notifyOffers } = await import("@/lib/notify");
+  const enquiryId = String(fd.get("enquiryId"));
+  const options = [0, 1, 2].map((i) => ({
+    title: String(fd.get(`title${i}`) ?? "").trim(),
+    lines: String(fd.get(`lines${i}`) ?? "").split("\n"),
+    priceInr: Number(String(fd.get(`price${i}`) ?? "").replace(/[^\d]/g, "")) || null,
+  })).filter((o) => o.title);
+  try {
+    const sent = await sendOffers(enquiryId, options, Number(fd.get("validHours")) || 48);
+    if (fd.get("notify") === "on") after(() => notifyOffers(enquiryId));
+    revalidatePath("/admin/enquiries");
+    return { ok: `Sent ${sent.length} option${sent.length > 1 ? "s" : ""}. They're in the traveller's trip hub${fd.get("notify") === "on" ? " and inbox" : ""}.` };
+  } catch (e) {
+    if (e instanceof OfferError) return { error: e.message };
+    throw e;
+  }
+}
+
+export async function markBookedAction(_: OfferFormState, fd: FormData): Promise<OfferFormState> {
+  await requireAdmin();
+  const { markOfferBooked, OfferError } = await import("@/lib/offers");
+  const { notifyBooked } = await import("@/lib/notify");
+  const offerId = String(fd.get("offerId"));
+  try {
+    await markOfferBooked(offerId, String(fd.get("confirmation") ?? ""));
+    after(() => notifyBooked(offerId));
+    revalidatePath("/admin/enquiries");
+    return { ok: "Booked. The traveller has been emailed the confirmation." };
+  } catch (e) {
+    if (e instanceof OfferError) return { error: e.message };
+    throw e;
+  }
+}

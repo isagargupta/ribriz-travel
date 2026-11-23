@@ -631,3 +631,15 @@ kbd { font-family: var(--f-mono); font-size: 11px; background: var(--surface); b
 .watch-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 0; padding: 0; list-style: none }
 .watch-list li { font-size: 13px; padding: 6px 12px; border-radius: 999px; background: #eef0ff }
 .hub-updates { display: grid; gap: 14px; margin: 0 0 22px }
+
+/* bookings (travel pack) */
+.bookings ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px }
+.bookings li { display: grid; grid-template-columns: 38px 1fr auto; gap: 12px; align-items: center; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; animation: fadeUp .35s ease-out both }
+.bookings li.bk-booked { border-color: #9fe0bf; background: linear-gradient(135deg, #effbf5, #fff) }
+.bookings .bk-ico { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: #eef0ff; font-size: 17px }
+.bookings small { color: var(--muted, #5b628a); display: block }
+.bookings b { display: block; font-size: 15px }
+.bookings p { margin: 2px 0 0; font-size: 13px; color: var(--ink-2, #3a4170) }
+.bookings .bk-right { text-align: right; display: grid; gap: 4px; font-size: 14px }
+.bookings .bk-conf { font-family: Menlo, Consolas, monospace; font-weight: 700; color: #0b4fc4; background: #eef3ff; padding: 3px 8px; border-radius: 8px; user-select: all }
+@media (max-width: 560px) { .bookings li { grid-template-columns: 38px 1fr } .bookings .bk-right { grid-column: 2; text-align: left } }
