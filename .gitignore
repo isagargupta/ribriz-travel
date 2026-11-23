@@ -17,3 +17,5 @@ prisma/*.db-journal
 
 # editor / tool settings
 .claude/
+.vercel
+.env*
