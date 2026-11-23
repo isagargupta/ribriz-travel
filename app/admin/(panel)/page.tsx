@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { fmt } from "@/lib/pricing";
 import { runAgentsNow } from "../actions";
+import { inbox } from "@/lib/inbox";
 
 const KIND_LABEL: Record<string, string> = { price_drop: "price drops", hold_expiring: "holds ending", hold_expired: "holds ended", visa_deadline: "visa deadlines", docs_missing: "missing documents", sold_out: "sold-out dates", pre_trip: "pre-trip checklists" };
 
@@ -19,6 +20,8 @@ export default async function Dashboard() {
     prisma.priceWatch.count({ where: { active: true } }),
     prisma.notification.groupBy({ by: ["kind"], _count: true, where: { createdAt: { gte: weekAgo } } }),
   ]);
+  const work = await inbox();
+  const hot = work.filter((r) => r.work.level === "urgent" || r.work.level === "today");
   const stats = lastRun?.stats ? (JSON.parse(lastRun.stats) as { new?: number; emailsSent?: number; aiWritten?: number }) : null;
 
   return (
@@ -31,6 +34,14 @@ export default async function Dashboard() {
         <div className="kpi"><b>{fmt(pipeline._sum.quotedTotal ?? 0)}</b><span>open quotes (new + contacted)</span></div>
       </div>
       <p className="muted" style={{ marginTop: -8 }}>{trips} trips on sale · {subs} newsletter subscribers</p>
+
+      <Link href="/admin/inbox" className="agent-card inbox-card">
+        <div>
+          <h2 style={{ fontSize: 18, margin: 0 }}>{hot.length ? `${hot.length} request${hot.length > 1 ? "s" : ""} need you today` : "Inbox is under control"}</h2>
+          <p className="muted" style={{ margin: "4px 0 0" }}>{hot.length ? `Top: ${hot[0].name}, ${hot[0].work.next.toLowerCase()}${hot[0].work.reasons[0] ? ` (${hot[0].work.reasons[0].toLowerCase()})` : ""}.` : `${work.length} open request${work.length === 1 ? "" : "s"}, none urgent.`} Riya drafts every reply.</p>
+        </div>
+        <span className="btn sm">Open inbox →</span>
+      </Link>
 
       <section className="agent-card">
         <div>

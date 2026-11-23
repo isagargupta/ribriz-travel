@@ -387,3 +387,40 @@ footer.site .logo img { height: 48px }
 .oa-row .in:first-child { flex: 1; min-width: 200px }
 .admin-details { margin: 10px 0 0; padding: 10px 14px; list-style: none; background: var(--surface-2); border-radius: 12px; font-size: 14px; columns: 2 }
 @media (max-width: 700px) { .admin-details { columns: 1 } }
+/* team inbox */
+.inbox-counts { display: flex; gap: 6px; flex-wrap: wrap }
+.lvl { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: #eef0ff; color: #3a4170; white-space: nowrap }
+.lvl-urgent { background: #ffe2dc; color: #b3261e }
+.lvl-today { background: #fff0d6; color: #8a5300 }
+.lvl-soon { background: #e3eeff; color: #0b4fc4 }
+.lvl-fyi { background: #eef0f4; color: #5b628a }
+.inbox { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px }
+.inbox-item { background: var(--surface); border: 1px solid var(--line); border-left: 5px solid #dfe3fb; border-radius: 16px; padding: 16px 18px; animation: fadeUp .3s ease-out both }
+.inbox-item.lvl-b-urgent { border-left-color: #e5533d }
+.inbox-item.lvl-b-today { border-left-color: #f0a020 }
+.inbox-item.lvl-b-soon { border-left-color: #4a86f0 }
+.ib-top { display: flex; gap: 10px; align-items: center; flex-wrap: wrap }
+.ib-top b { font-size: 16px }
+.ib-ref { margin-left: auto; font-size: 12px }
+.ib-reasons { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 0 }
+.ib-reasons span { font-size: 12px; background: var(--surface-2); border-radius: 8px; padding: 3px 8px }
+.ib-next { margin: 8px 0 0; font-size: 14px }
+.ib-sum { margin: 4px 0 0; font-size: 13px }
+.ib-hist { list-style: none; margin: 8px 0 0; padding: 0; font-size: 13px; display: grid; gap: 3px }
+.ch { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 6px; background: #eef0ff }
+.ch-whatsapp { background: #dcf8e6; color: #0a7a4b }
+.ch-note { background: #fff4d6; color: #8a5300 }
+.cp-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 12px }
+.cp-draft { background: linear-gradient(135deg, #6a4cff, #4a86f0); color: #fff; border: 0 }
+.cp { margin-top: 12px; border-top: 1px dashed var(--line); padding-top: 12px; display: grid; gap: 10px; animation: fadeUp .3s ease-out both }
+.cp-steps { background: #f6f4ff; border-radius: 12px; padding: 10px 14px; font-size: 14px }
+.cp-steps ol { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px }
+.cp-done { text-decoration: line-through; color: var(--muted, #5b628a) }
+.cp-tabs { display: flex; gap: 4px }
+.cp-tab { font: inherit; font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); cursor: pointer }
+.cp-tab[aria-selected="true"] { background: var(--fg, #0b1240); color: #fff; border-color: transparent }
+.cp-pane { display: grid; gap: 8px }
+.cp-pane textarea { resize: vertical; font-family: inherit; line-height: 1.5 }
+.cp-act { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px }
+.cp-ok { color: #0a7a4b; font-weight: 600; font-size: 14px }
+.inbox-card { text-decoration: none; color: inherit; background: linear-gradient(135deg, #fff4ee, #fff) }

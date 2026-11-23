@@ -24,7 +24,7 @@ export default async function Enquiries({ searchParams }: { searchParams: Promis
   const where = FILTERS.includes(status) && status !== "all" ? { status } : {};
   const list = await prisma.enquiry.findMany({
     where, orderBy: { createdAt: "desc" }, take: 200,
-    include: { offers: { orderBy: { createdAt: "asc" } }, mission: { select: { id: true, documents: { orderBy: { createdAt: "desc" }, select: { id: true, kind: true, fileName: true, status: true, findings: true } } } } },
+    include: { offers: { orderBy: { createdAt: "asc" } }, messages: { orderBy: { createdAt: "desc" }, take: 10 }, mission: { select: { id: true, documents: { orderBy: { createdAt: "desc" }, select: { id: true, kind: true, fileName: true, status: true, findings: true } } } } },
   });
   const wa = (phone: string) => phone.replace(/[^\d]/g, "");
   const hints = new Map(await Promise.all(list.filter((e) => e.type === "forex").map(async (e) => [e.id, await forexHint(e.details)] as const)));
@@ -82,6 +82,13 @@ export default async function Enquiries({ searchParams }: { searchParams: Promis
                   )}
                   <small className="muted">Links open for 2 minutes. Documents are deleted automatically 30 days after the trip.</small>
                 </div>
+              )}
+              {e.messages.length > 0 && (
+                <ul className="ib-hist" style={{ marginTop: 10 }}>
+                  {e.messages.map((m) => (
+                    <li key={m.id}><span className={`ch ch-${m.channel}`}>{m.channel === "note" ? "Note" : m.channel === "email" ? "Email" : "WhatsApp"}</span> {m.createdAt.toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" })} · {m.author.split("@")[0]} · {m.subject ? <b>{m.subject}</b> : null} {m.body.slice(0, 160)}{m.body.length > 160 ? "…" : ""}</li>
+                  ))}
+                </ul>
               )}
               <form action={updateEnquiry} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "end", marginTop: 10 }}>
                 <input type="hidden" name="id" value={e.id} />

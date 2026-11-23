@@ -104,6 +104,7 @@ model Enquiry {
   missionId   String?
   mission     Mission?   @relation(fields: [missionId], references: [id], onDelete: SetNull)
   offers      ServiceOffer[]
+  messages    TeamMessage[]
   /// new | contacted | booked | closed
   status      String     @default("new")
   note        String?
@@ -383,4 +384,23 @@ model TravellerProfile {
   notes      String   @default("[]")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+/// What the team sent a customer (email from the admin, or a WhatsApp message
+/// opened from it) and internal notes, kept with the request.
+model TeamMessage {
+  id        String   @id @default(cuid())
+  enquiryId String
+  enquiry   Enquiry  @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
+  /// email | whatsapp | note
+  channel   String
+  subject   String?
+  body      String
+  /// admin email, or "password"
+  author    String
+  /// true when Riya drafted it (edited or not)
+  drafted   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([enquiryId, createdAt])
 }

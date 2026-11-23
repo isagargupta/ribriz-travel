@@ -18,7 +18,7 @@ async function syncMissionFromEnquiry(id: string, status: string) {
 }
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { adminEmails, endSession, passwordLoginEnabled, passwordMatches, requireAdmin, startSession } from "@/lib/auth";
+import { adminEmails, currentAdmin, endSession, passwordLoginEnabled, passwordMatches, requireAdmin, startSession } from "@/lib/auth";
 import { sendLoginCode, verifyLoginCode } from "@/lib/otp";
 import { BOARDS, KINDS, isoDate } from "@/lib/pricing";
 import { setEnquiryStatus } from "@/lib/bookings";
@@ -285,6 +285,31 @@ export async function markBookedAction(_: OfferFormState, fd: FormData): Promise
     return { ok: "Booked. The traveller has been emailed the confirmation." };
   } catch (e) {
     if (e instanceof OfferError) return { error: e.message };
+    throw e;
+  }
+}
+
+/* ---------- team inbox (co-pilot) ---------- */
+export async function draftReplyAction(enquiryId: string) {
+  await requireAdmin();
+  const { draftReply } = await import("@/lib/copilot");
+  return draftReply(enquiryId);
+}
+
+export type MessageResult = { ok: true; message: string } | { ok: false; error: string };
+
+export async function sendReplyAction(i: { enquiryId: string; channel: "email" | "whatsapp" | "note"; subject?: string; body: string; drafted: boolean }): Promise<MessageResult> {
+  await requireAdmin();
+  const author = (await currentAdmin()) ?? "admin";
+  const { sendTeamEmail, logWhatsApp, addTeamNote, MessageError } = await import("@/lib/team-messages");
+  try {
+    if (i.channel === "email") await sendTeamEmail({ enquiryId: i.enquiryId, subject: i.subject ?? "", body: i.body, author, drafted: i.drafted });
+    else if (i.channel === "whatsapp") await logWhatsApp({ enquiryId: i.enquiryId, body: i.body, author, drafted: i.drafted });
+    else await addTeamNote({ enquiryId: i.enquiryId, body: i.body, author });
+    revalidatePath("/admin/inbox");
+    return { ok: true, message: i.channel === "email" ? "Email sent." : i.channel === "whatsapp" ? "Logged. Finish sending in WhatsApp." : "Note saved." };
+  } catch (e) {
+    if (e instanceof MessageError) return { ok: false, error: e.message };
     throw e;
   }
 }
