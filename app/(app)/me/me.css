@@ -97,7 +97,7 @@
 .confetti { position: absolute; left: 50%; top: 40%; width: 8px; height: 12px; border-radius: 2px; pointer-events: none; animation: burst 1s cubic-bezier(.15, .7, .3, 1) forwards }
 @keyframes burst { to { transform: translate(var(--x), var(--y)) rotate(var(--r)); opacity: 0 } }
 
-/* ============ trips with constellations ============ */
+/* ============ trip cards ============ */
 .me-trips { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 18px }
 .trip-x { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; overflow: hidden; box-shadow: var(--shadow-sm); animation: fadeUp .5s ease-out both; animation-delay: calc(var(--i) * 80ms); transition: transform .25s, box-shadow .25s }
 .trip-x:hover { transform: translateY(-4px); box-shadow: var(--shadow) }
@@ -117,39 +117,6 @@
 .trip-x-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 12px; font-size: 14px; flex-wrap: wrap }
 .trip-x-links { display: flex; gap: 8px }
 
-.cons { margin: 0; padding: 6px 10px 0 }
-.cons svg { width: 100%; height: auto; display: block; overflow: visible }
-.cons-orbit { fill: none; stroke: #e7e3ff; stroke-dasharray: 2 6 }
-.cons-halo { animation: breathe 4s ease-in-out infinite; transform-origin: center; transform-box: fill-box }
-.cons-center-ring { fill: #fff; stroke: var(--riya); stroke-width: 2; stroke-dasharray: 4 5; animation: spin 18s linear infinite; transform-origin: center; transform-box: fill-box }
-.cons-edge path { fill: none; stroke-linecap: round }
-.cons-edge .base { stroke: #dfe3fb; stroke-width: 2; stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw .8s ease-out forwards; animation-delay: var(--d) }
-@keyframes draw { to { stroke-dashoffset: 0 } }
-.cons-edge.s-done .base { stroke: #8fe0c0 }
-.cons-edge.s-needs_approval .base { stroke: #ffb39f; stroke-width: 2.5 }
-.cons-edge.s-in_progress .base, .cons-edge.s-waiting .base { stroke: #c9bcff }
-.cons-edge.s-skipped .base { stroke: #eef0f6 }
-.cons-edge .flow { stroke: var(--riya); stroke-width: 3; stroke-dasharray: .05 .09; animation: flow 1.4s linear infinite; opacity: .85 }
-.cons-edge.s-waiting .flow { stroke: var(--riya-2); animation-duration: 2.4s }
-@keyframes flow { to { stroke-dashoffset: -.28 } }
-.spark { fill: #fff; filter: drop-shadow(0 0 4px #7a5cff) drop-shadow(0 0 8px #7a5cff) }
-.cons-node { opacity: 0; animation: pop .5s cubic-bezier(.2, .9, .3, 1.5) forwards; animation-delay: var(--d); cursor: pointer; outline: none }
-@keyframes pop { from { opacity: 0; transform: scale(.2) } to { opacity: 1; transform: scale(1) } }
-.cons-node .dot { fill: #fff; stroke: #d5d9f0; stroke-width: 2; transition: r .2s }
-.cons-node:hover .dot, .cons-node:focus .dot { r: 20 }
-.cons-node .ico { font-size: 14px; pointer-events: none }
-.cons-node .lbl { font-size: 10.5px; font-weight: 700; fill: var(--muted); letter-spacing: .01em }
-.cons-node.s-done .dot { fill: #e6faf2; stroke: #19b37a } .cons-node.s-done .ico { fill: #0b8f6c; font-weight: 900; font-size: 15px }
-.cons-node.s-in_progress .dot { fill: #f1edff; stroke: var(--riya) }
-.cons-node.s-waiting .dot { fill: #eaf2ff; stroke: var(--riya-2) }
-.cons-node.s-needs_approval .dot { fill: #fff0eb; stroke: var(--coral) } .cons-node.s-needs_approval .lbl { fill: var(--coral) }
-.cons-node.s-skipped { opacity: .45 }
-.cons-node .pulse { fill: none; stroke: var(--coral); stroke-width: 2; transform-box: fill-box; transform-origin: center; animation: ring 1.6s ease-out infinite }
-@keyframes ring { from { transform: scale(1); opacity: .9 } to { transform: scale(1.9); opacity: 0 } }
-.cons-node .spin { fill: none; stroke: var(--riya); stroke-width: 2; stroke-dasharray: 10 8; transform-box: fill-box; transform-origin: center; animation: spin 3s linear infinite }
-.cons-cap { min-height: 44px; margin: 0 8px 8px; padding: 8px 12px; border-radius: 12px; background: var(--surface-2); font-size: 13px; transition: background .2s }
-.cons-cap span { display: block; color: var(--muted); margin-top: 2px }
-.cons-cap.s-needs_approval { background: #fff0eb } .cons-cap.s-done { background: #e6faf2 } .cons-cap.s-in_progress { background: #f1edff }
 
 /* ============ feed + side tiles ============ */
 .me-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 18px; align-items: start }
@@ -205,7 +172,6 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .me *, .me *::before, .me *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition: none !important }
-  .cons-node { opacity: 1 } .cons-edge .base { stroke-dashoffset: 0 }
 }
 .me-stats > a { display: block; text-decoration: none; color: inherit; background: rgba(255, 255, 255, .72); backdrop-filter: blur(10px); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; animation: fadeUp .5s ease-out both; transition: transform .2s, box-shadow .2s }
 .me-stats > a:hover { transform: translateY(-3px); box-shadow: var(--shadow-sm) }
@@ -213,3 +179,38 @@
 .me-stats > a span { font-size: 13px; color: var(--muted) }
 .tile-link { display: block; text-decoration: none; color: inherit; transition: transform .2s, box-shadow .2s }
 .tile-link:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm) }
+
+/* ============ journey track (trip progress) ============ */
+.jt { padding: 16px 16px 4px; display: grid; gap: 12px }
+.jt-track { position: relative }
+.jt-rail { position: absolute; top: 15px; left: calc(50% / var(--n)); right: calc(50% / var(--n)); height: 4px; margin-top: -2px; border-radius: 4px; background: repeating-linear-gradient(90deg, #dfe3fb 0 6px, transparent 6px 11px) }
+.jt-fill { position: absolute; inset: 0 auto 0 0; width: calc(var(--p) * 100%); border-radius: inherit; background: linear-gradient(90deg, #19b37a, #6a4cff 70%, #4a86f0); box-shadow: 0 0 12px rgba(106, 76, 255, .45); transition: width 1.4s cubic-bezier(.22, .8, .2, 1) }
+.jt-fill::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .8), transparent); background-size: 40% 100%; background-repeat: no-repeat; animation: jt-sheen 2.4s ease-in-out infinite }
+@keyframes jt-sheen { from { background-position: -40% 0 } to { background-position: 140% 0 } }
+.jt-plane { position: absolute; top: -21px; left: calc(var(--p) * 100%); translate: -50% 0; font-size: 17px; transition: left 1.4s cubic-bezier(.22, .8, .2, 1); animation: jt-bob 2s ease-in-out infinite; filter: drop-shadow(0 3px 4px rgba(11, 18, 64, .25)); pointer-events: none; z-index: 2 }
+@keyframes jt-bob { 50% { transform: translateY(-3px) rotate(-4deg) } }
+.jt-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); position: relative; z-index: 1 }
+.jt-step button { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 6px; background: none; border: 0; padding: 0; font: inherit; cursor: pointer; color: var(--muted) }
+.jt-dot { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; background: #fff; border: 2px solid #dfe3fb; transition: transform .2s; animation: jt-in .45s cubic-bezier(.2, .9, .3, 1.5) both; animation-delay: calc(var(--i) * 70ms) }
+@keyframes jt-in { from { opacity: 0; transform: scale(.3) } }
+.jt-step button:hover .jt-dot, .jt-step.picked .jt-dot { transform: scale(1.12) }
+.jt-lbl { font-size: 11px; font-weight: 700; letter-spacing: .01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100% }
+.jt-step.s-done .jt-dot { background: #19b37a; border-color: #19b37a; color: #fff; font-weight: 900; font-size: 13px }
+.jt-step.s-in_progress .jt-dot { border-color: #6a4cff; background: #f1edff }
+.jt-step.s-waiting .jt-dot { border-color: #4a86f0; background: #eaf2ff }
+.jt-step.s-needs_approval .jt-dot { border-color: var(--coral); background: #fff0eb }
+.jt-step.s-needs_approval .jt-lbl { color: var(--coral) }
+.jt-step.now .jt-lbl { color: var(--fg) }
+.jt-step.now .jt-dot { box-shadow: 0 0 0 0 rgba(106, 76, 255, .5); animation: jt-in .45s cubic-bezier(.2, .9, .3, 1.5) both, jt-pulse 1.8s ease-out 1s infinite }
+.jt-step.now.s-needs_approval .jt-dot { animation: jt-in .45s cubic-bezier(.2, .9, .3, 1.5) both, jt-pulse-c 1.6s ease-out 1s infinite }
+@keyframes jt-pulse { 70% { box-shadow: 0 0 0 9px rgba(106, 76, 255, 0) } 100% { box-shadow: 0 0 0 0 rgba(106, 76, 255, 0) } }
+@keyframes jt-pulse-c { 0% { box-shadow: 0 0 0 0 rgba(255, 90, 54, .55) } 70% { box-shadow: 0 0 0 9px rgba(255, 90, 54, 0) } }
+
+.jt-now { display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 14px; background: var(--surface-2); animation: fadeUp .3s ease-out both }
+.jt-now.s-needs_approval { background: #fff0eb } .jt-now.s-done { background: #e6faf2 } .jt-now.s-in_progress { background: #f1edff } .jt-now.s-waiting { background: #eaf2ff }
+.jt-now-ico { width: 34px; height: 34px; border-radius: 10px; background: #fff; display: grid; place-items: center; font-size: 16px; font-weight: 900; color: #19b37a }
+.jt-now b { font-size: 14px } .jt-now-state { font-size: 12.5px; color: var(--muted); margin-left: 6px }
+.jt-now.s-needs_approval .jt-now-state { color: var(--coral); font-weight: 700 }
+.jt-now p { margin: 2px 0 0; font-size: 12.5px; color: var(--muted); line-height: 1.4 }
+.jt-work { display: inline-flex; gap: 3px } .jt-work i { width: 5px; height: 5px; border-radius: 50%; background: #6a4cff; animation: dot 1.2s infinite } .jt-work i:nth-child(2) { animation-delay: .15s } .jt-work i:nth-child(3) { animation-delay: .3s }
+@media (prefers-reduced-motion: reduce) { .jt-fill, .jt-plane { transition: none } .jt-fill::after, .jt-plane { animation: none } }

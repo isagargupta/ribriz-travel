@@ -3,9 +3,9 @@ import Link from "next/link";
 import type { DashTrip } from "@/lib/dashboard";
 import { fmtDate } from "@/lib/pricing";
 import AskButton from "./AskButton";
-import Constellation from "./Constellation";
+import JourneyTrack from "./JourneyTrack";
 
-/** A trip as a card: photo, dates, countdown, Riya's live task map, and what's next. */
+/** A trip as a card: photo, dates, countdown, the journey track of Riya's steps, and what's next. */
 export default function TripCardX({ t, i = 0 }: { t: DashTrip; i?: number }) {
   return (
     <article className="trip-x" style={{ ["--i" as string]: i }}>
@@ -19,11 +19,10 @@ export default function TripCardX({ t, i = 0 }: { t: DashTrip; i?: number }) {
           {t.daysToGo !== null && t.daysToGo >= 0 && <span className="trip-x-count">{t.daysToGo === 0 ? "Today!" : <><b>{t.daysToGo}</b> days</>}</span>}
         </div>
       </header>
-      <Constellation tasks={t.tasks} image={t.image} label={t.title} />
+      <JourneyTrack tasks={t.tasks} />
       <footer>
-        <div className="trip-x-bar" aria-label={`${t.progress}% done`}><i style={{ width: `${t.progress}%` }} /></div>
         <div className="trip-x-foot">
-          <span>{t.needsYou ? <b className="warn-txt">{t.needsYou} waiting for your OK</b> : <>Next: <b>{t.next}</b></>}</span>
+          <span>{t.needsYou ? <b className="warn-txt">● {t.needsYou} waiting for your OK</b> : <span className="muted"><b style={{ color: "var(--fg)" }}>{t.progress}%</b> sorted</span>}</span>
           <span className="trip-x-links">
             <AskButton q={`Let's continue my trip "${t.title}" (mission ${t.id}). What's next?`}>Ask Riya</AskButton>
             <Link className="btn sm" href={`/me/trips/${t.id}`}>Open</Link>

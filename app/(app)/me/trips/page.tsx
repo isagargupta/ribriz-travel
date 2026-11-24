@@ -12,7 +12,7 @@ export default async function Trips() {
   return (
     <div className="wrap">
       <div className="app-page-head">
-        <div><h1>My trips</h1><p>Every trip Riya is running for you. Tap a step on the map to see what she&apos;s doing.</p></div>
+        <div><h1>My trips</h1><p>Every trip Riya is running for you. Tap any step to see what&apos;s happening.</p></div>
         <AskButton className="btn hot" q="Plan a new trip for me">✦ Plan a new trip</AskButton>
       </div>
       {d.trips.length === 0 ? (
