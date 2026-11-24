@@ -39,3 +39,10 @@ export async function watchesFor(owner: Owner) {
   const or = [owner.customerId && { customerId: owner.customerId }, owner.anonId && { anonId: owner.anonId }, owner.email && { email: owner.email.toLowerCase() }].filter(Boolean) as object[];
   return prisma.priceWatch.findMany({ where: { active: true, OR: or }, orderBy: { createdAt: "desc" }, take: 20 });
 }
+
+export async function stopWatch(owner: Owner, id: string) {
+  const mine = await watchesFor(owner);
+  if (!mine.some((w) => w.id === id)) return false;
+  await prisma.priceWatch.update({ where: { id }, data: { active: false } });
+  return true;
+}

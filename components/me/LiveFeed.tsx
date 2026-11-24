@@ -39,7 +39,7 @@ export default function LiveFeed({ items, working }: { items: FeedItem[]; workin
                 <span className={`feed-av ${who.cls}`}>{who.cls === "riya" ? <i className="mini-orb" /> : who.name[0]}</span>
                 <div>
                   <p><b>{who.name}</b> {e.text}</p>
-                  <small>{ago(e.at, now)} · {e.tripId ? <Link href={`/hub/${e.tripId}`}>{e.trip}</Link> : e.trip}</small>
+                  <small>{ago(e.at, now)} · {e.tripId ? <Link href={`/me/trips/${e.tripId}`}>{e.trip}</Link> : e.trip}</small>
                 </div>
               </li>
             );

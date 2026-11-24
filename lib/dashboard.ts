@@ -1,4 +1,7 @@
 import "server-only";
+import { cache } from "react";
+import { currentCustomer } from "./customer";
+import { getOwner } from "./owner";
 import { pendingCard, type ApprovalCard } from "./approvals";
 import type { Customer } from "@prisma/client";
 import { prisma } from "./db";
@@ -90,3 +93,11 @@ export async function getDashboard(owner: Owner, me: Customer): Promise<Dashboar
     memory, status,
   };
 }
+
+/** The signed-in traveller's dashboard, loaded once per request (layout and page share it). */
+export const myDashboard = cache(async () => {
+  const me = await currentCustomer();
+  if (!me) return null;
+  const owner = await getOwner();
+  return { me, owner, d: await getDashboard(owner, me) };
+});

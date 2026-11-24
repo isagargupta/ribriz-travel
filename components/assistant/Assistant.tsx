@@ -24,10 +24,13 @@ export function askRiya(question?: string) {
   window.dispatchEvent(new CustomEvent("ribriz:ask", { detail: question }));
 }
 
+/** Tells the traveller app that Riya changed something (a trip, a card, a booking), so it can refresh. */
+export const announceChange = () => window.dispatchEvent(new Event("ribriz:changed"));
+
 /* ---------- tiny safe markdown: **bold**, links, bullet lists ---------- */
 function inline(text: string, key: string) {
   const parts: React.ReactNode[] = [];
-  const re = /\*\*([^*]+)\*\*|\[([^\]]+)\]\(((?:https?:\/\/|\/)[^)\s]+)\)|((?:https?:\/\/www\.ribriztravel\.com)?\/(?:trips|visa|plan|booking|account)[^\s)]*)/g;
+  const re = /\*\*([^*]+)\*\*|\[([^\]]+)\]\(((?:https?:\/\/|\/)[^)\s]+)\)|((?:https?:\/\/www\.ribriztravel\.com)?\/(?:trips|visa|plan|booking|account|hub|me|you)[^\s)]*)/g;
   let last = 0, m: RegExpExecArray | null, i = 0;
   while ((m = re.exec(text))) {
     if (m.index > last) parts.push(text.slice(last, m.index));
@@ -57,10 +60,17 @@ function Rich({ text }: { text: string }) {
   return <>{blocks}</>;
 }
 
-export default function Assistant() {
+/**
+ * Riya's chat. On the public site it's a floating panel; inside the traveller
+ * app it's docked beside the dashboard (`docked`), always open, and everything
+ * she does shows up on the dashboard straight away.
+ */
+export default function Assistant({ docked = false, onClose }: { docked?: boolean; onClose?: () => void } = {}) {
   const { from, passport, adults, childAges, currency, money, ready, me } = usePrefs();
   const path = usePathname();
-  const [open, setOpen] = useState(false);
+  const [openState, setOpen] = useState(false);
+  const open = docked || openState;
+  const tripHref = (id: string) => (docked || me ? `/me/trips/${id}` : `/hub/${id}`);
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -77,11 +87,11 @@ export default function Assistant() {
   useEffect(() => { list.current?.scrollTo({ top: list.current.scrollHeight, behavior: busy ? "auto" : "smooth" }); }, [msgs, status, busy]);
   useEffect(() => { if (open) setTimeout(() => box.current?.focus(), 60); }, [open]);
   useEffect(() => {
-    if (!open) return;
+    if (!open || docked) return;
     const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
     document.addEventListener("keydown", esc);
     return () => document.removeEventListener("keydown", esc);
-  }, [open]);
+  }, [open, docked]);
 
   const send = useCallback(async (text: string) => {
     const q = text.trim();
@@ -125,6 +135,7 @@ export default function Assistant() {
       if ((err as Error).name !== "AbortError") patch((m) => ({ ...m, content: m.content || "You seem to be offline. Please try again.", error: !m.content }));
     } finally {
       setBusy(false); setStatus(""); abort.current = null;
+      announceChange(); // tools may have started a trip, prepared a card or saved a preference
     }
   }, [busy, msgs, from, passport, adults, childAges, currency]);
 
@@ -157,21 +168,24 @@ export default function Assistant() {
   }, [send]);
 
   if (path.startsWith("/admin")) return null;
+  const closeOnPhone = () => { if (window.innerWidth < 640) (onClose ?? (() => setOpen(false)))(); };
   const first = me?.name?.split(" ")[0];
 
   return (
     <>
-      <button className={`ai-launch ${open ? "hide" : ""}`} onClick={() => setOpen(true)} aria-label="Ask Riya, our travel assistant" aria-expanded={open}>
-        <span className="ai-dot" aria-hidden="true">✦</span><span className="ai-launch-text">Ask Riya</span>
-      </button>
+      {!docked && (
+        <button className={`ai-launch ${open ? "hide" : ""}`} onClick={() => setOpen(true)} aria-label="Ask Riya, our travel assistant" aria-expanded={open}>
+          <span className="ai-dot" aria-hidden="true">✦</span><span className="ai-launch-text">Ask Riya</span>
+        </button>
+      )}
 
       {open && (
-        <div className="ai-panel" role="dialog" aria-label="Travel assistant">
+        <div className={`ai-panel ${docked ? "docked" : ""}`} role={docked ? "complementary" : "dialog"} aria-label="Riya, your travel agent">
           <header className="ai-head">
-            <span className="ai-avatar" aria-hidden="true">R</span>
-            <div><b>Riya</b><small>Ribriz AI travel assistant</small></div>
+            {docked ? <span className="mini-orb ai-orb" aria-hidden="true" /> : <span className="ai-avatar" aria-hidden="true">R</span>}
+            <div><b>Riya</b><small>{busy ? status || "Working…" : docked ? "Your AI travel agent · actions show up here instantly" : "Ribriz AI travel assistant"}</small></div>
             {msgs.length > 0 && <button className="link-btn" onClick={() => { abort.current?.abort(); setMsgs([]); }} disabled={busy}>New chat</button>}
-            <button className="icon-btn" onClick={() => setOpen(false)} aria-label="Close assistant">×</button>
+            {(!docked || onClose) && <button className="icon-btn" onClick={() => (onClose ?? (() => setOpen(false)))()} aria-label="Close assistant">×</button>}
           </header>
 
           <div className="ai-list" ref={list} aria-live="polite">
@@ -194,7 +208,7 @@ export default function Assistant() {
                 {m.cards && m.cards.length > 0 && (
                   <div className="ai-cards">
                     {m.cards.map((c) => (
-                      <Link key={c.slug + (c.date ?? "")} className="ai-card" href={`/trips/${c.slug}${c.date ? `?date=${c.date}` : ""}`} onClick={() => { if (window.innerWidth < 640) setOpen(false); }}>
+                      <Link key={c.slug + (c.date ?? "")} className="ai-card" href={`/trips/${c.slug}${c.date ? `?date=${c.date}` : ""}`} onClick={closeOnPhone}>
                         <span className="ai-card-img"><Image src={c.image} alt="" fill sizes="180px" /></span>
                         <span className="ai-card-body">
                           <b>{c.dest}</b>
@@ -208,16 +222,16 @@ export default function Assistant() {
                   </div>
                 )}
                 {m.mission && (
-                  <Link className="ai-mission" href={`/hub/${m.mission.id}`} onClick={() => { if (window.innerWidth < 640) setOpen(false); }}>
-                    <span aria-hidden="true">🧭</span><span><b>{m.mission.title}</b><small>Trip plan started · open your trip hub</small></span><span aria-hidden="true">→</span>
+                  <Link className="ai-mission" href={tripHref(m.mission.id)} onClick={closeOnPhone}>
+                    <span aria-hidden="true">🧭</span><span><b>{m.mission.title}</b><small>Trip plan started · {docked ? "it's on your dashboard" : "open your trip hub"}</small></span><span aria-hidden="true">→</span>
                   </Link>
                 )}
                 {m.approvals?.map((a) => (
-                  <ApprovalCard key={a.id} card={a} compact onDecided={(o) => setMsgs((all) => [
+                  <ApprovalCard key={a.id} card={a} compact onDecided={(o) => { announceChange(); setMsgs((all) => [
                     // remember the outcome on the card itself so it stays correct after a reload
                     ...all.map((x) => (x.approvals?.some((y) => y.id === a.id) ? { ...x, approvals: x.approvals.map((y) => (y.id === a.id ? { ...y, status: o.status } : y)) } : x)),
                     { role: "assistant", note: true, content: o.status === "done" ? `✓ Approved: ${a.summary}. ${o.message}` : `Not now: ${a.summary}.` },
-                  ])} />
+                  ]); }} />
                 ))}
               </Fragment>
             ))}

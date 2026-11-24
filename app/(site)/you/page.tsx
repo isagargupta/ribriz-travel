@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import MemoryEditor from "@/components/you/MemoryEditor";
 import { getOwner } from "@/lib/owner";
 import { getProfile } from "@/lib/profile";
@@ -9,6 +10,7 @@ export const dynamic = "force-dynamic";
 
 export default async function YouPage() {
   const owner = await getOwner();
+  if (owner.customerId) redirect("/me/profile"); // signed in: it lives in the traveller app
   const profile = await getProfile(owner);
   return (
     <div className="wrap you">
