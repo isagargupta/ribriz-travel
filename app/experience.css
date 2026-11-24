@@ -827,3 +827,21 @@ kbd { font-family: var(--f-mono); font-size: 11px; background: var(--surface); b
 .legal-table { width: 100%; border-collapse: collapse; font-size: 14px }
 .legal-table th, .legal-table td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top }
 @media (max-width: 800px) { .legal-page { grid-template-columns: 1fr; gap: 16px } .legal-nav { position: static; display: flex; flex-wrap: wrap } }
+
+/* payments */
+.pay-page { padding-block: 40px 80px; display: grid; justify-items: center }
+.pay-card { width: min(560px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 22px; box-shadow: var(--shadow); display: grid; gap: 16px; animation: fadeUp .4s ease-out both }
+.pay-trip { display: flex; gap: 14px; align-items: center }
+.pay-img { position: relative; width: 84px; height: 84px; border-radius: 16px; overflow: hidden; flex: none } .pay-img img { object-fit: cover }
+.pay-trip h1 { font-size: 21px; margin: 2px 0 } .pay-trip p { margin: 0; font-size: 14px }
+.pay-progress { height: 8px; border-radius: 8px; background: var(--surface-2); overflow: hidden } .pay-progress i { display: block; height: 100%; background: linear-gradient(90deg, #19b37a, #4a86f0); animation: grow 1s ease-out both }
+@keyframes grow { from { width: 0 } }
+.pay-sum { margin: 0; display: grid; gap: 8px } .pay-sum > div { display: flex; justify-content: space-between; gap: 12px; font-size: 15px } .pay-sum dt { color: var(--muted) } .pay-sum dd { margin: 0; font-weight: 700; text-align: right } .pay-sum small { display: block; font-weight: 500; color: var(--muted); font-size: 12px }
+.pay-due { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-radius: 16px; background: linear-gradient(135deg, #fff3ee, #fff); border: 1.5px solid #ffc7b8 } .pay-due b { font-family: var(--f-display); font-size: 24px }
+.pay-btn { font-size: 17px }
+.pay-btn-wrap { display: grid; gap: 8px }
+.pay-done { display: grid; justify-items: center; text-align: center; gap: 4px; padding: 16px; border-radius: 16px; background: var(--good-bg) } .pay-done p { margin: 0 }
+.pay-tick { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: #19b37a; color: #fff; font-size: 24px; font-weight: 900; animation: popIn .5s cubic-bezier(.2, .9, .3, 1.6) both }
+.pay-hist h2 { font-size: 16px; margin: 0 0 8px } .pay-hist ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px }
+.pay-hist li { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); font-size: 14px } .pay-hist small { grid-column: 1 / -1; color: var(--muted) }
+.pay-hist li.ph-failed { opacity: .6 }

@@ -106,6 +106,7 @@ model Enquiry {
   mission     Mission?   @relation(fields: [missionId], references: [id], onDelete: SetNull)
   offers      ServiceOffer[]
   messages    TeamMessage[]
+  payments    Payment[]
   /// new | contacted | booked | closed
   status      String     @default("new")
   note        String?
@@ -428,4 +429,27 @@ model Review {
   publishedAt DateTime?
 
   @@index([tripId, status])
+}
+
+/// A payment for a booking through Razorpay. Amounts are worked out on the
+/// server; a payment counts only after Razorpay's signature (or webhook) and
+/// a fetch of the payment from Razorpay both confirm it.
+model Payment {
+  id             String    @id @default(cuid())
+  enquiryId      String
+  enquiry        Enquiry   @relation(fields: [enquiryId], references: [id], onDelete: Restrict)
+  /// deposit | balance | full
+  kind           String
+  /// INR, whole rupees
+  amount         Int
+  orderId        String    @unique
+  paymentId      String?   @unique
+  /// created | paid | failed | refunded | partially_refunded
+  status         String    @default("created")
+  method         String?
+  refundedAmount Int       @default(0)
+  createdAt      DateTime  @default(now())
+  paidAt         DateTime?
+
+  @@index([enquiryId, status])
 }

@@ -1,7 +1,7 @@
 import "server-only";
 import { prisma } from "./db";
 import { sendEmail, teamInbox } from "./email";
-import { bookingConfirmedEmail, enquiryReceivedEmail, holdConfirmationEmail, offerChosenTeamEmail, offersReadyEmail, statusUpdateEmail, teamAlertEmail, welcomeEmail } from "./email-templates";
+import { paymentReceiptEmail, paymentTeamEmail, bookingConfirmedEmail, enquiryReceivedEmail, holdConfirmationEmail, offerChosenTeamEmail, offersReadyEmail, statusUpdateEmail, teamAlertEmail, welcomeEmail } from "./email-templates";
 import { OFFER_LABEL } from "./offers";
 import { quote } from "./pricing";
 
@@ -31,7 +31,7 @@ export async function notifyHold(ref: string) {
   await Promise.all([
     sendEmail({
       to: e.email, idempotencyKey: `hold-${e.ref}`,
-      ...holdConfirmationEmail({ ref: e.ref, name: e.name, tripTitle: e.tripTitle ?? "Your trip", tripSlug: e.trip.slug, date: e.departure, nights: e.trip.nights, adults: e.adults, children: e.children, total: e.quotedTotal ?? 0, from: e.fromCity, deposit }),
+      ...holdConfirmationEmail({ ref: e.ref, name: e.name, tripTitle: e.tripTitle ?? "Your trip", tripSlug: e.trip.slug, date: e.departure, nights: e.trip.nights, adults: e.adults, children: e.children, total: e.quotedTotal ?? 0, from: e.fromCity, deposit, payLink: (process.env.NEXT_PUBLIC_SITE_URL || "https://www.ribriztravel.com").replace(/\/$/, "") + (await import("./payments")).payUrl(e.ref) }),
     }),
     alertTeam(e),
   ]);
@@ -89,4 +89,24 @@ export async function notifyBooked(offerId: string) {
     to: o.enquiry.email, idempotencyKey: `booked-${o.id}-${o.confirmation}`,
     ...bookingConfirmedEmail({ name: o.enquiry.name, label: OFFER_LABEL[o.service] ?? "Service", ref: o.enquiry.ref, offer: offerLine(o), confirmation: o.confirmation, missionId: o.missionId }),
   });
+}
+
+/** Receipt to the traveller and an alert to the team after an online payment. */
+export async function notifyPayment(enquiryId: string, amount: number, kind: string) {
+  const e = await prisma.enquiry.findUnique({ where: { id: enquiryId }, include: { payments: { where: { status: { in: ["paid", "partially_refunded"] } }, orderBy: { paidAt: "desc" } } } });
+  if (!e) return;
+  const { payUrl } = await import("./payments");
+  const { BALANCE_DAYS } = await import("./payment-rules");
+  const site = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.ribriztravel.com").replace(/\/$/, "");
+  const paidTotal = e.payments.reduce((n, p) => n + p.amount - p.refundedAmount, 0);
+  const last = e.payments[0];
+  const balanceDue = e.departure ? new Date(Date.parse(e.departure + "T00:00:00Z") - BALANCE_DAYS * 864e5).toISOString().slice(0, 10) : null;
+  const tripTitle = e.tripTitle ?? "Your trip";
+  await Promise.all([
+    sendEmail({
+      to: e.email, idempotencyKey: `paid-${last?.id ?? e.id}`,
+      ...paymentReceiptEmail({ name: e.name, ref: e.ref, tripTitle, amount, kind, paidTotal, total: e.quotedTotal ?? 0, balanceDue, method: last?.method ?? null, paymentId: last?.paymentId ?? null, payLink: site + payUrl(e.ref), hubUrl: e.missionId ? `${site}/me/trips/${e.missionId}` : null }),
+    }),
+    teamInbox().length ? sendEmail({ to: teamInbox(), idempotencyKey: `paid-team-${last?.id ?? e.id}`, ...paymentTeamEmail({ ref: e.ref, name: e.name, tripTitle, amount, kind, paidTotal, total: e.quotedTotal ?? 0, enquiryId: e.id }) }) : null,
+  ]);
 }

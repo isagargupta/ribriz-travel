@@ -44,11 +44,13 @@ export async function deleteAccount(me: Customer, owner: Owner) {
   const ids = missions.map((m) => m.id);
   const docs = await prisma.travelDoc.findMany({ where: { missionId: { in: ids } }, select: { fileKey: true } });
   await removePrivate(docs.map((d) => d.fileKey)); // files first, so nothing is left in storage
-  const kept = await prisma.enquiry.count({ where: { email: me.email, status: "booked" } });
+  const kept = await prisma.enquiry.count({ where: { email: me.email, OR: [{ status: "booked" }, { payments: { some: { status: { notIn: ["created", "failed"] } } } }] } });
   await prisma.$transaction([
     prisma.notification.deleteMany({ where: { OR: [{ customerId: me.id }, { email: me.email }, { missionId: { in: ids } }] } }),
     prisma.mission.deleteMany({ where: { id: { in: ids } } }), // tasks, events, approvals and documents go with it
-    prisma.enquiry.deleteMany({ where: { email: me.email, status: { not: "booked" } } }),
+    // unpaid attempts go; anything with real money stays as a financial record
+    prisma.payment.deleteMany({ where: { enquiry: { email: me.email }, status: { in: ["created", "failed"] } } }),
+    prisma.enquiry.deleteMany({ where: { email: me.email, status: { not: "booked" }, payments: { none: {} } } }),
     prisma.priceWatch.deleteMany({ where: { OR: [{ customerId: me.id }, { email: me.email }] } }),
     prisma.review.deleteMany({ where: { customerId: me.id } }),
     prisma.travellerProfile.deleteMany({ where: { OR: [{ customerId: me.id }, ...(owner.anonId ? [{ anonId: owner.anonId }] : [])] } }),

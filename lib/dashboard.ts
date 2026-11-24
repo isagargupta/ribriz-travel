@@ -29,6 +29,8 @@ export interface Dashboard {
   requests: { ref: string; type: string; title: string | null; status: string; createdAt: string; total: number | null; departure: string | null }[];
   memory: string[];
   status: string[];
+  /** online payments due on the traveller's holds and bookings */
+  dues: { ref: string; title: string; kind: string; amount: number; balanceDue: string | null; payPath: string }[];
 }
 
 const closed = (s: string) => s === "done" || s === "skipped";
@@ -85,7 +87,19 @@ export async function getDashboard(owner: Owner, me: Customer): Promise<Dashboar
   if (watches.length) status.push(`watching ${watches.length} price${watches.length > 1 ? "s" : ""}`);
   if (!status.length) status.push(active.length ? "everything's on track" : "tell me where you'd like to go and I'll plan the rest");
 
+  // what they can pay online now (holds and bookings made with their email)
+  const { payUrl, planOf } = await import("./payments");
+  const payable = await prisma.enquiry.findMany({
+    where: { email: me.email, type: "hold", status: { in: ["new", "contacted", "booked"] } },
+    include: { payments: { orderBy: { createdAt: "asc" } }, trip: { select: { title: true, slug: true, image: true, nights: true } }, mission: { select: { id: true, customerId: true, anonId: true } }, dep: { select: { status: true, seatsLeft: true } } },
+    take: 20,
+  });
+  const dues = payable.map((e) => ({ e, plan: planOf(e) })).filter((x) => x.plan.next)
+    .map(({ e, plan }) => ({ ref: e.ref, title: e.trip?.title ?? e.tripTitle ?? "Your trip", kind: plan.next!.kind, amount: plan.next!.amount, balanceDue: plan.balanceDue, payPath: payUrl(e.ref) }));
+  if (dues.length) status.splice(approvals.length ? 1 : 0, 0, `${dues.length} payment${dues.length > 1 ? "s" : ""} ready to book`);
+
   return {
+    dues,
     name: me.name, email: me.email, trips: active, past: shaped.filter(isPast), approvals, feed,
     watching: watches.map((w) => { const t = trips.find((x) => x.id === w.tripId); return t ? { id: w.id, dest: t.dest, slug: t.slug, price: w.lastPrice } : null; }).filter((x): x is NonNullable<typeof x> => !!x),
     bookings: offers.map((o) => ({ id: o.id, label: OFFER_LABEL[o.service] ?? o.service, title: o.title, confirmation: o.confirmation, status: o.status, tripId: o.missionId })),

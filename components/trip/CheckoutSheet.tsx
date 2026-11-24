@@ -24,7 +24,7 @@ export default function CheckoutSheet() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [priceMoved, setPriceMoved] = useState<number | null>(null);
-  const [done, setDone] = useState<{ ref: string; total: number } | null>(null);
+  const [done, setDone] = useState<{ ref: string; total: number; payPath?: string } | null>(null);
 
   // restore contact details typed earlier in this browser session
   useEffect(() => {
@@ -62,7 +62,7 @@ export default function CheckoutSheet() {
       const j = await r.json();
       if (r.status === 409 && j.total) { setPriceMoved(j.total); setErr(j.error); return; }
       if (!r.ok) { setErr(j.error || "Something went wrong. Please try again."); return; }
-      setDone({ ref: j.ref, total: j.total });
+      setDone({ ref: j.ref, total: j.total, payPath: j.payPath });
       setStep(3);
     } catch {
       setErr("You seem to be offline. Check your connection and try again.");
@@ -184,6 +184,7 @@ export default function CheckoutSheet() {
               <li><b>Expert confirmation</b><span>Within 2 working hours, by email to {c.email}</span></li>
               <li><b>Pay deposit to book</b><span><Money inr={q.deposit} />, rest 30 days before</span></li>
             </ol>
+            {done.payPath && <Link className="btn hot lg" href={done.payPath} onClick={close} style={{ justifySelf: "center" }}>🔒 Pay <Money inr={q.deposit} /> deposit &amp; book now</Link>}
             <div className="co-btns" style={{ justifyContent: "center", flexWrap: "wrap" }}>
               <button className="btn" onClick={downloadIcs}>Add to calendar</button>
               <Link className="btn blue" href={me ? "/me" : `/booking?ref=${done.ref}`} onClick={close}>{me ? "See my trips" : "View my booking"}</Link>

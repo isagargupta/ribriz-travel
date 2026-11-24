@@ -87,7 +87,11 @@ export async function updateEnquiry(fd: FormData) {
 
 export async function deleteEnquiry(fd: FormData) {
   await requireAdmin();
-  await prisma.enquiry.delete({ where: { id: String(fd.get("id")) } });
+  const id = String(fd.get("id"));
+  // payment records are financial records: a request with real payments can be closed, not deleted
+  if (await prisma.payment.count({ where: { enquiryId: id, status: { not: "created" } } })) return;
+  await prisma.payment.deleteMany({ where: { enquiryId: id } });
+  await prisma.enquiry.delete({ where: { id } });
   revalidatePath("/admin", "layout");
 }
 
@@ -322,4 +326,21 @@ export async function moderateReview(fd: FormData) {
   const { setReviewStatus } = await import("@/lib/reviews");
   await setReviewStatus(String(fd.get("id")), status as "published" | "rejected" | "pending");
   revalidatePath("/admin/reviews");
+}
+
+/* ---------- payments ---------- */
+export type RefundState = { ok?: string; error?: string } | undefined;
+export async function refundAction(_: RefundState, fd: FormData): Promise<RefundState> {
+  await requireAdmin();
+  const { refund, PayError, RazorpayError } = await import("@/lib/payments");
+  const amount = Number(String(fd.get("amount") ?? "").replace(/[^\d]/g, ""));
+  if (!(amount > 0)) return { error: "Enter an amount in rupees." };
+  try {
+    const r = await refund(String(fd.get("paymentId")), amount, String(fd.get("reason") ?? "Refund"));
+    revalidatePath("/admin/enquiries");
+    return { ok: `Refund of ₹${r.refunded.toLocaleString("en-IN")} started. It reaches the customer in 5–7 working days.` };
+  } catch (e) {
+    if (e instanceof PayError || e instanceof RazorpayError) return { error: e.message };
+    throw e;
+  }
 }

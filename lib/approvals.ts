@@ -177,7 +177,7 @@ export async function decide(owner: Owner, id: string, body: unknown): Promise<D
         await setTask(a.missionId, "price_hold", { status: "done", note: `Held ${fmt(r.total)} until ${until.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}. Ref ${r.ref}.`, data: { ref: r.ref } });
         await logEvent(a.missionId, "traveller", `Approved the price hold. Reference ${r.ref}.`);
       }
-      return { ok: true, status: "done", ref: r.ref, message: `Done! ${fmt(r.total)} is held for 48 hours (ref ${r.ref}). We've emailed you the details; an expert confirms flights and rooms by email within 2 working hours.` };
+      return { ok: true, status: "done", ref: r.ref, message: `Done! ${fmt(r.total)} is held for 48 hours (ref ${r.ref}). Pay the deposit to book any time at /pay/${r.ref}, or wait for our expert to confirm flights and rooms by email within 2 working hours.` };
     }
 
     const service = payload.service as Service;

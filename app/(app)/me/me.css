@@ -214,3 +214,9 @@
 .jt-now p { margin: 2px 0 0; font-size: 12.5px; color: var(--muted); line-height: 1.4 }
 .jt-work { display: inline-flex; gap: 3px } .jt-work i { width: 5px; height: 5px; border-radius: 50%; background: #6a4cff; animation: dot 1.2s infinite } .jt-work i:nth-child(2) { animation-delay: .15s } .jt-work i:nth-child(3) { animation-delay: .3s }
 @media (prefers-reduced-motion: reduce) { .jt-fill, .jt-plane { transition: none } .jt-fill::after, .jt-plane { animation: none } }
+.dues { display: grid; gap: 10px; animation: fadeUp .4s ease-out both }
+.due { display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-radius: 18px; text-decoration: none; color: inherit; background: linear-gradient(135deg, #fff3ee, #fff); border: 1.5px solid #ffc7b8; transition: transform .2s, box-shadow .2s }
+.due:hover { transform: translateY(-2px); box-shadow: 0 14px 28px -18px rgba(255, 90, 54, .7) }
+.due-ico { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: #fff; font-size: 20px; flex: none }
+.due-txt { flex: 1; min-width: 0 } .due-txt b { display: block } .due-txt small { color: var(--muted) }
+.due-amt { font-family: var(--f-display); font-size: 20px; color: var(--coral); white-space: nowrap }

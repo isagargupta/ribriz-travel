@@ -32,7 +32,7 @@ export const announceChange = () => window.dispatchEvent(new Event("ribriz:chang
 /* ---------- tiny safe markdown: **bold**, links, bullet lists ---------- */
 function inline(text: string, key: string) {
   const parts: React.ReactNode[] = [];
-  const re = /\*\*([^*]+)\*\*|\[([^\]]+)\]\(((?:https?:\/\/|\/)[^)\s]+)\)|((?:https?:\/\/www\.ribriztravel\.com)?\/(?:trips|visa|plan|booking|account|hub|me|you)[^\s)]*)/g;
+  const re = /\*\*([^*]+)\*\*|\[([^\]]+)\]\(((?:https?:\/\/|\/)[^)\s]+)\)|((?:https?:\/\/www\.ribriztravel\.com)?\/(?:trips|visa|plan|booking|account|hub|me|you|pay)[^\s)]*)/g;
   let last = 0, m: RegExpExecArray | null, i = 0;
   while ((m = re.exec(text))) {
     if (m.index > last) parts.push(text.slice(last, m.index));

@@ -4,11 +4,14 @@ import { prisma } from "@/lib/db";
 import { rateLimited } from "@/lib/http";
 import { HOLD_HOURS } from "@/lib/pricing";
 import { firstError, lookupSchema } from "@/lib/schemas";
+import { payUrl } from "@/lib/payments";
 
 export interface BookingView {
   ref: string; type: string; status: string; tripTitle: string | null; tripSlug: string | null; image: string | null;
   departure: string | null; nights: number | null; adults: number; children: number; fromCity: string | null;
   total: number | null; createdAt: string; holdEndsAt: string | null; name: string;
+  /** payment page link, for holds and bookings */
+  payPath: string | null;
 }
 
 export type LookupState = { error?: string; booking?: BookingView } | undefined;
@@ -32,6 +35,7 @@ export async function lookupBooking(_: LookupState, fd: FormData): Promise<Looku
       total: e.quotedTotal, createdAt: e.createdAt.toISOString(),
       holdEndsAt: e.type === "hold" ? new Date(e.createdAt.getTime() + HOLD_HOURS * 3600e3).toISOString() : null,
       name: e.name.split(" ")[0],
+      payPath: e.type === "hold" && e.status !== "closed" ? payUrl(e.ref) : null,
     },
   };
 }

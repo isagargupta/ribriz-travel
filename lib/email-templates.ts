@@ -51,7 +51,7 @@ export function loginCodeEmail(code: string, forAdmin = false): Built {
   };
 }
 
-export interface HoldInfo { ref: string; name: string; tripTitle: string; tripSlug?: string | null; date: string; nights: number; adults: number; children: number; total: number; from?: string | null; deposit?: number }
+export interface HoldInfo { ref: string; name: string; tripTitle: string; tripSlug?: string | null; date: string; nights: number; adults: number; children: number; total: number; from?: string | null; deposit?: number; payLink?: string }
 
 export function holdConfirmationEmail(h: HoldInfo): Built {
   const ret = addDays(h.date, h.nights);
@@ -71,8 +71,8 @@ export function holdConfirmationEmail(h: HoldInfo): Built {
           ["Total incl. GST", fmt(h.total)],
           ...(h.deposit ? [["Deposit to book", fmt(h.deposit)] as [string, string]] : []),
         ]) +
-        p("<b>What happens next:</b> a travel expert will confirm flights and rooms by email within 2 working hours. Pay the deposit to book; the rest is due 30 days before you leave."),
-      cta: { label: "View my booking", url },
+        p(h.payLink ? `<b>Ready to book?</b> Pay the ${h.deposit ? fmt(h.deposit) + " " : ""}deposit securely online (UPI, cards, net banking); the rest is due 30 days before you leave. Or wait: a travel expert confirms flights and rooms by email within 2 working hours. <a href="${url}" style="color:#0b4fc4">View your booking</a>.` : "<b>What happens next:</b> a travel expert will confirm flights and rooms by email within 2 working hours. Pay the deposit to book; the rest is due 30 days before you leave."),
+      cta: h.payLink ? { label: `Pay deposit & book`, url: h.payLink } : { label: "View my booking", url },
     }),
     text: `Your price is held for ${HOLD_HOURS} hours.\n\nReference: ${h.ref}\nTrip: ${h.tripTitle}\nDates: ${h.date} to ${ret}\nTravellers: ${party}\nTotal incl. GST: ${fmt(h.total)}\n\nA travel expert will confirm flights and rooms by email within 2 working hours.\nView your booking: ${url}`,
   };
@@ -264,5 +264,48 @@ export function teamMessageEmail(d: { subject: string; body: string; ref: string
     subject: d.subject,
     html: layout({ preheader: d.body.slice(0, 120), heading: d.subject.replace(/^\s*RB-[A-Z0-9]+\s*[:\-–|]\s*/, "").replace(/\s*[(\[]?RB-[A-Z0-9]+[)\]]?\s*$/, "") || d.subject, body: paras + `<p style="margin:16px 0 0;font-size:12px;color:#5b628a">Reference ${esc(d.ref)} · just reply to this email to reach us.</p>`, cta: d.hubUrl ? { label: "Open my trip hub", url: d.hubUrl } : undefined }),
     text: `${d.body.trim()}\n\nReference ${d.ref}${d.hubUrl ? `\n${d.hubUrl}` : ""}`,
+  };
+}
+
+/** Receipt after an online payment. */
+export function paymentReceiptEmail(d: { name: string; ref: string; tripTitle: string; amount: number; kind: string; paidTotal: number; total: number; balanceDue: string | null; method: string | null; paymentId: string | null; payLink: string; hubUrl: string | null }): Built {
+  const balance = Math.max(0, d.total - d.paidTotal);
+  const what = d.kind === "deposit" ? "Deposit" : d.kind === "balance" ? "Balance" : "Full payment";
+  const heading = balance === 0 ? "Paid in full. You're all set!" : "You're booked!";
+  return {
+    subject: `${heading.replace(/!$/, "")}: ${d.tripTitle} (${d.ref})`,
+    html: layout({
+      preheader: `${what} of ${fmt(d.amount)} received. Reference ${d.ref}.`,
+      heading,
+      body: p(`Hi ${esc(d.name.split(" ")[0])}, we've received your payment${balance === 0 ? " and your trip is fully paid" : " and your trip is confirmed"}. Thank you!`) +
+        box([
+          ["Reference", `<span style="font-family:Menlo,Consolas,monospace;color:#0b4fc4">${d.ref}</span>`],
+          ["Trip", esc(d.tripTitle)],
+          [what, fmt(d.amount)],
+          ["Paid so far", fmt(d.paidTotal)],
+          ["Trip total incl. GST", fmt(d.total)],
+          ...(balance > 0 ? [["Balance", `${fmt(balance)}${d.balanceDue ? ` due by ${fmtDate(d.balanceDue, { day: "numeric", month: "short", year: "numeric" })}` : ""}`] as [string, string]] : []),
+          ...(d.method ? [["Paid by", esc(d.method.toUpperCase())] as [string, string]] : []),
+          ...(d.paymentId ? [["Payment ID", `<span style="font-family:Menlo,Consolas,monospace">${esc(d.paymentId)}</span>`] as [string, string]] : []),
+        ]) +
+        p(balance > 0 ? "We'll remind you before the balance is due, and you can pay it any time from the button below." : "Your vouchers and final travel documents will follow before you leave.") +
+        p("Your GST invoice will be sent separately."),
+      cta: balance > 0 ? { label: "Pay the balance", url: d.payLink } : d.hubUrl ? { label: "Open my trip", url: d.hubUrl } : undefined,
+    }),
+    text: `${heading}\nReference ${d.ref} · ${d.tripTitle}\n${what}: ${fmt(d.amount)}\nPaid so far: ${fmt(d.paidTotal)} of ${fmt(d.total)}\n${balance > 0 ? `Balance ${fmt(balance)}${d.balanceDue ? ` due by ${d.balanceDue}` : ""}: ${d.payLink}` : "Fully paid."}\nPayment ID: ${d.paymentId ?? "-"}`,
+  };
+}
+
+export function paymentTeamEmail(d: { ref: string; name: string; tripTitle: string; amount: number; kind: string; paidTotal: number; total: number; enquiryId: string }): Built {
+  return {
+    subject: `Payment received: ${fmt(d.amount)} ${d.kind} · ${d.name} (${d.ref})`,
+    html: layout({
+      preheader: `${d.name} paid ${fmt(d.amount)} online.`,
+      heading: "Payment received",
+      body: box([["Reference", d.ref], ["Customer", esc(d.name)], ["Trip", esc(d.tripTitle)], ["Paid now", `${fmt(d.amount)} (${d.kind})`], ["Paid so far", `${fmt(d.paidTotal)} of ${fmt(d.total)}`]]) +
+        p("The booking is marked as booked. Confirm flights and rooms with suppliers and send the confirmation."),
+      cta: { label: "Open in admin", url: `${site()}/admin/enquiries#${d.enquiryId}` },
+    }),
+    text: `Payment received: ${fmt(d.amount)} (${d.kind}) from ${d.name}, ${d.ref}. Paid ${fmt(d.paidTotal)} of ${fmt(d.total)}.`,
   };
 }

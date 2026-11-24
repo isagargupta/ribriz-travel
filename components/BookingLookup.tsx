@@ -59,6 +59,7 @@ export default function BookingLookup({ initialRef }: { initialRef: string }) {
           </ol>
         ) : <div className="notice">This request is closed. Contact us if you'd like to reopen it.</div>}
         {/* full reload resets the form state */}
+        {b.payPath && <Link className="btn hot" href={b.payPath}>🔒 {b.status === "booked" ? "Pay balance" : "Pay deposit & book"}</Link>}
         <a className="btn" href="/booking">Look up another</a>
       </div>
     );

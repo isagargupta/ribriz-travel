@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { fmt } from "@/lib/pricing";
 import { deleteEnquiry, updateEnquiry } from "../../actions";
 import OffersPanel from "@/components/admin/OffersPanel";
+import PaymentsPanel from "@/components/admin/PaymentsPanel";
 import { inrFor } from "@/lib/fx";
 import { detailLines } from "@/lib/service-fields";
 
@@ -24,7 +25,7 @@ export default async function Enquiries({ searchParams }: { searchParams: Promis
   const where = FILTERS.includes(status) && status !== "all" ? { status } : {};
   const list = await prisma.enquiry.findMany({
     where, orderBy: { createdAt: "desc" }, take: 200,
-    include: { offers: { orderBy: { createdAt: "asc" } }, messages: { orderBy: { createdAt: "desc" }, take: 10 }, mission: { select: { id: true, documents: { orderBy: { createdAt: "desc" }, select: { id: true, kind: true, fileName: true, status: true, findings: true } } } } },
+    include: { payments: { orderBy: { createdAt: "asc" } }, offers: { orderBy: { createdAt: "asc" } }, messages: { orderBy: { createdAt: "desc" }, take: 10 }, mission: { select: { id: true, documents: { orderBy: { createdAt: "desc" }, select: { id: true, kind: true, fileName: true, status: true, findings: true } } } } },
   });
   const wa = (phone: string) => phone.replace(/[^\d]/g, "");
   const hints = new Map(await Promise.all(list.filter((e) => e.type === "forex").map(async (e) => [e.id, await forexHint(e.details)] as const)));
@@ -83,6 +84,7 @@ export default async function Enquiries({ searchParams }: { searchParams: Promis
                   <small className="muted">Links open for 2 minutes. Documents are deleted automatically 30 days after the trip.</small>
                 </div>
               )}
+              <PaymentsPanel total={e.quotedTotal ?? 0} payments={e.payments.map((p) => ({ id: p.id, kind: p.kind, amount: p.amount, status: p.status, method: p.method, paymentId: p.paymentId, paidAt: p.paidAt?.toISOString() ?? null, refunded: p.refundedAmount }))} />
               {e.messages.length > 0 && (
                 <ul className="ib-hist" style={{ marginTop: 10 }}>
                   {e.messages.map((m) => (

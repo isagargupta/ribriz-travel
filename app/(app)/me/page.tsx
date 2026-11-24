@@ -9,7 +9,7 @@ import RiyaOrb from "@/components/me/RiyaOrb";
 import TripCardX from "@/components/me/TripCardX";
 import TypedStatus from "@/components/me/TypedStatus";
 import { myDashboard } from "@/lib/dashboard";
-import { fmt } from "@/lib/pricing";
+import { fmt, fmtDate } from "@/lib/pricing";
 
 export const metadata: Metadata = { title: "Travel HQ", robots: { index: false } };
 
@@ -48,6 +48,17 @@ export default async function Overview() {
 
       <div className="wrap me-body">
         {d.approvals.length > 0 && <NeedsYou cards={d.approvals} />}
+        {d.dues.length > 0 && (
+          <section className="dues">
+            {d.dues.map((x) => (
+              <Link key={x.ref} href={x.payPath} className="due">
+                <span className="due-ico" aria-hidden="true">🔒</span>
+                <span className="due-txt"><b>{x.kind === "balance" ? "Pay the balance" : "Pay the deposit to book"}</b><small>{x.title} · {x.ref}{x.kind === "balance" && x.balanceDue ? ` · due ${fmtDate(x.balanceDue, { day: "numeric", month: "short" })}` : ""}</small></span>
+                <span className="due-amt">{fmt(x.amount)} →</span>
+              </Link>
+            ))}
+          </section>
+        )}
 
         <section>
           <div className="me-head"><h2>Your trips</h2>{d.trips.length > 0 && <AskButton className="link-btn" q="Plan a new trip for me">+ Plan another</AskButton>}</div>
