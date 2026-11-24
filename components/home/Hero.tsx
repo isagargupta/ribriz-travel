@@ -40,11 +40,11 @@ export default function Hero() {
       <div className="wrap">
         <span className="kicker" style={{ color: "#ffc531" }}>Holidays from India &amp; Europe</span>
         <h1>Your next trip is <span className="rot"><span key={i}>{SLIDES[i].word}</span></span></h1>
-        <p className="lede">Flights, stays, transfers and a local guide in one honest price. Find the cheapest week, compare trips side by side, pay in easy EMIs.</p>
+        <p className="lede">Flights, stays, transfers and a local guide in one honest price. Find the cheapest week, compare trips side by side, and hold the price free for 48 hours.</p>
         <div className="hero-badges">
-          <span>★ <b>4.7</b> from 38,400 travellers</span>
-          <span><b>0%</b> EMI on 3 &amp; 6 months</span>
-          <span><b>24×7</b> on-trip help</span>
+          <span><b>48 h</b> free price hold</span>
+          <span><b>✓</b> Visa check for your passport</span>
+          <span><b>24×7</b> AI travel agent</span>
         </div>
         <div className="hero-dots">
           {SLIDES.map((s, n) => (

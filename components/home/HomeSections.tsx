@@ -1,5 +1,6 @@
 "use client";
 import Image from "next/image";
+import Consent from "@/components/legal/Consent";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { TripDTO } from "@/lib/types";
@@ -180,13 +181,14 @@ export function Newsletter() {
   }
   return (
     <div className="cta">
-      <div><h2>Get price drops before anyone else</h2><p>One email a week with flash sales from your city. Unsubscribe in one click.</p></div>
-      {done ? <p className="cta-done pop-in">You&apos;re in. Watch your inbox on Friday.</p> : (
+      <div><h2>Get price drops before anyone else</h2><p>We email you when there&apos;s a deal worth it: big price drops and last-minute seats. Unsubscribe any time.</p></div>
+      {done ? <p className="cta-done pop-in">You&apos;re in. We&apos;ll email you when there&apos;s a deal worth it.</p> : (
         <form onSubmit={submit}>
           <input type="email" required placeholder="Your email" aria-label="Email address" value={email} onChange={(e) => setEmail(e.target.value)} />
           <button type="submit" disabled={busy}>{busy ? <span className="spinner light" aria-label="Saving" /> : "Notify me"}</button>
         </form>
       )}
+      {!done && <Consent action="subscribing" />}
     </div>
   );
 }

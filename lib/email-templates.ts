@@ -166,9 +166,9 @@ export function welcomeEmail(): Built {
   return {
     subject: "You're on the Ribriz price-drop list",
     html: layout({
-      preheader: "One email a week with flash sales from your city.",
+      preheader: "We'll email you when there's a deal worth it.",
       heading: "You're in",
-      body: p("Every Friday we'll send the week's best price drops and last-minute seats from your city. No spam, and you can unsubscribe any time by replying “unsubscribe”."),
+      body: p("We'll email you when there's a deal worth it: big price drops and last-minute seats. No spam, and you can unsubscribe any time by replying “unsubscribe”."),
       cta: { label: "See this week's deals", url: `${site()}/trips?deal=lm` },
     }),
     text: `You're on the Ribriz price-drop list. See this week's deals: ${site()}/trips?deal=lm`,

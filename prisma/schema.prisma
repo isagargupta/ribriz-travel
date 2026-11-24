@@ -28,6 +28,7 @@ model Trip {
   /// price per adult in INR, flights from Mumbai included when `flight` is true
   price       Int
   was         Int?
+  /// legacy demo fields, not shown: ratings now come from real Review rows
   rating      Float     @default(9)
   reviews     Int       @default(0)
   /// metres to the beach, null when not a beach stay
@@ -403,4 +404,28 @@ model TeamMessage {
   createdAt DateTime @default(now())
 
   @@index([enquiryId, createdAt])
+}
+
+/// A review from a traveller who took the trip (verified through their trip
+/// on Ribriz). Shown only after the team publishes it.
+model Review {
+  id          String   @id @default(cuid())
+  tripId      String
+  /// the trip this traveller took with us (one review per trip taken)
+  missionId   String?  @unique
+  customerId  String?
+  /// shown as written by the traveller, e.g. "Priya, Pune"
+  displayName String
+  /// 1–5 stars
+  stars       Int
+  title       String?
+  body        String
+  /// YYYY-MM the trip started
+  travelledOn String?
+  /// pending | published | rejected
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+  publishedAt DateTime?
+
+  @@index([tripId, status])
 }

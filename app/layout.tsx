@@ -14,7 +14,7 @@ const site = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 export const metadata: Metadata = {
   metadataBase: new URL(site),
   title: { default: "Ribriz Travel: holidays, group tours & beach escapes", template: "%s · Ribriz Travel" },
-  description: "Flight + hotel packages, escorted group tours and beach hotels from India and Europe. One honest price with taxes shown, 0% EMI and a 48-hour price hold.",
+  description: "Flight + hotel packages, escorted group tours and beach hotels from India and Europe. One honest price with taxes shown, a free 48-hour price hold, and Riya, an AI agent who handles the details.",
   openGraph: { siteName: "Ribriz Travel", type: "website", images: ["/img/hero.jpg"] },
 };
 

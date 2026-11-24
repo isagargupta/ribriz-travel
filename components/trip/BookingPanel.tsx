@@ -1,5 +1,6 @@
 "use client";
 import { BOARDS, HOLD_HOURS, addDays, emi, fmtDate } from "@/lib/pricing";
+import { OFFERS } from "@/lib/company";
 import { usePrefs } from "../Prefs";
 import PaxPicker from "../PaxPicker";
 import Money from "../ui/Money";
@@ -38,7 +39,7 @@ export default function BookingPanel() {
                 <tr className="total"><td>Total</td><td><Money inr={q.total} /></td></tr>
               </tbody>
             </table>
-            <p className="fine">Includes {trip.flight ? "return flights, " : ""}{trip.nights} nights, {BOARDS[trip.board]?.toLowerCase()}, transfers and listed sightseeing. Or <b><Money inr={emi(q.total, 6)} />/month</b> for 6 months at 0% interest.</p>
+            <p className="fine">Includes {trip.flight ? "return flights, " : ""}{trip.nights} nights, {BOARDS[trip.board]?.toLowerCase()}, transfers and listed sightseeing.{OFFERS.emi && <> Or <b><Money inr={emi(q.total, 6)} />/month</b> for 6 months at 0% interest.</>}</p>
 
             <button className="btn hot block lg" onClick={() => setCheckout(true)}>Reserve this price</button>
             <p className="fine center">Free {HOLD_HOURS}-hour hold · No payment today</p>

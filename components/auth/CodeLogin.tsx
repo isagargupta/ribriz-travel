@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import Consent from "@/components/legal/Consent";
 
 type Result = { ok: boolean; error?: string; retryIn?: number; redirect?: string };
 
@@ -73,6 +74,7 @@ export default function CodeLogin({ request, verify, next, intro, defaultEmail =
         </label>
         {err && <div className="notice err" role="alert">{err}</div>}
         <button className="btn hot block lg" disabled={busy || wait > 0}>{busy ? <span className="spinner" aria-label="Sending" /> : wait > 0 ? `Try again in ${wait}s` : "Email me a code"}</button>
+        <Consent action="signing in" />
         <p className="fine center">No password needed. We&apos;ll send a 6-digit code that works for 10 minutes.</p>
       </form>
     );

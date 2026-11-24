@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { addNote, cleanNote, combinePrefs, describePrefs, mergePrefs } from "../lib/profile-rules.ts";
 import { recommend, type RecTrip } from "../lib/recommend.ts";
 
-const T = (id: string, o: Partial<RecTrip>): RecTrip => ({ id, dest: id, region: "Europe", title: id, themes: [], price: 100000, was: null, rating: 8.5, depDates: ["2027-03-10"], countryCodes: ["FR"], lastMinute: false, ...o });
+const T = (id: string, o: Partial<RecTrip>): RecTrip => ({ id, dest: id, region: "Europe", title: id, themes: [], price: 100000, was: null, rating: null, depDates: ["2027-03-10"], countryCodes: ["FR"], lastMinute: false, ...o });
 const trips = [
   T("bali", { region: "South-East Asia", themes: ["beach", "honeymoon"], price: 90000 }),
   T("phuket", { region: "South-East Asia", themes: ["beach"], price: 70000 }),
@@ -21,7 +21,8 @@ test("stated likes and budget rank beach trips in budget first, with a reason", 
   const r = recommend(trips, { likes: ["beach"], budgetPerAdult: 100000 }, { viewed: [], saved: [], active: [] });
   assert.ok(["bali", "phuket"].includes(r[0].id));
   assert.match(r[0].reason, /beach|budget/);
-  assert.ok(r.findIndex((x) => x.id === "maldives") > r.findIndex((x) => x.id === "phuket")); // way over budget
+  const mal = r.findIndex((x) => x.id === "maldives");
+  assert.ok(mal === -1 || mal > r.findIndex((x) => x.id === "phuket")); // way over budget: last, or left out
 });
 
 test("behaviour: saved trips are excluded but steer the rest; reasons cite them", () => {

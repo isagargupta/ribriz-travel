@@ -313,3 +313,13 @@ export async function sendReplyAction(i: { enquiryId: string; channel: "email" |
     throw e;
   }
 }
+
+/* ---------- reviews ---------- */
+export async function moderateReview(fd: FormData) {
+  await requireAdmin();
+  const status = String(fd.get("status"));
+  if (!["published", "rejected", "pending"].includes(status)) return;
+  const { setReviewStatus } = await import("@/lib/reviews");
+  await setReviewStatus(String(fd.get("id")), status as "published" | "rejected" | "pending");
+  revalidatePath("/admin/reviews");
+}

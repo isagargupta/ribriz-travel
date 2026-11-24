@@ -48,7 +48,7 @@ export function CompareTable({ trips }: { trips: TripDTO[] }) {
     { label: "Per night, per adult", get: (t) => Math.round(q(t).perAdult / t.nights), best: "min", show: m },
     { label: "Cheapest date", get: (t) => (t.cheapestDate ? fmtDate(t.cheapestDate) : "On request"), show: String },
     { label: "Nights", get: (t) => t.nights, show: String },
-    { label: "Guest rating", get: (t) => t.rating, best: "max", show: (v) => Number(v).toFixed(1) },
+    { label: "Traveller rating", get: (t) => t.rating ?? "No reviews yet", best: "max", show: (v) => (typeof v === "number" ? `${v.toFixed(1)} / 5` : String(v)) },
     { label: "Hotel", get: (t) => t.stars, best: "max", show: (v) => "★".repeat(Number(v)) },
     { label: "Meals", get: (t) => BOARDS[t.board] ?? t.board, show: String },
     { label: "Flights included", get: (t) => (t.flight ? "Yes" : "No"), show: yes },

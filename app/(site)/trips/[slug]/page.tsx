@@ -14,6 +14,8 @@ import { DEFAULT_PASSPORT } from "@/lib/visa";
 import { getPassports, getVisaRules } from "@/lib/visa-data";
 import { getPublishedTrips, getTripBySlug } from "@/lib/trips";
 import { BOARDS, BOARD_DETAIL, KINDS, ratingWord, seeded } from "@/lib/pricing";
+import { publishedReviews } from "@/lib/reviews";
+import Stars from "@/components/Stars";
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | undefined>> };
 
@@ -37,7 +39,7 @@ export default async function TripPage({ params, searchParams }: Props) {
   const r = await getTripBySlug(slug);
   if (!r) notFound();
   const { trip: t, departures } = r;
-  const [inRules, passports] = await Promise.all([getVisaRules(DEFAULT_PASSPORT), getPassports()]);
+  const [inRules, passports, reviews] = await Promise.all([getVisaRules(DEFAULT_PASSPORT), getPassports(), publishedReviews(t.id)]);
   const initialDate = sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : undefined;
 
   const inclusions: [string, boolean][] = [
@@ -52,7 +54,6 @@ export default async function TripPage({ params, searchParams }: Props) {
   ];
   const meals = (i: number, n: number) =>
     i === 0 ? "Arrival" : i === n - 1 ? "Departure" : t.board === "AI" || t.board === "FB" ? "Breakfast, lunch, dinner" : t.board === "HB" ? "Breakfast, dinner" : "Breakfast";
-  const cats: [string, number][] = [["Hotel", t.rating + 0.2], ["Food", t.rating - 0.3], ["Guide & service", t.rating + 0.1], ["Value for money", t.rating - 0.4]];
 
   const related = (await getPublishedTrips())
     .filter((x) => x.id !== t.id && (x.region === t.region || x.themes.some((th) => t.themes.includes(th))))
@@ -63,7 +64,8 @@ export default async function TripPage({ params, searchParams }: Props) {
     "@context": "https://schema.org", "@type": "TouristTrip", name: t.title, description: t.highlights.join(". "),
     touristType: t.themes, image: t.image,
     offers: { "@type": "Offer", priceCurrency: "INR", price: t.price + t.minDelta, availability: departures.length ? "https://schema.org/InStock" : "https://schema.org/SoldOut" },
-    aggregateRating: { "@type": "AggregateRating", ratingValue: t.rating, bestRating: 10, reviewCount: t.reviews },
+    // only real, published reviews; never shown before the first one exists
+    ...(t.rating && t.reviews ? { aggregateRating: { "@type": "AggregateRating", ratingValue: t.rating, bestRating: 5, worstRating: 1, reviewCount: t.reviews } } : {}),
   };
 
   return (
@@ -76,7 +78,7 @@ export default async function TripPage({ params, searchParams }: Props) {
           <span className="kicker" style={{ color: "#ffc531" }}>{KINDS[t.kind]} · {t.country}</span>
           <h1>{t.title}</h1>
           <div className="hero-facts">
-            <span><span className="score">{t.rating.toFixed(1)}</span> {ratingWord(t.rating)} · {t.reviews.toLocaleString("en-IN")} reviews</span>
+            {t.rating ? <span><Stars value={t.rating} /> {t.rating.toFixed(1)} {ratingWord(t.rating)} · {t.reviews} review{t.reviews > 1 ? "s" : ""}</span> : null}
             <span>{t.nights} nights</span><span>{"★".repeat(t.stars)}</span><span>{BOARDS[t.board]}</span>
           </div>
         </div>
@@ -134,11 +136,23 @@ export default async function TripPage({ params, searchParams }: Props) {
           </section></Reveal>
 
           <Reveal><section className="panel" id="reviews">
-            <h2>Guest ratings</h2>
-            <div className="rating-big"><span className="score">{t.rating.toFixed(1)}</span><div><b>{ratingWord(t.rating)}</b><small className="muted">{t.reviews.toLocaleString("en-IN")} verified reviews from travellers who took this trip</small></div></div>
-            <div className="bars">
-              {cats.map(([l, v]) => <div key={l}><span>{l}</span><i style={{ ["--w" as string]: `${Math.min(100, v * 10)}%` }} /><span className="mono">{Math.min(10, v).toFixed(1)}</span></div>)}
-            </div>
+            <h2>Traveller reviews</h2>
+            {t.rating && reviews.length ? (
+              <>
+                <div className="rating-big"><span className="score">{t.rating.toFixed(1)}</span><div><b><Stars value={t.rating} /> {ratingWord(t.rating)}</b><small className="muted">{t.reviews} review{t.reviews > 1 ? "s" : ""} from travellers who took this trip with Ribriz</small></div></div>
+                <ul className="reviews">
+                  {reviews.map((r) => (
+                    <li key={r.id}>
+                      <div className="rv-top"><Stars value={r.stars} /><b>{r.title ?? ""}</b></div>
+                      <p>{r.body}</p>
+                      <small className="muted">{r.displayName}{r.travelledOn ? ` · travelled ${r.travelledOn}` : ""} · <span className="rv-verified">✓ Verified trip</span></small>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <p className="muted">No reviews yet. Only travellers who take this trip with Ribriz can review it, and every review is shown as written.</p>
+            )}
           </section></Reveal>
         </div>
 

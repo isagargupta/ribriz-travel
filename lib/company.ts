@@ -16,4 +16,13 @@ export const COMPANY = {
   phone: null,
 } as const;
 
+/**
+ * What we can actually offer today. Switch a flag on only when it's real
+ * (e.g. EMI once a payment partner offers it), and the site shows it again.
+ */
+export const OFFERS = {
+  /** 0% EMI needs a payment partner (e.g. Razorpay) with EMI enabled */
+  emi: false,
+} as const;
+
 export const ADDRESS_ONE_LINE = COMPANY.address.lines.join(", ");

@@ -14,7 +14,7 @@ import { docsReminder, holdStage, isMeaningfulDrop, isPreTrip, visaReminder } fr
 
 export interface Alert {
   dedupeKey: string;
-  kind: "price_drop" | "hold_expiring" | "hold_expired" | "visa_deadline" | "docs_missing" | "sold_out" | "pre_trip";
+  kind: "price_drop" | "hold_expiring" | "hold_expired" | "visa_deadline" | "docs_missing" | "sold_out" | "pre_trip" | "review_request";
   title: string;
   body: string;
   url: string;
@@ -162,6 +162,17 @@ async function missionAlerts(c: Ctx): Promise<Alert[]> {
         title: `${missing.length} visa document${missing.length > 1 ? "s" : ""} still needed`,
         body: `${docs.daysToGo} days to go. Still needed: ${missing.map((i) => i.label.toLowerCase() + (i.state === "issue" ? " (needs a fix)" : "")).join(", ")}. Snap a photo in your trip hub and I'll check it in seconds.`,
         url: hub(m),
+      });
+    }
+
+    // back home: ask how it was, once, 1–10 days after return (signed-in travellers can review)
+    const back = daysBetween(addDays(d.date, t.nights), c.today);
+    if (m.customerId && back >= 1 && back <= 10 && !(await prisma.review.findUnique({ where: { missionId: m.id }, select: { id: true } }))) {
+      out.push({
+        ...who, dedupeKey: `review:${m.id}`, kind: "review_request",
+        title: `Welcome back! How was ${t.dest}?`,
+        body: `Tap a star rating and a few words for other travellers. We publish reviews as written, good or bad.`,
+        url: "/me/trips#review",
       });
     }
 

@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Consent from "@/components/legal/Consent";
 import { usePrefs } from "../Prefs";
 
 export interface ApprovalCardData {
@@ -56,11 +57,14 @@ export default function ApprovalCard({ card, onDecided, compact = false }: { car
       ) : (
         <>
           {card.needsContact && (
+            <>
             <div className="appr-contact">
               <input aria-label="Full name" placeholder="Full name" autoComplete="name" value={c.name} onChange={(e) => setC({ ...c, name: e.target.value })} />
               <input aria-label="Mobile" placeholder="Mobile" inputMode="tel" autoComplete="tel" value={c.phone} onChange={(e) => setC({ ...c, phone: e.target.value })} />
               <input aria-label="Email" placeholder="Email" type="email" autoComplete="email" value={c.email} onChange={(e) => setC({ ...c, email: e.target.value })} />
             </div>
+            <Consent action="approving" />
+            </>
           )}
           {err && <p className="appr-err" role="alert">{err}</p>}
           <div className="appr-btns">

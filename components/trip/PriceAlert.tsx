@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Consent from "@/components/legal/Consent";
 import { usePrefs } from "../Prefs";
 import { useBooking } from "./BookingContext";
 
@@ -46,6 +47,7 @@ export default function PriceAlert() {
             <input id="pa-email" className="in" type="email" required autoFocus autoComplete="email" placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
             <button className="btn sm" disabled={busy}>{busy ? "…" : "Alert me"}</button>
           </div>
+          <Consent action="setting an alert" />
         </form>
       )}
     </div>

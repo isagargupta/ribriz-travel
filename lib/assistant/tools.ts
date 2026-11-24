@@ -19,6 +19,7 @@ import { bookingsFor } from "../offers";
 import { pendingCard } from "../approvals";
 import { FX_ATTRIBUTION, getFxRates } from "../fx";
 import { prisma } from "../db";
+import { OFFERS } from "../company";
 import type { TripPick, UiBlock } from "./ui";
 import { getProfile, updateProfile } from "../profile";
 import { PACES, REGIONS, THEME_KEYS as PROFILE_THEMES, TRAVELS_WITH, describePrefs, type Prefs } from "../profile-rules";
@@ -409,7 +410,7 @@ function card(t: TripDTO, price: number, dep?: DepartureDTO | null, visa?: strin
 function summary(t: TripDTO) {
   return {
     slug: t.slug, title: t.title, destination: t.dest, countries: t.country, type: KINDS[t.kind], nights: t.nights,
-    hotel_stars: t.stars, meals: BOARDS[t.board], rating: t.rating, reviews: t.reviews, flights_included: t.flight,
+    hotel_stars: t.stars, meals: BOARDS[t.board], traveller_rating_out_of_5: t.rating, reviews: t.reviews, flights_included: t.flight,
     free_cancellation: t.freeCancel, tour_manager: t.tourManager, themes: t.themes,
     beach_distance_m: t.beach, url: `${site()}/trips/${t.slug}`,
   };
@@ -439,7 +440,7 @@ async function searchTrips(i: z.infer<typeof SearchInput>, ctx: VisitorContext):
     rows.push({ t, deps, cheapest, price, visa });
   }
   const sort = i.sort ?? "price";
-  rows.sort((a, b) => sort === "rating" ? b.t.rating - a.t.rating : sort === "soonest" ? a.deps[0].date.localeCompare(b.deps[0].date) : a.price - b.price);
+  rows.sort((a, b) => sort === "rating" ? (b.t.rating ?? 0) - (a.t.rating ?? 0) : sort === "soonest" ? a.deps[0].date.localeCompare(b.deps[0].date) : a.price - b.price);
   const top = rows.slice(0, i.limit ?? 4);
 
   return {
@@ -549,7 +550,7 @@ async function quoteTrip(i: z.infer<typeof QuoteInput>, ctx: VisitorContext): Pr
     result: {
       trip: t.title, date: dep.date, return_date: addDays(dep.date, t.nights), from_city: t.flight ? ctx.from : null,
       lines: q.lines, subtotal_inr: q.subtotal, gst_inr: q.gst, total_inr: q.total, per_person_inr: q.perPerson,
-      deposit_to_book_inr: q.deposit, emi_6_months_no_cost_inr: Math.round(emi(q.total, 6)), seats_left: dep.seatsLeft,
+      deposit_to_book_inr: q.deposit, ...(OFFERS.emi ? { emi_6_months_no_cost_inr: Math.round(emi(q.total, 6)) } : { emi: "not offered yet" }), seats_left: dep.seatsLeft,
       reserve_url: `${site()}/trips/${t.slug}?date=${dep.date}`,
       how_to_book: "Open the trip, pick this date and press 'Reserve this price' for a free 48-hour hold. No payment online.",
     },
@@ -709,7 +710,7 @@ async function showTripsTool(i: z.infer<typeof ShowTripsInput>, ctx: VisitorCont
     const visa = visaShort(await visaFor(t, ctx.passport));
     items.push({
       ...card(t, adultPrice(t.price, dep ? dep.priceDelta : t.minDelta, t.flight, ctx.from), dep, visa),
-      date: dep?.date ?? null, seats: dep?.seatsLeft ?? null, badge: p.badge, why: p.why, rating: t.rating, flight: t.flight,
+      date: dep?.date ?? null, seats: dep?.seatsLeft ?? null, badge: p.badge, why: p.why, rating: t.rating ?? undefined, flight: t.flight,
     });
   }
   if (!items.length) return { status: "", result: { error: `Unknown trips: ${missing.join(", ")}. Use slugs from search results.` } };

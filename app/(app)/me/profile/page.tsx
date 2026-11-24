@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import ProfileForm from "@/components/auth/ProfileForm";
 import MemoryEditor from "@/components/you/MemoryEditor";
+import DataRights from "@/components/me/DataRights";
 import { myDashboard } from "@/lib/dashboard";
 import { getProfile } from "@/lib/profile";
 
@@ -18,6 +19,7 @@ export default async function Profile() {
         <ProfileForm name={me.name ?? ""} phone={me.phone ?? ""} />
       </section>
       <MemoryEditor initial={profile} />
+      <DataRights />
     </div>
   );
 }

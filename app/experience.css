@@ -801,3 +801,29 @@ kbd { font-family: var(--f-mono); font-size: 11px; background: var(--surface); b
 .act { display: inline-flex; gap: 6px; align-items: center; font: inherit; font-size: 13px; font-weight: 700; color: #3b26b5; text-decoration: none; padding: 8px 13px; border-radius: 999px; border: 1.5px solid #d9d0ff; background: #faf8ff; cursor: pointer; animation: popIn .3s ease-out both; animation-delay: calc(var(--i) * 60ms + 120ms); transition: transform .12s, background .12s }
 .act:hover { transform: translateY(-1px); background: #efeaff }
 @media (prefers-reduced-motion: reduce) { .trail, .trail li, .ask, .ask-q, .ask-opt, .car-card, .act, .ai-tiles button { animation: none !important } }
+
+/* stars and real reviews */
+.stars { position: relative; display: inline-block; line-height: 1; letter-spacing: 1px; vertical-align: -1px }
+.stars-bg { color: #d6daf0 }
+.stars-fg { position: absolute; inset: 0 auto 0 0; overflow: hidden; white-space: nowrap; color: #f5a623 }
+.reviews { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 12px }
+.reviews li { padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface) }
+.reviews p { margin: 6px 0 }
+.rv-top { display: flex; gap: 10px; align-items: center }
+.rv-verified { color: var(--good); font-weight: 700 }
+
+/* legal pages */
+.legal-page { display: grid; grid-template-columns: 220px minmax(0, 760px); gap: 40px; padding-block: 40px 80px }
+.legal-nav { position: sticky; top: 90px; align-self: start; display: grid; gap: 4px }
+.legal-nav a { padding: 8px 12px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px; color: var(--muted) }
+.legal-nav a:hover { background: var(--surface-2) } .legal-nav a[aria-current="page"] { background: var(--surface-2); color: var(--fg) }
+.legal-doc h1 { font-size: clamp(28px, 4vw, 42px); margin: 6px 0 4px }
+.legal-meta { color: var(--muted); font-size: 13px; margin: 0 0 16px }
+.legal-intro { font-size: 17px; line-height: 1.6 }
+.legal-doc section { margin-top: 26px }
+.legal-doc h2 { font-size: 19px; margin: 0 0 8px }
+.legal-doc p, .legal-doc li { line-height: 1.65; font-size: 15px }
+.legal-doc ul { padding-left: 20px; display: grid; gap: 6px }
+.legal-table { width: 100%; border-collapse: collapse; font-size: 14px }
+.legal-table th, .legal-table td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top }
+@media (max-width: 800px) { .legal-page { grid-template-columns: 1fr; gap: 16px } .legal-nav { position: static; display: flex; flex-wrap: wrap } }

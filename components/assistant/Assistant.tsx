@@ -249,7 +249,7 @@ export default function Assistant({ docked = false, onClose }: { docked?: boolea
               ? <button type="button" className="ai-send stop" onClick={() => abort.current?.abort()} aria-label="Stop">■</button>
               : <button className="ai-send" disabled={!input.trim()} aria-label="Send">↑</button>}
           </form>
-          <p className="ai-fine">AI answers can be wrong. Prices and dates come from live Ribriz data; confirm visas on official sites.</p>
+          <p className="ai-fine">AI answers can be wrong. Prices and dates come from live Ribriz data; confirm visas on official sites. <Link href="/legal/privacy" target="_blank">Privacy</Link></p>
         </div>
       )}
     </>

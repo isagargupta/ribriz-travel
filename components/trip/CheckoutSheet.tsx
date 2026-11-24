@@ -167,7 +167,7 @@ export default function CheckoutSheet() {
               <dt>Total</dt><dd><b><Money inr={priceMoved ?? q.total} /></b> incl. GST · deposit <Money inr={q.deposit} /></dd>
               <dt>Cancellation</dt><dd>{trip.freeCancel ? "Free until 30 days before departure." : "Fees apply from booking; we'll send them in writing."}</dd>
             </dl>
-            <label className="agree"><input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} /> I agree to be contacted about this trip and accept the booking terms.</label>
+            <label className="agree"><input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} /> I agree to the <a href="/legal/terms" target="_blank">Terms of booking</a> and <a href="/legal/privacy" target="_blank">Privacy policy</a>, and to be contacted by email about this trip.</label>
             {err && <div className={`notice ${priceMoved ? "warn" : "err"}`} role="alert">{err}</div>}
           </>
         )}

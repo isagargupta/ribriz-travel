@@ -35,8 +35,6 @@ export default function TripForm({ trip = {}, images }: { trip?: TripFormValues;
       <label>Distance to beach in metres (blank if none)<input name="beach" type="number" min={0} defaultValue={trip.beach ?? ""} /></label>
       <label>Price per adult (₹, flights from Mumbai)<input name="price" type="number" min={1} required defaultValue={trip.price} /></label>
       <label>Old price to show crossed out (₹, optional)<input name="was" type="number" min={0} defaultValue={trip.was ?? ""} /></label>
-      <label>Guest rating (0–10)<input name="rating" type="number" step="0.1" min={0} max={10} defaultValue={trip.rating ?? 9} /></label>
-      <label>Number of reviews<input name="reviews" type="number" min={0} defaultValue={trip.reviews ?? 0} /></label>
 
       <fieldset className="full" style={{ border: 0, padding: 0, margin: 0 }}>
         <legend className="lab" style={{ marginBottom: 6 }}>Travel styles</legend>

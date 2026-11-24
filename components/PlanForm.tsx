@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Consent from "@/components/legal/Consent";
 import { usePrefs } from "./Prefs";
 
 export default function PlanForm() {
@@ -47,6 +48,7 @@ export default function PlanForm() {
       <label className="full">Anything else?<textarea value={f.message} onChange={up("message")} placeholder="Hotels you like, food preferences, must-see places…" /></label>
       <p className="full muted" style={{ margin: 0, fontSize: 13 }}>Travellers: {adults} adult{adults > 1 ? "s" : ""}{childAges.length ? `, ${childAges.length} child${childAges.length > 1 ? "ren" : ""}` : ""} from {from}. Change these in the search box on the home page.</p>
       {state.err && <div className="notice err full">{state.err}</div>}
+      <Consent action="sending this request" />
       <button className="btn hot full" type="submit" disabled={state.busy} style={{ padding: 14 }}>{state.busy ? <span className="spinner light" aria-label="Sending" /> : "Send my trip request"}</button>
     </form>
   );

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { NoticeView } from "@/lib/notifications";
 
-const ICON: Record<string, string> = { price_drop: "↓", hold_expiring: "⏳", hold_expired: "⌛", visa_deadline: "🛂", docs_missing: "📄", sold_out: "⚠", pre_trip: "🧳" };
+const ICON: Record<string, string> = { price_drop: "↓", hold_expiring: "⏳", hold_expired: "⌛", visa_deadline: "🛂", docs_missing: "📄", sold_out: "⚠", pre_trip: "🧳", review_request: "⭐" };
 
 /** "Updates from Riya": what the background agent noticed, newest first. */
 export default function Notices({ items, title = "Updates from Riya" }: { items: NoticeView[]; title?: string }) {

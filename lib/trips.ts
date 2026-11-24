@@ -11,12 +11,12 @@ export const TRIPS_TAG = "trips";
  * Bump when the shape of cached data changes (new fields). Vercel keeps cached
  * results across deploys, so old entries would otherwise be served to new code.
  */
-export const DATA_VERSION = "3";
+export const DATA_VERSION = "4";
 
 const lines = (s: string) => s.split("\n").map((x) => x.trim()).filter(Boolean);
 const today = () => isoDate(new Date());
 
-function toDTO(t: Trip & { departures: Departure[] }): TripDTO {
+function toDTO(t: Trip & { departures: Departure[] }, score?: { avg: number; n: number }): TripDTO {
   const deps = t.departures; // already filtered to upcoming + open, sorted by date
   let cheapest: Departure | null = null;
   for (const d of deps) if (!cheapest || d.priceDelta < cheapest.priceDelta) cheapest = d;
@@ -25,7 +25,7 @@ function toDTO(t: Trip & { departures: Departure[] }): TripDTO {
     kind: t.kind as Kind,
     themes: t.themes.split(",").map((x) => x.trim()).filter(Boolean),
     nights: t.nights, stars: t.stars, board: t.board, price: t.price, was: t.was,
-    rating: t.rating, reviews: t.reviews, beach: t.beach,
+    rating: score?.n ? Math.round(score.avg * 10) / 10 : null, reviews: score?.n ?? 0, beach: t.beach,
     flight: t.flight, freeCancel: t.freeCancel, tourManager: t.tourManager, easyVisa: t.easyVisa,
     lastMinute: t.lastMinute, earlyBird: t.earlyBird, featured: t.featured,
     image: t.image, highlights: lines(t.highlights), days: lines(t.days),
@@ -47,7 +47,10 @@ export const getPublishedTrips = unstable_cache(
       orderBy: { createdAt: "asc" },
       include: { departures: upcoming() },
     });
-    return rows.map(toDTO);
+    // ratings come only from published reviews by travellers who took the trip
+    const scores = await prisma.review.groupBy({ by: ["tripId"], where: { status: "published" }, _avg: { stars: true }, _count: true });
+    const byTrip = new Map(scores.map((x) => [x.tripId, { avg: x._avg.stars ?? 0, n: x._count }]));
+    return rows.map((r) => toDTO(r, byTrip.get(r.id)));
   },
   [`published-trips-v${DATA_VERSION}`],
   { tags: [TRIPS_TAG], revalidate: 3600 },

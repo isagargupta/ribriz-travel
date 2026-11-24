@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Consent from "@/components/legal/Consent";
 import { fmtDate } from "@/lib/pricing";
 import { usePrefs } from "../Prefs";
 import Sheet from "../ui/Sheet";
@@ -43,6 +44,7 @@ export default function QuestionSheet() {
           <label>Mobile<input required inputMode="tel" autoComplete="tel" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></label>
           <label>Email<input required type="email" autoComplete="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
           {state.err && <div className="notice err full" role="alert">{state.err}</div>}
+          <Consent action="sending this" />
           <button className="btn hot full" disabled={state.busy}>{state.busy ? <span className="spinner" aria-label="Sending" /> : "Send question"}</button>
         </form>
       )}

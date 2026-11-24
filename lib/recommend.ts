@@ -5,7 +5,7 @@ import { monthName } from "./profile-rules.ts";
 
 export interface RecTrip {
   id: string; dest: string; region: string; title: string; themes: string[]; price: number; was: number | null;
-  rating: number; depDates: string[]; countryCodes: string[]; lastMinute: boolean;
+  rating: number | null; depDates: string[]; countryCodes: string[]; lastMinute: boolean;
 }
 export interface Signals {
   /** recently viewed trip ids, newest first */
@@ -79,7 +79,7 @@ export function recommend(trips: RecTrip[], p: Prefs, s: Signals, opts: { easyVi
     if (opts.easyVisa?.(t.countryCodes)) parts.push({ w: avoid.some((a) => a.includes("visa")) ? 1.2 : 0.35, why: "Easy visa for your passport" });
     const off = t.was && t.was > t.price ? Math.round((1 - t.price / t.was) * 100) : 0;
     if (off >= 12) parts.push({ w: 0.3 + off / 100, why: `${off}% off right now` });
-    parts.push({ w: (t.rating - 8) * 0.25, why: t.rating >= 9 ? `Rated ${t.rating.toFixed(1)} by travellers` : "" });
+    if (t.rating) parts.push({ w: (t.rating - 4) * 0.5, why: t.rating >= 4.5 ? `Rated ${t.rating.toFixed(1)}/5 by travellers` : "" });
     const text = `${t.title} ${t.dest} ${t.region} ${t.themes.join(" ")}`.toLowerCase();
     if (avoid.some((a) => a.length > 2 && text.includes(a))) parts.push({ w: -4, why: "" });
     const hours = FLIGHT_HOURS[t.region] ?? 6;

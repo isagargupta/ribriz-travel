@@ -3,18 +3,28 @@ import Link from "next/link";
 import AskButton from "@/components/me/AskButton";
 import TripCardX from "@/components/me/TripCardX";
 import { myDashboard } from "@/lib/dashboard";
+import ReviewForm from "@/components/me/ReviewForm";
+import { reviewable } from "@/lib/reviews";
 import { fmtDate } from "@/lib/pricing";
 
 export const metadata: Metadata = { title: "My trips", robots: { index: false } };
 
 export default async function Trips() {
-  const { d } = (await myDashboard())!;
+  const { d, me } = (await myDashboard())!;
+  const toReview = await reviewable(me.id);
+  const first = me.name?.split(" ")[0] ?? "Ribriz traveller";
   return (
     <div className="wrap">
       <div className="app-page-head">
         <div><h1>My trips</h1><p>Every trip Riya is running for you. Tap any step to see what&apos;s happening.</p></div>
         <AskButton className="btn hot" q="Plan a new trip for me">✦ Plan a new trip</AskButton>
       </div>
+      {toReview.length > 0 && (
+        <section className="app-sec" id="review">
+          <h2>Rate your trip</h2>
+          {toReview.map((m) => <ReviewForm key={m.id} missionId={m.id} dest={d.past.find((x) => x.id === m.id)?.dest ?? d.trips.find((x) => x.id === m.id)?.dest ?? m.title} defaultName={first} />)}
+        </section>
+      )}
       {d.trips.length === 0 ? (
         <div className="app-empty"><span className="mini-orb" style={{ width: 64, height: 64 }} /><b>No trips yet</b><p>Tell Riya where you&apos;d like to go. She sets up the plan and you&apos;ll see each step here.</p><AskButton className="btn hot" q="Help me plan a trip">Start with Riya</AskButton></div>
       ) : <div className="me-trips">{d.trips.map((t, i) => <TripCardX key={t.id} t={t} i={i} />)}</div>}

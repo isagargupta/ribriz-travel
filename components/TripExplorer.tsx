@@ -61,9 +61,9 @@ export default function TripExplorer({ trips, initial }: { trips: TripDTO[]; ini
     const price = (t: TripDTO) => adultPrice(t.price, t.minDelta, t.flight, from);
     const sorters: Record<string, (a: TripDTO, b: TripDTO) => number> = {
       rec: (a, b) => (q.trim() ? (relevance.get(b.id)! - relevance.get(a.id)!) * 1000 : 0)
-        + (b.rating * 1000 - price(b) / 400 + (b.featured ? 300 : 0)) - (a.rating * 1000 - price(a) / 400 + (a.featured ? 300 : 0)),
+        + ((b.rating ?? 4) * 2000 - price(b) / 400 + (b.featured ? 300 : 0)) - ((a.rating ?? 4) * 2000 - price(a) / 400 + (a.featured ? 300 : 0)),
       price: (a, b) => price(a) - price(b),
-      rating: (a, b) => b.rating - a.rating,
+      rating: (a, b) => (b.rating ?? 0) - (a.rating ?? 0) || b.reviews - a.reviews,
       deal: (a, b) => savingPct(b) - savingPct(a),
       nights: (a, b) => a.nights - b.nights,
     };

@@ -9,7 +9,7 @@ import { writeNote } from "./digest";
 import { oneClickUrl, unsubscribeUrl } from "./optout";
 
 /** Most urgent first: these decide the email's subject. */
-const URGENCY: Record<Alert["kind"], number> = { hold_expiring: 0, sold_out: 1, visa_deadline: 2, hold_expired: 3, docs_missing: 4, pre_trip: 5, price_drop: 6 };
+const URGENCY: Record<Alert["kind"], number> = { hold_expiring: 0, sold_out: 1, visa_deadline: 2, hold_expired: 3, docs_missing: 4, pre_trip: 5, price_drop: 6, review_request: 7 };
 const MAX_PER_EMAIL = 6;
 
 /** Saves an alert once. Returns false when the same alert was already raised (same dedupeKey). */

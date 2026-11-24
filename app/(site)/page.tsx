@@ -6,12 +6,20 @@ import Reveal from "@/components/ui/Reveal";
 import AskRiyaBand from "@/components/assistant/AskRiyaBand";
 import ForYou from "@/components/home/ForYou";
 import { getCalendar, getPublishedTrips } from "@/lib/trips";
-import { THEMES, RATES } from "@/lib/pricing";
+import { THEMES } from "@/lib/pricing";
+import { getFxRates } from "@/lib/fx";
+import { prisma } from "@/lib/db";
+import Stars from "@/components/Stars";
 
 export const revalidate = 3600;
 
 export default async function Home() {
-  const [trips, calendar] = await Promise.all([getPublishedTrips(), getCalendar(14)]);
+  const [trips, calendar, fx, stories] = await Promise.all([
+    getPublishedTrips(), getCalendar(14), getFxRates(),
+    // only real, published reviews from travellers who took a trip with us
+    prisma.review.findMany({ where: { status: "published", stars: { gte: 4 } }, orderBy: { publishedAt: "desc" }, take: 3 }),
+  ]);
+  const rate = (c: string) => (fx?.perInr[c] ? Math.round(1 / fx.perInr[c]) : null);
   const featured = [...trips.filter((t) => t.featured), ...trips.filter((t) => !t.featured)].slice(0, 5);
   const destinations = [...new Set(trips.flatMap((t) => [t.dest, t.country.split(" · ")[0]]))];
 
@@ -69,7 +77,7 @@ export default async function Home() {
             {[
               ["See the real total", "Every price shows what it covers. Switch to “Total” at the top to see the full amount for your group, taxes included."],
               ["Reserve free for 48 hours", "Pick a date and hold that exact price. No card, no payment, no pressure."],
-              ["An expert confirms, then you book", "We confirm flights and rooms by email within 2 working hours. Pay 10% to book and the rest 30 days before you go, or in 0% EMIs."],
+              ["An expert confirms, then you book", "We confirm flights and rooms by email within 2 working hours. Pay 10% to book and the rest 30 days before you go."],
             ].map(([h, p], i) => (
               <Reveal key={h} delay={i * 90}><div className="step3"><span className="num">{i + 1}</span><h3>{h}</h3><p>{p}</p></div></Reveal>
             ))}
@@ -77,25 +85,27 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="band" style={{ paddingTop: 0 }}>
-        <div className="wrap">
-          <Reveal><div className="sec-head"><div><span className="kicker">Traveller stories</span><h2>Back home and still smiling</h2></div></div></Reveal>
-          <div className="stories">
-            {[
-              ["#ffd6c9", "#ff5a36", "PA", "Transfers on time every day, and the cheapest-week calendar saved us ₹18,000 on Bali.", "Priya & Arjun", "Pune · Bali, 7 nights"],
-              ["#cfe9ff", "#0b4fc4", "MF", "Our tour manager knew every shortcut in Rome. The kids still talk about the gondola.", "The Mehta family", "Surat · Europe, 10 nights"],
-              ["#d4f5e7", "#0fb68f", "K", "Price on the site matched the price at check-in. No surprises, just a very good week in Crete.", "Kasia", "Wrocław · Crete, 8 nights"],
-            ].map(([bg, av, ini, q, who, sub], i) => (
-              <Reveal key={who} delay={i * 90}>
-                <figure className="story" style={{ background: bg }}>
-                  <blockquote>{q}</blockquote>
-                  <figcaption className="who"><span className="av" style={{ background: av }}>{ini}</span><div>{who}<span>{sub}</span></div></figcaption>
-                </figure>
-              </Reveal>
-            ))}
+      {stories.length > 0 && (
+        <section className="band" style={{ paddingTop: 0 }}>
+          <div className="wrap">
+            <Reveal><div className="sec-head"><div><span className="kicker">Traveller reviews</span><h2>Back home and still smiling</h2></div><p>From travellers who took these trips with Ribriz, published as written.</p></div></Reveal>
+            <div className="stories">
+              {stories.map((r, i) => {
+                const t = trips.find((x) => x.id === r.tripId);
+                return (
+                  <Reveal key={r.id} delay={i * 90}>
+                    <figure className="story" style={{ background: ["#ffd6c9", "#cfe9ff", "#d4f5e7"][i % 3] }}>
+                      <Stars value={r.stars} />
+                      <blockquote>{r.body.length > 220 ? r.body.slice(0, 217) + "…" : r.body}</blockquote>
+                      <figcaption className="who"><span className="av" style={{ background: ["#ff5a36", "#0b4fc4", "#0fb68f"][i % 3] }}>{r.displayName[0]}</span><div>{r.displayName}<span>{t ? `${t.dest} · ` : ""}{r.travelledOn ?? ""} · ✓ verified trip</span></div></figcaption>
+                    </figure>
+                  </Reveal>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       <section className="band" id="services" style={{ paddingTop: 0 }}>
         <div className="wrap">
@@ -107,10 +117,10 @@ export default async function Home() {
           </div>
           <Reveal><div className="sec-head"><div><span className="kicker">Before you fly</span><h2>Everything around the trip</h2></div><p>Sorted in the same booking, by the same team.</p></div></Reveal>
           <div className="services">
-            <div className="svc"><span className="ico" style={{ background: "#ffe7a1" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="5" width="20" height="14" rx="3" /><path d="M2 10h20M6 15h4" /></svg></span><h3>Forex card</h3><p>Load USD, EUR, THB and 12 more. Delivered home in 24 hours.</p><span className="rate">1 EUR ≈ ₹{(1 / RATES.EUR).toFixed(0)} · 1 PLN ≈ ₹{(1 / RATES.PLN).toFixed(0)}</span></div>
-            <div className="svc"><span className="ico" style={{ background: "#cfe9ff" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="4" y="2" width="16" height="20" rx="2" /><circle cx="12" cy="10" r="3" /><path d="M8 17h8" /></svg></span><h3>Visa help</h3><p>Checklist, appointment booking and form filling for 60+ countries.</p><span className="rate">Schengen · UK · USA · Japan</span></div>
-            <div className="svc"><span className="ico" style={{ background: "#d4f5e7" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z" /><path d="M9 12l2 2 4-4" /></svg></span><h3>Travel cover</h3><p>Medical up to $100,000, lost baggage and trip cancellation in one policy.</p><span className="rate">from ₹38 / day</span></div>
-            <div className="svc"><span className="ico" style={{ background: "#ffd6c9" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 21l3-9 9-9 6 6-9 9z" /><path d="M14 4l6 6" /></svg></span><h3>Custom trip</h3><p>Tell an expert your dates and budget. Get a costed plan within a day.</p><Link className="btn hot sm" href="/plan" style={{ justifySelf: "start" }}>Plan my trip</Link></div>
+            <div className="svc"><span className="ico" style={{ background: "#ffe7a1" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="5" width="20" height="14" rx="3" /><path d="M2 10h20M6 15h4" /></svg></span><h3>Forex</h3><p>Riya shows today&apos;s market rate for your currency; our forex partner confirms the final rate and delivery.</p><span className="rate">{rate("USD") ? `Today: 1 USD ≈ ₹${rate("USD")} · 1 EUR ≈ ₹${rate("EUR")}` : "Live market rates"}</span></div>
+            <div className="svc"><span className="ico" style={{ background: "#cfe9ff" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="4" y="2" width="16" height="20" rx="2" /><circle cx="12" cy="10" r="3" /><path d="M8 17h8" /></svg></span><h3>Visa help</h3><p>See what your passport needs, upload documents for an instant check, and we file e-Visas and embassy visas for you.</p><span className="rate">Instant check for your passport</span></div>
+            <div className="svc"><span className="ico" style={{ background: "#d4f5e7" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z" /><path d="M9 12l2 2 4-4" /></svg></span><h3>Travel insurance</h3><p>Tell Riya your trip; our team sends plan options sized to your dates and travellers.</p><span className="rate">Quotes from our team</span></div>
+            <div className="svc"><span className="ico" style={{ background: "#ffd6c9" }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 21l3-9 9-9 6 6-9 9z" /><path d="M14 4l6 6" /></svg></span><h3>Custom trip</h3><p>Tell an expert your dates and budget. Get a costed plan within one working day.</p><Link className="btn hot sm" href="/plan" style={{ justifySelf: "start" }}>Plan my trip</Link></div>
           </div>
         </div>
       </section>

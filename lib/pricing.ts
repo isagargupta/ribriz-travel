@@ -140,7 +140,8 @@ export function savingPct(t: { price: number; was: number | null }) {
   return t.was && t.was > t.price ? Math.round((1 - t.price / t.was) * 100) : 0;
 }
 
-export const ratingWord = (r: number) => (r >= 9 ? "Exceptional" : r >= 8.5 ? "Excellent" : r >= 8 ? "Very good" : "Good");
+/** Word for an average star rating out of 5. */
+export const ratingWord = (r: number) => (r >= 4.7 ? "Exceptional" : r >= 4.4 ? "Excellent" : r >= 4 ? "Very good" : r >= 3.5 ? "Good" : "Mixed");
 
 /* ---------------- dates (calendar dates, no time zones) ---------------- */
 

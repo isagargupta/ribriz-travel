@@ -26,7 +26,9 @@ export interface TripDTO {
   /** base price per adult in INR (flights from Mumbai when `flight`) */
   price: number;
   was: number | null;
-  rating: number;
+  /** average stars (1–5) from published traveller reviews; null until the first one */
+  rating: number | null;
+  /** number of published traveller reviews */
   reviews: number;
   beach: number | null;
   flight: boolean;

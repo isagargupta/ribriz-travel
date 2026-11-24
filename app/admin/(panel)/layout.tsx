@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   await requireAdmin();
   const who = await currentAdmin();
-  const [fresh, urgent] = await Promise.all([prisma.enquiry.count({ where: { status: "new" } }), urgentCount()]);
+  const [fresh, urgent, toModerate] = await Promise.all([prisma.enquiry.count({ where: { status: "new" } }), urgentCount(), prisma.review.count({ where: { status: "pending" } })]);
   return (
     <div className="admin-shell">
       <aside className="admin-side">
@@ -19,6 +19,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         <Link href="/admin/inbox">Inbox {urgent > 0 && <span className="badge-count">{urgent}</span>}</Link>
         <Link href="/admin">Dashboard</Link>
         <Link href="/admin/enquiries">Enquiries {fresh > 0 && <span className="badge-count">{fresh}</span>}</Link>
+        <Link href="/admin/reviews">Reviews {toModerate > 0 && <span className="badge-count">{toModerate}</span>}</Link>
         <Link href="/admin/trips">Trips</Link>
         <Link href="/admin/trips/new">+ Add trip</Link>
         <Link href="/admin/subscribers">Subscribers</Link>

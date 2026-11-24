@@ -89,7 +89,7 @@ export default function VisaPanel({ missionId, initial }: { missionId: string; i
           ? <button className="btn hot" onClick={() => askRiya("All my visa documents are uploaded and checked. Please send them to the visa team.")}>Send to our visa team</button>
           : <button className="btn" onClick={() => askRiya("Help me with my visa documents. What's still missing and how do I get it right?")}>Ask Riya for help</button>}
       </div>
-      <p className="fine">Documents are stored privately, opened only by you and our visa team, and deleted automatically 30 days after your trip. AI checks catch common problems; the consulate makes the final decision.</p>
+      <p className="fine">Documents are stored privately, opened only by you and our visa team, and deleted automatically 30 days after your trip. AI checks catch common problems; the consulate makes the final decision. <a href="/legal/privacy" target="_blank">Privacy policy</a></p>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { TripDTO } from "@/lib/types";
 import { BOARDS, emi, fmtDate, quote, ratingWord, savingPct } from "@/lib/pricing";
+import { OFFERS } from "@/lib/company";
 import { usePrefs } from "./Prefs";
 import PriceTag from "./PriceTag";
 import Money from "./ui/Money";
@@ -42,7 +43,7 @@ export default function TripCard({ t, priority = false }: { t: TripDTO; priority
       <div className="body">
         <div className="loc">{t.country} · {t.nights}N/{t.nights + 1}D</div>
         <h3><Link href={href} className="stretch">{t.title}</Link></h3>
-        <div className="rating"><span className="score">{t.rating.toFixed(1)}</span> {ratingWord(t.rating)} <span className="muted" style={{ fontWeight: 500 }}>· {t.reviews.toLocaleString("en-IN")} reviews</span></div>
+        {t.rating ? <div className="rating"><span className="score">{t.rating.toFixed(1)}</span> {ratingWord(t.rating)} <span className="muted" style={{ fontWeight: 500 }}>· {t.reviews} review{t.reviews > 1 ? "s" : ""}</span></div> : null}
         <div className="meta">
           <span className="pill">{"★".repeat(t.stars)}</span>
           <span className="pill">{BOARDS[t.board] ?? t.board}</span>
@@ -57,7 +58,7 @@ export default function TripCard({ t, priority = false }: { t: TripDTO; priority
           </span>
         </div>
         <div className="card-foot">
-          <span className="emi">or <Money inr={emi(q.total, 6)} />/mo, 0% EMI</span>
+          {OFFERS.emi ? <span className="emi">or <Money inr={emi(q.total, 6)} />/mo, 0% EMI</span> : <span className="emi">Free 48-hour hold</span>}
           {t.cheapestDate
             ? <span className={seatsLow ? "warn-txt" : "muted"}>{seatsLow ? "Few dates left" : `Next: ${fmtDate(t.depDates[0], { day: "numeric", month: "short" })}`}</span>
             : <span className="muted">Dates on request</span>}
