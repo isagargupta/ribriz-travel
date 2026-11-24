@@ -39,7 +39,8 @@ export async function sendEmail(e: Email): Promise<{ ok: boolean; id?: string; e
       },
       body: JSON.stringify({
         from: FROM(), to: [e.to].flat(), subject: e.subject, html: e.html, text: e.text,
-        reply_to: e.replyTo ?? COMPANY.email, // customers reply to the public inbox
+        // customers' replies: REPLY_TO if set, else the team inbox (hello@ only once that mailbox receives mail)
+        reply_to: e.replyTo ?? process.env.REPLY_TO ?? (process.env.TEAM_EMAIL || COMPANY.email),
         ...(e.headers ? { headers: e.headers } : {}),
       }),
     });
