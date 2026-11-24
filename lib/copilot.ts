@@ -31,7 +31,8 @@ Rules:
 - Do the obvious next thing for this request (the "Suggested next action" line), e.g. confirm a hold and ask for the deposit, ask for missing details, nudge to choose an option, share booking confirmation details.
 - Sound like a helpful human agent: warm, concise, Indian English, rupee amounts as ₹1,23,456. No emoji in email; at most one in WhatsApp.
 - Respect what we know about the traveller's preferences (e.g. vegetarian) when relevant, without being creepy.
-- Never include passport or document numbers.`;
+- Never include passport or document numbers.
+- Ribriz has no phone line: never offer, promise or ask to schedule a call. Everything is done by email (hello@ribriztravel.com) or chat with Riya. Ask the customer to reply to the email.`;
 
 let client: Anthropic | null = null;
 

@@ -44,7 +44,7 @@ const getClient = () => (client ??= new Anthropic());
  *   {t:"done"} | {t:"error", v}
  */
 export async function POST(req: Request) {
-  if (!process.env.ANTHROPIC_API_KEY) return fail("The assistant isn't switched on yet. Please try again later or call us.", 503);
+  if (!process.env.ANTHROPIC_API_KEY) return fail("The assistant isn't switched on yet. Please try again later or email hello@ribriztravel.com.", 503);
   if (rateLimited("ai:" + clientIp(req), 20)) return fail("You're sending messages quickly. Please wait a few minutes.", 429);
 
   let body: z.infer<typeof Body>;
@@ -97,7 +97,7 @@ export async function POST(req: Request) {
           const msg = await run.finalMessage();
 
           if (msg.stop_reason === "refusal") {
-            send({ t: "text", v: "\n\nSorry, I can't help with that one. Our team can, though: call us or send a request at /plan." });
+            send({ t: "text", v: "\n\nSorry, I can't help with that one. Our team can, though: email hello@ribriztravel.com or send a request at /plan." });
             break;
           }
           const calls = msg.content.filter((b): b is Anthropic.Beta.BetaToolUseBlock => b.type === "tool_use");

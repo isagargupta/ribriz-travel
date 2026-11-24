@@ -201,7 +201,7 @@ async function holds(c: Ctx): Promise<Alert[]> {
       dedupeKey: `hold:${e.ref}:${stage}`, kind: stage === "expiring" ? "hold_expiring" : "hold_expired",
       title: stage === "expiring" ? `Your ${t.dest} price hold ends in about ${hoursLeft} hours` : `Your ${t.dest} hold has ended`,
       body: stage === "expiring"
-        ? `Hold ${e.ref} (${fmt(e.quotedTotal ?? 0)}) ends soon. Reply to this email or call us to pay the deposit and lock in the price.`
+        ? `Hold ${e.ref} (${fmt(e.quotedTotal ?? 0)}) ends soon. Reply to this email to pay the deposit and lock in the price.`
         : open && now
           ? `Hold ${e.ref} has expired. Today's price for ${fmtDate(e.dep!.date)} is ${fmt(now)} per adult. Ask Riya and I'll hold it again in one tap.`
           : `Hold ${e.ref} has expired and that date is no longer open. Ask Riya for the nearest dates.`,

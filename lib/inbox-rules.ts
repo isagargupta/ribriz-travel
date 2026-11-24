@@ -57,7 +57,7 @@ export function rankWork(w: WorkInput, now: Date): WorkItem | null {
     const late = hoursBetween(due, now);
     if (late > 0) { score += 60 + Math.min(40, late * 4); reasons.push(`Reply overdue by ${late < 1 ? `${Math.max(1, Math.round(late * 60))} min` : `${Math.round(late)} h`}`); }
     else { score += 35 + Math.max(0, 20 - hoursBetween(now, due) * 5); reasons.push("New, not answered yet"); }
-    if (w.type === "hold") next = "Call to confirm the held price";
+    if (w.type === "hold") next = "Confirm the held price with the customer";
   }
   if (w.type === "hold" && w.status !== "booked") {
     const ends = new Date(w.createdAt.getTime() + 48 * 3600e3);

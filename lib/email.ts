@@ -1,4 +1,5 @@
 import "server-only";
+import { COMPANY } from "./company";
 
 export interface Email {
   to: string | string[];
@@ -38,7 +39,7 @@ export async function sendEmail(e: Email): Promise<{ ok: boolean; id?: string; e
       },
       body: JSON.stringify({
         from: FROM(), to: [e.to].flat(), subject: e.subject, html: e.html, text: e.text,
-        reply_to: e.replyTo ?? process.env.TEAM_EMAIL ?? undefined,
+        reply_to: e.replyTo ?? COMPANY.email, // customers reply to the public inbox
         ...(e.headers ? { headers: e.headers } : {}),
       }),
     });

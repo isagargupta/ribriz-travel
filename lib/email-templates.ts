@@ -3,7 +3,7 @@ import { HOLD_HOURS, addDays, fmt, fmtDate } from "./pricing";
 
 const site = () => (process.env.NEXT_PUBLIC_SITE_URL || "https://www.ribriztravel.com").replace(/\/$/, "");
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
-const phone = () => process.env.NEXT_PUBLIC_PHONE || "";
+import { ADDRESS_ONE_LINE, COMPANY } from "./company";
 
 interface Built { subject: string; html: string; text: string }
 
@@ -22,7 +22,8 @@ ${opts.body}
 ${opts.cta ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:22px 0 4px"><tr><td style="background:#ff5a36;border-radius:999px"><a href="${opts.cta.url}" style="display:inline-block;padding:12px 24px;color:#ffffff;font-weight:700;text-decoration:none;font-size:15px">${esc(opts.cta.label)}</a></td></tr></table>` : ""}
 </td></tr>
 <tr><td style="padding:18px 28px;background:#eef0ff;font-size:12px;color:#5b628a;line-height:1.6">
-Ribriz Travel${phone() ? ` · ${esc(phone())}` : ""} · <a href="${s}" style="color:#0b4fc4">ribriztravel.com</a><br>
+<b>Ribriz Travel</b> · <a href="mailto:${COMPANY.email}" style="color:#0b4fc4">${COMPANY.email}</a> · <a href="${s}" style="color:#0b4fc4">ribriztravel.com</a><br>
+${COMPANY.legalName} · CIN ${COMPANY.cin}<br>${esc(ADDRESS_ONE_LINE)}<br>
 You're receiving this because you used Ribriz Travel. Reply to this email to reach our team.${opts.unsubscribe ? `<br><a href="${opts.unsubscribe}" style="color:#5b628a">Stop trip updates from Riya</a>` : ""}
 </td></tr></table></td></tr></table></body></html>`;
 }
@@ -70,10 +71,10 @@ export function holdConfirmationEmail(h: HoldInfo): Built {
           ["Total incl. GST", fmt(h.total)],
           ...(h.deposit ? [["Deposit to book", fmt(h.deposit)] as [string, string]] : []),
         ]) +
-        p("<b>What happens next:</b> a travel expert will call you within 2 hours to confirm flights and rooms. Pay the deposit to book; the rest is due 30 days before you leave."),
+        p("<b>What happens next:</b> a travel expert will confirm flights and rooms by email within 2 working hours. Pay the deposit to book; the rest is due 30 days before you leave."),
       cta: { label: "View my booking", url },
     }),
-    text: `Your price is held for ${HOLD_HOURS} hours.\n\nReference: ${h.ref}\nTrip: ${h.tripTitle}\nDates: ${h.date} to ${ret}\nTravellers: ${party}\nTotal incl. GST: ${fmt(h.total)}\n\nA travel expert will call you within 2 hours.\nView your booking: ${url}`,
+    text: `Your price is held for ${HOLD_HOURS} hours.\n\nReference: ${h.ref}\nTrip: ${h.tripTitle}\nDates: ${h.date} to ${ret}\nTravellers: ${party}\nTotal incl. GST: ${fmt(h.total)}\n\nA travel expert will confirm flights and rooms by email within 2 working hours.\nView your booking: ${url}`,
   };
 }
 

@@ -425,3 +425,5 @@ footer.site .logo img { height: 48px }
 .cp-ok { color: #0a7a4b; font-weight: 600; font-size: 14px }
 .inbox-card { text-decoration: none; color: inherit; background: linear-gradient(135deg, #fff4ee, #fff) }
 @media (max-width: 420px) { header .logo .word { display: none } }
+footer.site .legal { border-top: 1px solid #d3ddff; padding-block: 16px 22px } footer.site .legal p { margin: 0; font-size: 12.5px; opacity: .75 }
+footer.site address { font-size: 14px; opacity: .82 } footer.site .legal p { max-width: none }

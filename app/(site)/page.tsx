@@ -69,7 +69,7 @@ export default async function Home() {
             {[
               ["See the real total", "Every price shows what it covers. Switch to “Total” at the top to see the full amount for your group, taxes included."],
               ["Reserve free for 48 hours", "Pick a date and hold that exact price. No card, no payment, no pressure."],
-              ["Talk to an expert, then book", "We call within 2 hours to confirm. Pay 10% to book and the rest 30 days before you go, or in 0% EMIs."],
+              ["An expert confirms, then you book", "We confirm flights and rooms by email within 2 working hours. Pay 10% to book and the rest 30 days before you go, or in 0% EMIs."],
             ].map(([h, p], i) => (
               <Reveal key={h} delay={i * 90}><div className="step3"><span className="num">{i + 1}</span><h3>{h}</h3><p>{p}</p></div></Reveal>
             ))}

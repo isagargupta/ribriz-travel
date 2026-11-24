@@ -6,7 +6,7 @@ import { enquirySchema } from "@/lib/schemas";
 
 /** Questions about a trip and custom-trip requests. */
 export async function POST(req: Request) {
-  if (rateLimited("enq:" + clientIp(req))) return fail("Too many requests. Please wait a few minutes or call us.", 429);
+  if (rateLimited("enq:" + clientIp(req))) return fail("Too many requests. Please wait a few minutes and try again.", 429);
   const parsed = await readJson(req, enquirySchema);
   if ("res" in parsed) return parsed.res;
   const ref = await createEnquiry(parsed.data);

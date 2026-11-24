@@ -1,8 +1,8 @@
 import Link from "next/link";
+import { COMPANY } from "@/lib/company";
+import AskButton from "./me/AskButton";
 
 export default function Footer() {
-  const phone = process.env.NEXT_PUBLIC_PHONE || "1800 000 0000";
-  const email = process.env.NEXT_PUBLIC_EMAIL || "hello@ribriz.example";
   return (
     <footer className="site">
       <div className="wrap"><div className="big" aria-hidden="true">ribriz travel</div></div>
@@ -32,12 +32,17 @@ export default function Footer() {
           <Link href="/visa">Visa checker</Link>
         </div>
         <div>
-          <h4>Talk to us</h4>
-          <p className="mono" style={{ opacity: 1, fontSize: 16 }}>{phone}</p>
-          <p style={{ userSelect: "all" }}>{email}</p>
-          <p>Daily, 8 am – 11 pm IST</p>
-          <p style={{ marginTop: 14 }}>© {new Date().getFullYear()} Ribriz Travel</p>
+          <h4>Contact us</h4>
+          <p><a href={`mailto:${COMPANY.email}`} style={{ color: "inherit", fontWeight: 700 }}>{COMPANY.email}</a></p>
+          <p>Replies within a few working hours. For anything else, Riya is here 24×7.</p>
+          <AskButton className="btn sm" q="I need help with something">✦ Chat with Riya</AskButton>
+          <address style={{ fontStyle: "normal", marginTop: 14, lineHeight: 1.6 }}>
+            {COMPANY.address.lines.map((l) => <span key={l} style={{ display: "block" }}>{l}</span>)}
+          </address>
         </div>
+      </div>
+      <div className="wrap legal">
+        <p>© {new Date().getFullYear()} {COMPANY.legalName} · CIN {COMPANY.cin} · {COMPANY.brand} is a brand of {COMPANY.legalName}.</p>
       </div>
     </footer>
   );

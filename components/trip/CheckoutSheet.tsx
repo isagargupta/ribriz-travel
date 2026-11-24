@@ -74,7 +74,7 @@ export default function CheckoutSheet() {
     const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Ribriz Travel//EN", "BEGIN:VEVENT",
       `UID:${done?.ref}@ribriz`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").slice(0, 15)}Z`,
       `DTSTART;VALUE=DATE:${d(selected!.date)}`, `DTEND;VALUE=DATE:${d(addDays(ret, 1))}`,
-      `SUMMARY:${trip.title} (Ribriz ${done?.ref})`, `DESCRIPTION:Price hold ${done?.ref}. We'll call you to confirm.`, "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+      `SUMMARY:${trip.title} (Ribriz ${done?.ref})`, `DESCRIPTION:Price hold ${done?.ref}. We'll confirm by email.`, "END:VEVENT", "END:VCALENDAR"].join("\r\n");
     const url = URL.createObjectURL(new Blob([ics], { type: "text/calendar" }));
     const a = document.createElement("a"); a.href = url; a.download = `ribriz-${done?.ref}.ics`; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -133,7 +133,7 @@ export default function CheckoutSheet() {
               <b>How reserving works</b>
               <ol>
                 <li>We hold this exact price for {HOLD_HOURS} hours. Nothing to pay now.</li>
-                <li>A travel expert calls you within 2 hours to confirm flights and rooms.</li>
+                <li>A travel expert confirms flights and rooms by email within 2 working hours.</li>
                 <li>Pay <Money inr={q.deposit} /> to book. The rest is due 30 days before you leave.</li>
               </ol>
             </div>
@@ -181,7 +181,7 @@ export default function CheckoutSheet() {
             {summary}
             <ol className="timeline">
               <li className="done"><b>Price held</b><span>Just now · <Money inr={done.total} /></span></li>
-              <li><b>Expert call</b><span>Within 2 hours, on {c.phone}</span></li>
+              <li><b>Expert confirmation</b><span>Within 2 working hours, by email to {c.email}</span></li>
               <li><b>Pay deposit to book</b><span><Money inr={q.deposit} />, rest 30 days before</span></li>
             </ol>
             <div className="co-btns" style={{ justifyContent: "center", flexWrap: "wrap" }}>

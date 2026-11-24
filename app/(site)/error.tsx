@@ -7,7 +7,7 @@ export default function SiteError({ error, reset }: { error: Error & { digest?: 
   return (
     <div className="login-card" style={{ textAlign: "center" }}>
       <h1 style={{ fontSize: 24 }}>Something went wrong on our side</h1>
-      <p className="muted" style={{ margin: 0 }}>Please try again. If it keeps happening, call us and we&apos;ll help you book by phone.</p>
+      <p className="muted" style={{ margin: 0 }}>Please try again. If it keeps happening, email hello@ribriztravel.com or ask Riya and we&apos;ll help you book.</p>
       <button className="btn hot" onClick={reset}>Try again</button>
       <Link className="btn" href="/">Go to home page</Link>
       {error.digest && <small className="muted mono">Error code {error.digest}</small>}

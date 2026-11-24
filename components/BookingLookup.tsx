@@ -51,7 +51,7 @@ export default function BookingLookup({ initialRef }: { initialRef: string }) {
         )}
         {b.total !== null && <div className="lr-total"><span>Price held</span><Money inr={b.total} className="price" /></div>}
         {b.holdEndsAt && b.status === "new" && left !== null && (
-          <div className={`notice ${left > 0 ? "ok" : "warn"}`}>{left > 0 ? `Price held for another ${h} h ${m} min.` : "The 48-hour hold has ended. Call us and we'll check today's price."}</div>
+          <div className={`notice ${left > 0 ? "ok" : "warn"}`}>{left > 0 ? `Price held for another ${h} h ${m} min.` : "The 48-hour hold has ended. Ask Riya and she'll check today's price and hold it again."}</div>
         )}
         {stage >= 0 ? (
           <ol className="timeline">
