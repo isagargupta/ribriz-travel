@@ -736,3 +736,68 @@ kbd { font-family: var(--f-mono); font-size: 11px; background: var(--surface); b
 @media (max-width: 1060px) { .nav2 { display: none } .menu-btn { display: inline-flex } }
 @media (min-width: 1061px) { .drawer, .menu-btn { display: none } }
 @media (max-width: 480px) { .prefs-pill { display: none } }
+
+/* ============ Riya as an agent: work trail, forms, carousel, actions ============ */
+.ai-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px }
+.ai-tiles button { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left; font: inherit; font-size: 13.5px; font-weight: 700; padding: 12px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; animation: fadeUp .35s ease-out both; animation-delay: calc(var(--i) * 60ms); transition: transform .15s, border-color .15s, box-shadow .15s }
+.ai-tiles button span { font-size: 22px }
+.ai-tiles button:hover { transform: translateY(-2px); border-color: #b9adff; box-shadow: 0 10px 20px -14px rgba(106, 76, 255, .6) }
+
+.trail { list-style: none; margin: 0; padding: 10px 12px; display: grid; gap: 6px; align-self: flex-start; min-width: 62%; max-width: 92%; border-radius: 16px; background: linear-gradient(135deg, #f5f2ff, #f0f6ff); border: 1px solid #e4ddff; font-size: 13px; animation: fadeUp .25s ease-out both }
+.trail.live { box-shadow: 0 0 0 0 rgba(106, 76, 255, .35); animation: fadeUp .25s ease-out both, trailGlow 2s ease-in-out infinite }
+@keyframes trailGlow { 50% { box-shadow: 0 0 0 4px rgba(106, 76, 255, .12) } }
+.trail li { display: flex; gap: 9px; align-items: center; animation: slideIn .3s ease-out both }
+.trail small { color: var(--muted) }
+.trail-ico { width: 20px; height: 20px; flex: none; display: grid; place-items: center; border-radius: 50%; font-size: 11px; font-weight: 900 }
+.trail-done .trail-ico { background: #19b37a; color: #fff; animation: pop .35s cubic-bezier(.2, .9, .3, 1.6) both }
+.trail-error .trail-ico { background: var(--coral); color: #fff }
+.trail-run { color: #3b26b5; font-weight: 600 }
+.trail-spin { width: 14px; height: 14px; border-radius: 50%; background: conic-gradient(#6a4cff, #4a86f0, #39c6d6, transparent 80%); -webkit-mask: radial-gradient(circle, transparent 38%, #000 40%); mask: radial-gradient(circle, transparent 38%, #000 40%); animation: spin .8s linear infinite }
+.trail-fold { align-self: flex-start; font: inherit; font-size: 12.5px; font-weight: 600; color: #3b26b5; background: #f3f0ff; border: 1px solid #e4ddff; border-radius: 999px; padding: 5px 11px; cursor: pointer }
+.trail-ok { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: #19b37a; color: #fff; font-size: 10px; margin-right: 4px }
+@keyframes pop { from { transform: scale(0) } to { transform: scale(1) } }
+@keyframes slideIn { from { opacity: 0; transform: translateX(-8px) } }
+
+.ask { align-self: stretch; display: grid; gap: 12px; padding: 14px; border-radius: 18px; background: var(--surface); border: 1.5px solid #d9d0ff; box-shadow: 0 12px 28px -20px rgba(106, 76, 255, .7); animation: popIn .35s cubic-bezier(.2, .9, .3, 1.3) both }
+.ask.done { border-color: var(--line); box-shadow: none; opacity: .85 }
+.ask-intro { margin: 0; font-weight: 600; font-size: 14px }
+.ask-q { border: 0; margin: 0; padding: 0; min-width: 0; animation: fadeUp .3s ease-out both; animation-delay: calc(var(--i) * 70ms) }
+.ask-q legend { font-weight: 800; font-size: 13.5px; margin-bottom: 8px; padding: 0 }
+.ask-opts { display: flex; flex-wrap: wrap; gap: 7px }
+.ask-opt { display: inline-flex; gap: 6px; align-items: center; font: inherit; font-size: 13.5px; font-weight: 600; padding: 8px 13px; border-radius: 999px; border: 1.5px solid var(--line); background: #fff; cursor: pointer; animation: popIn .3s ease-out both; animation-delay: calc(var(--j) * 35ms); transition: transform .12s, border-color .12s, background .12s }
+.ask-opt:hover:not(:disabled) { transform: translateY(-1px); border-color: #b9adff }
+.ask-opt[aria-pressed="true"] { background: linear-gradient(135deg, #6a4cff, #4a86f0); border-color: transparent; color: #fff; transform: scale(1.03) }
+.ask-opt:disabled { cursor: default }
+.ask-other, .ask-text { font: inherit; font-size: 13.5px; padding: 8px 12px; border-radius: 999px; border: 1.5px dashed var(--line); background: #fff; min-width: 110px; flex: 1; outline: none }
+.ask-text { border-style: solid; border-radius: 12px; width: 100% }
+.ask-other:focus, .ask-text:focus { border-color: #b9adff; border-style: solid }
+.ask-go { justify-self: end }
+.ask-sent { margin: 0; font-size: 12.5px; color: var(--good); font-weight: 700 }
+
+.carousel { align-self: stretch; display: grid; gap: 8px; min-width: 0 }
+.car-head { display: flex; justify-content: space-between; align-items: center; font-size: 14px }
+.car-nav { display: flex; gap: 4px }
+.car-nav button { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line); background: #fff; font-size: 18px; line-height: 1; cursor: pointer }
+.car-rail { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(220px, 78%); gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 2px 2px 8px; scrollbar-width: none }
+.car-rail::-webkit-scrollbar { display: none }
+.car-card { scroll-snap-align: start; background: #fff; border: 1px solid var(--line); border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; animation: cardIn .45s cubic-bezier(.2, .9, .3, 1.2) both; animation-delay: calc(var(--i) * 90ms); transition: transform .2s, box-shadow .2s }
+.car-card:hover { transform: translateY(-3px); box-shadow: 0 16px 30px -18px rgba(11, 18, 64, .45) }
+.car-card.lead { border: 2px solid transparent; background: linear-gradient(#fff, #fff) padding-box, linear-gradient(135deg, #6a4cff, #4a86f0, #ff7a59) border-box }
+@keyframes cardIn { from { opacity: 0; transform: translateX(30px) scale(.96) } }
+.car-img { position: relative; height: 120px; background: #1c2558 }
+.car-img img { object-fit: cover }
+.car-badge { position: absolute; top: 8px; left: 8px; font-size: 11.5px; font-weight: 800; color: #fff; background: linear-gradient(135deg, #6a4cff, #4a86f0); padding: 4px 9px; border-radius: 999px; box-shadow: 0 6px 14px -6px rgba(106, 76, 255, .9) }
+.car-rate { position: absolute; bottom: 8px; right: 8px; font-size: 11.5px; font-weight: 800; background: rgba(255, 255, 255, .92); padding: 3px 8px; border-radius: 999px }
+.car-body { padding: 10px 12px 12px; display: grid; gap: 4px; flex: 1 }
+.car-body > b { font-size: 15px } .car-body > small { color: var(--muted); font-size: 12px }
+.car-why { margin: 2px 0; font-size: 12.5px; color: #3b26b5; line-height: 1.4 }
+.car-meta { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-top: auto }
+.car-price { font-family: var(--f-display); font-size: 16px } .car-price small { font-family: var(--f-body); font-size: 11px; color: var(--muted); margin-left: 2px }
+.car-visa { font-size: 11px; font-weight: 700; background: var(--good-bg); color: var(--good); padding: 3px 8px; border-radius: 999px; white-space: nowrap }
+.car-btns { display: flex; gap: 6px; margin-top: 6px }
+.car-btns > * { flex: 1; justify-content: center; text-align: center }
+
+.acts { display: flex; flex-wrap: wrap; gap: 7px; align-self: stretch }
+.act { display: inline-flex; gap: 6px; align-items: center; font: inherit; font-size: 13px; font-weight: 700; color: #3b26b5; text-decoration: none; padding: 8px 13px; border-radius: 999px; border: 1.5px solid #d9d0ff; background: #faf8ff; cursor: pointer; animation: popIn .3s ease-out both; animation-delay: calc(var(--i) * 60ms + 120ms); transition: transform .12s, background .12s }
+.act:hover { transform: translateY(-1px); background: #efeaff }
+@media (prefers-reduced-motion: reduce) { .trail, .trail li, .ask, .ask-q, .ask-opt, .car-card, .act, .ai-tiles button { animation: none !important } }

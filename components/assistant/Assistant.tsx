@@ -7,16 +7,18 @@ import { fmtDate } from "@/lib/pricing";
 import { usePrefs } from "../Prefs";
 import ApprovalCard, { type ApprovalCardData } from "./ApprovalCard";
 import { uploadToMission } from "@/lib/client/compress";
+import { ActionChips, AskForm, TripCarousel, WorkTrail } from "./AgentUi";
+import { blockAsText, type Step, type UiBlock } from "@/lib/assistant/ui";
 
 interface Card { slug: string; title: string; image: string; dest: string; country: string; nights: number; price: number; date?: string | null; seats?: number | null; visa?: string }
-interface Msg { role: "user" | "assistant"; content: string; cards?: Card[]; approvals?: ApprovalCardData[]; mission?: { id: string; title: string }; error?: boolean; note?: boolean }
+interface Msg { role: "user" | "assistant"; content: string; cards?: Card[]; approvals?: ApprovalCardData[]; mission?: { id: string; title: string }; error?: boolean; note?: boolean; steps?: Step[]; ui?: UiBlock[] }
 
 const KEY = "ribriz_chat_v1";
 const SUGGESTIONS = [
-  "Cheapest beach trip next month where I can get the visa on arrival",
-  "Honeymoon under ₹1 lakh per person in December",
-  "Do I need a visa for Japan, and how long does it take?",
-  "Family trip in India for 6 nights, kids aged 4 and 8",
+  { icon: "🧭", label: "Plan a trip for me", say: "Plan a new trip for me" },
+  { icon: "🔥", label: "Find this month's best deals", say: "Show me the best deals right now" },
+  { icon: "🛂", label: "Check my visa", say: "Check what visa I need for my next trip" },
+  { icon: "💱", label: "Sort my forex", say: "I need forex for my trip" },
 ];
 
 /** Opens the assistant from anywhere: window.dispatchEvent(new CustomEvent("ribriz:ask", { detail: "question" })) */
@@ -125,6 +127,8 @@ export default function Assistant({ docked = false, onClose }: { docked?: boolea
           if (e.t === "text") { setStatus(""); patch((m) => ({ ...m, content: m.content + (e.v as string) })); }
           else if (e.t === "retract") patch((m) => ({ ...m, content: m.content.slice(0, Math.max(0, m.content.length - (e.v as number))) }));
           else if (e.t === "status") setStatus((e.v as string) || "Thinking…");
+          else if (e.t === "step") { const st = e.v as Step; patch((m) => ({ ...m, steps: [...(m.steps ?? []).filter((x) => x.id !== st.id), st] })); }
+          else if (e.t === "ui") patch((m) => ({ ...m, ui: [...(m.ui ?? []), e.v as UiBlock] }));
           else if (e.t === "cards") patch((m) => ({ ...m, cards: dedupe([...(m.cards ?? []), ...(e.v as Card[])]) }));
           else if (e.t === "approval") patch((m) => ({ ...m, approvals: [...(m.approvals ?? []), e.v as ApprovalCardData] }));
           else if (e.t === "mission") patch((m) => ({ ...m, mission: e.v as { id: string; title: string } }));
@@ -191,36 +195,31 @@ export default function Assistant({ docked = false, onClose }: { docked?: boolea
           <div className="ai-list" ref={list} aria-live="polite">
             {msgs.length === 0 && (
               <div className="ai-hello pop-in">
-                <p><b>Hi{first ? ` ${first}` : ""}! I&apos;m Riya.</b> Tell me your budget, dates or dream destination and I&apos;ll find real trips with prices, dates and visa needs for your passport.</p>
-                <div className="ai-sugg">
-                  {SUGGESTIONS.map((s) => <button key={s} onClick={() => send(s)} disabled={!ready}>{s}</button>)}
+                <p><b>Hi{first ? ` ${first}` : ""}! I&apos;m Riya, your travel agent.</b> Tell me what you want, or tap one. I&apos;ll do the searching, pricing, holds and paperwork.</p>
+                <div className="ai-tiles">
+                  {SUGGESTIONS.map((s, i) => <button key={s.label} style={{ ["--i" as string]: i }} onClick={() => send(s.say)} disabled={!ready}><span aria-hidden="true">{s.icon}</span>{s.label}</button>)}
                 </div>
               </div>
             )}
-            {msgs.map((m, i) => (
+            {msgs.map((m, i) => {
+              const last = i === msgs.length - 1;
+              const working = busy && last && m.role === "assistant";
+              const answeredLater = msgs.slice(i + 1).some((x) => x.role === "user");
+              const legacyCards = m.cards?.length ? [{ kind: "trips" as const, id: `c${i}`, items: m.cards.map((c) => ({ ...c, date: c.date ?? null, seats: c.seats ?? null })) }] : [];
+              return (
               <Fragment key={i}>
-                <div className={`ai-msg ${m.role} ${m.error ? "err" : ""} ${m.note ? "note" : ""}`}>
-                  {m.role === "assistant" ? <Rich text={m.content} /> : <p>{m.content}</p>}
-                  {m.role === "assistant" && busy && i === msgs.length - 1 && (
-                    <div className="ai-status"><span className="ai-typing"><i /><i /><i /></span>{status}</div>
-                  )}
-                </div>
-                {m.cards && m.cards.length > 0 && (
-                  <div className="ai-cards">
-                    {m.cards.map((c) => (
-                      <Link key={c.slug + (c.date ?? "")} className="ai-card" href={`/trips/${c.slug}${c.date ? `?date=${c.date}` : ""}`} onClick={closeOnPhone}>
-                        <span className="ai-card-img"><Image src={c.image} alt="" fill sizes="180px" /></span>
-                        <span className="ai-card-body">
-                          <b>{c.dest}</b>
-                          <small>{c.nights} nights{c.date ? ` · ${fmtDate(c.date, { day: "numeric", month: "short" })}` : ""}</small>
-                          <span className="ai-card-price">{money(c.price)} <small>/adult</small></span>
-                          {c.visa && <small className="ai-card-visa">Visa: {c.visa}</small>}
-                          {c.seats !== null && c.seats !== undefined && c.seats <= 8 && <small className="warn-txt">{c.seats} seats left</small>}
-                        </span>
-                      </Link>
-                    ))}
+                {m.role === "assistant" && (m.steps?.length || (working && !m.content)) ? (
+                  <WorkTrail steps={m.steps?.length ? m.steps : [{ id: "think", label: status || "Thinking…", state: "run" }]} working={working} />
+                ) : null}
+                {(m.role === "user" || m.content || m.error) && (
+                  <div className={`ai-msg ${m.role} ${m.error ? "err" : ""} ${m.note ? "note" : ""}`}>
+                    {m.role === "assistant" ? <Rich text={m.content} /> : <p style={{ whiteSpace: "pre-line" }}>{m.content}</p>}
                   </div>
                 )}
+                {[...legacyCards, ...(m.ui ?? [])].map((b) =>
+                  b.kind === "ask" ? <AskForm key={b.id} block={b} locked={answeredLater} onSubmit={send} />
+                  : b.kind === "trips" ? <TripCarousel key={b.id} block={b} onSay={send} onNavigate={closeOnPhone} />
+                  : !answeredLater && !working ? <ActionChips key={b.id} block={b} onSay={send} onNavigate={closeOnPhone} /> : null)}
                 {m.mission && (
                   <Link className="ai-mission" href={tripHref(m.mission.id)} onClick={closeOnPhone}>
                     <span aria-hidden="true">🧭</span><span><b>{m.mission.title}</b><small>Trip plan started · {docked ? "it's on your dashboard" : "open your trip hub"}</small></span><span aria-hidden="true">→</span>
@@ -234,7 +233,8 @@ export default function Assistant({ docked = false, onClose }: { docked?: boolea
                   ]); }} />
                 ))}
               </Fragment>
-            ))}
+              );
+            })}
           </div>
 
           <form className="ai-input" onSubmit={(e) => { e.preventDefault(); send(input); }}>
@@ -260,10 +260,12 @@ export default function Assistant({ docked = false, onClose }: { docked?: boolea
 function toApi(history: Msg[]) {
   const out: { role: "user" | "assistant"; content: string }[] = [];
   for (const m of history) {
-    if (!m.content.trim()) continue;
+    // what Riya put on screen counts as part of what she said
+    const content = [m.content.trim(), ...(m.ui ?? []).map(blockAsText)].filter(Boolean).join("\n");
+    if (!content) continue;
     const last = out[out.length - 1];
-    if (last && last.role === m.role) last.content += "\n\n" + m.content;
-    else out.push({ role: m.role, content: m.content });
+    if (last && last.role === m.role) last.content += "\n\n" + content;
+    else out.push({ role: m.role, content });
   }
   while (out.length && out[0].role !== "user") out.shift();
   return out.slice(-20);

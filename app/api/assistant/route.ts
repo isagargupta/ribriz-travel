@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { contextMessage, SYSTEM_PROMPT } from "@/lib/assistant/prompt";
-import { runTool, TOOLS, TOOL_STATUS, type VisitorContext } from "@/lib/assistant/tools";
+import { runTool, stepDone, TOOLS, TOOL_STATUS, UI_TOOLS, type VisitorContext } from "@/lib/assistant/tools";
 import { missionsForContext } from "@/lib/missions";
 import { noticesFor } from "@/lib/notifications";
 import { watchesFor } from "@/lib/watches";
@@ -39,7 +39,8 @@ const getClient = () => (client ??= new Anthropic());
  *   {t:"status", v}  a tool is running ("Searching trips…")
  *   {t:"text", v}    a piece of the reply
  *   {t:"retract", v} remove the last v characters (a working note before a tool call)
- *   {t:"cards", v}   trips to show under the reply
+ *   {t:"step", v}    a step of Riya's work: {id, label, state: run|done|error, detail}
+ *   {t:"ui", v}      an interactive block: a question form, a trip carousel or next-step buttons
  *   {t:"done"} | {t:"error", v}
  */
 export async function POST(req: Request) {
@@ -75,6 +76,9 @@ export async function POST(req: Request) {
     async start(controller) {
       const send = (e: object) => controller.enqueue(enc.encode(JSON.stringify(e) + "\n"));
       try {
+        // trips found by searches; shown only if Riya doesn't present her own picks
+        const found = new Map<string, Record<string, unknown>>();
+        let presented = false;
         for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
           const run = getClient().beta.messages.stream({
             model: MODEL,
@@ -98,19 +102,29 @@ export async function POST(req: Request) {
           }
           const calls = msg.content.filter((b): b is Anthropic.Beta.BetaToolUseBlock => b.type === "tool_use");
           if (msg.stop_reason !== "tool_use" || calls.length === 0) break;
-          // text written just before tool calls is a working note, not part of the answer
-          if (roundChars) send({ t: "retract", v: roundChars });
+          const onlyUi = calls.every((c) => UI_TOOLS.has(c.name));
+          // text written before data tools is a working note; text before on-screen blocks is the answer
+          if (roundChars && !onlyUi) send({ t: "retract", v: roundChars });
 
           messages.push({ role: "assistant", content: msg.content });
-          for (const c of calls) send({ t: "status", v: TOOL_STATUS[c.name] ?? "Looking that up…" });
-          const outcomes = await Promise.all(calls.map((c) => runTool(c.name, c.input, ctx)));
-          const cards = outcomes.flatMap((o) => o.cards ?? []);
-          if (cards.length) send({ t: "cards", v: cards });
+          for (const c of calls) if (!UI_TOOLS.has(c.name)) send({ t: "step", v: { id: c.id, label: TOOL_STATUS[c.name] ?? "Looking that up…", state: "run" } });
+          const outcomes = await Promise.all(calls.map(async (c) => {
+            const o = await runTool(c.name, c.input, ctx);
+            if (!UI_TOOLS.has(c.name)) {
+              const s = stepDone(c.name, o);
+              send({ t: "step", v: { id: c.id, label: s.label, detail: s.detail, state: s.failed ? "error" : "done" } });
+            }
+            return o;
+          }));
           for (const o of outcomes) {
+            for (const card of o.cards ?? []) found.set(`${card.slug}|${card.date ?? ""}`, card as unknown as Record<string, unknown>);
+            for (const b of o.ui ?? []) { if (b.kind === "trips") presented = true; send({ t: "ui", v: b }); }
             if (o.mission) send({ t: "mission", v: o.mission });
             if (o.approval) send({ t: "approval", v: o.approval });
             for (const a of o.approvals ?? []) send({ t: "approval", v: a });
           }
+          // finished once Riya hands the turn back with a form or next-step buttons
+          if (onlyUi && calls.some((c) => c.name === "ask" || c.name === "suggest_actions")) break;
           // all results for this round go back together in one user message
           messages.push({
             role: "user",
@@ -121,8 +135,8 @@ export async function POST(req: Request) {
               ...(outcomes[n].isError ? { is_error: true } : {}),
             })),
           });
-          send({ t: "status", v: "" });
         }
+        if (!presented && found.size) send({ t: "ui", v: { kind: "trips", id: `found-${Date.now().toString(36)}`, items: [...found.values()].slice(0, 6) } });
         send({ t: "done" });
       } catch (err) {
         if (req.signal.aborted) { controller.close(); return; }

@@ -19,6 +19,7 @@ import { bookingsFor } from "../offers";
 import { pendingCard } from "../approvals";
 import { FX_ATTRIBUTION, getFxRates } from "../fx";
 import { prisma } from "../db";
+import type { TripPick, UiBlock } from "./ui";
 import { getProfile, updateProfile } from "../profile";
 import { PACES, REGIONS, THEME_KEYS as PROFILE_THEMES, TRAVELS_WITH, describePrefs, type Prefs } from "../profile-rules";
 
@@ -28,7 +29,10 @@ export interface VisitorContext { from: string; passport: string; adults: number
 /** Compact trip card the chat UI renders under a reply. Prices in INR per adult. */
 export interface CardTrip { slug: string; title: string; image: string; dest: string; country: string; nights: number; price: number; date?: string | null; seats?: number | null; visa?: string }
 
-export interface ToolOutcome { result: unknown; cards?: CardTrip[]; status: string; approval?: ApprovalCard; approvals?: ApprovalCard[]; mission?: { id: string; title: string } }
+export interface ToolOutcome { result: unknown; cards?: CardTrip[]; status: string; approval?: ApprovalCard; approvals?: ApprovalCard[]; mission?: { id: string; title: string }; ui?: UiBlock[]; summary?: string }
+
+/** Tools that only put something on screen; they don't fetch or change data. */
+export const UI_TOOLS = new Set(["ask", "show_trips", "suggest_actions"]);
 
 const THEME_KEYS = ["honeymoon", "family", "group", "beach", "heritage", "nature", "city", "luxury"] as const;
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD");
@@ -107,12 +111,90 @@ const RememberInput = z.object({
   forget: z.string().max(200).optional(),
   forget_fields: z.array(z.enum(["likes", "avoid", "regions", "budget_per_adult", "months", "pace", "travels_with", "dietary"])).max(8).optional(),
 }).strict();
+const AskInput = z.object({
+  intro: z.string().max(120).optional(),
+  questions: z.array(z.object({
+    id: z.string().max(30),
+    label: z.string().min(1).max(80),
+    type: z.enum(["single", "multi", "text"]),
+    options: z.array(z.object({ label: z.string().min(1).max(40), emoji: z.string().max(8).optional() })).max(8).optional(),
+    placeholder: z.string().max(60).optional(),
+  })).min(1).max(4),
+  submit: z.string().max(30).optional(),
+}).strict();
+const ShowTripsInput = z.object({
+  title: z.string().max(60).optional(),
+  picks: z.array(z.object({ slug: z.string().min(1).max(120), date: date.optional(), badge: z.string().max(24).optional(), why: z.string().max(110).optional() })).min(1).max(6),
+}).strict();
+const ActionsInput = z.object({
+  actions: z.array(z.object({ label: z.string().min(1).max(40), icon: z.string().max(8).optional(), say: z.string().max(300).optional(), href: z.string().max(200).regex(/^\//, "Site paths only").optional() })).min(1).max(4),
+}).strict();
 const WatchInput = z.object({ slug: z.string().min(1).max(120), date: date.optional(), email: z.string().trim().toLowerCase().email().max(160).optional() }).strict();
 
 /* ---------------- definitions sent to Claude ---------------- */
 
 const themeEnum = [...THEME_KEYS];
 export const TOOLS: Anthropic.Beta.BetaTool[] = [
+  {
+    name: "ask",
+    description: "Ask the traveller something as a tappable form instead of writing questions. Use whenever you need information: trip style, dates, budget, who's going, cabin class, card or cash, etc. Up to 4 questions in one form; give 3–6 short options per question (with an emoji) so they can just tap, and use type 'text' only for things like names or cities. A single 'single'-type question submits on tap. Don't repeat the questions in your text; at most one short intro line.",
+    eager_input_streaming: true,
+    input_schema: {
+      type: "object", additionalProperties: false, required: ["questions"],
+      properties: {
+        intro: { type: "string", description: "Optional one-line lead-in shown above the form" },
+        questions: {
+          type: "array", maxItems: 4,
+          items: {
+            type: "object", additionalProperties: false, required: ["id", "label", "type"],
+            properties: {
+              id: { type: "string" }, label: { type: "string", description: "Short, e.g. 'What kind of trip?'" },
+              type: { type: "string", enum: ["single", "multi", "text"] },
+              options: { type: "array", items: { type: "object", additionalProperties: false, required: ["label"], properties: { label: { type: "string" }, emoji: { type: "string" } } } },
+              placeholder: { type: "string" },
+            },
+          },
+        },
+        submit: { type: "string", description: "Button text, e.g. 'Find my trip'" },
+      },
+    },
+  },
+  {
+    name: "show_trips",
+    description: "Put your recommended trips on screen as a swipeable carousel with live prices and buttons (Choose / Details). Always use this to present trips after searching: pick the best 1–4, put your top recommendation first with badge \"Riya's pick\", and give each a short reason (≤ 90 chars). Use slugs (and dates) from your tool results only. Don't describe the trips again in text.",
+    eager_input_streaming: true,
+    input_schema: {
+      type: "object", additionalProperties: false, required: ["picks"],
+      properties: {
+        title: { type: "string", description: "e.g. 'Best beach trips in December'" },
+        picks: {
+          type: "array", maxItems: 6,
+          items: {
+            type: "object", additionalProperties: false, required: ["slug"],
+            properties: {
+              slug: { type: "string" }, date: { type: "string", description: "YYYY-MM-DD departure, if a specific date" },
+              badge: { type: "string", description: "e.g. Riya's pick, Cheapest, Visa-free, Best rated" },
+              why: { type: "string", description: "One short reason" },
+            },
+          },
+        },
+      },
+    },
+  },
+  {
+    name: "suggest_actions",
+    description: "End your turn with 2–4 one-tap next steps as buttons, so the traveller never has to type. 'say' is what the button sends to you as their message (e.g. 'Hold Phuket & Krabi on 14 Dec for 2 adults'); 'href' opens a site page instead (e.g. '/me/trips'). Use on almost every reply, except when you've just shown an ask form.",
+    eager_input_streaming: true,
+    input_schema: {
+      type: "object", additionalProperties: false, required: ["actions"],
+      properties: {
+        actions: {
+          type: "array", maxItems: 4,
+          items: { type: "object", additionalProperties: false, required: ["label"], properties: { label: { type: "string", description: "Short, e.g. 'Hold this price'" }, icon: { type: "string" }, say: { type: "string" }, href: { type: "string" } } },
+        },
+      },
+    },
+  },
   {
     name: "search_trips",
     description: "Search Ribriz trips (packages, group tours, hotels, cruises) that are on sale. Every filter is optional; combine them to match what the traveller asked. Prices are per adult in INR for the traveller's departure city, before 5% GST. Use visa_ready_within_days when the traveller needs the visa sorted quickly (0 = visa-free or on arrival only). Returns at most `limit` trips; the chat shows them as cards automatically.",
@@ -607,6 +689,38 @@ async function rememberTool(i: z.infer<typeof RememberInput>, ctx: VisitorContex
   };
 }
 
+let uiSeq = 0;
+const uiId = (k: string) => `${k}-${Date.now().toString(36)}-${(uiSeq++).toString(36)}`;
+
+async function askTool(i: z.infer<typeof AskInput>): Promise<ToolOutcome> {
+  const questions = i.questions.map((q) => ({ ...q, options: q.type === "text" ? undefined : q.options }));
+  return { status: "", ui: [{ kind: "ask", id: uiId("ask"), intro: i.intro, questions, submit: i.submit || "Continue" }], result: { shown: true, note: "The form is on screen. Stop here and wait for their answer; don't repeat the questions." } };
+}
+
+async function showTripsTool(i: z.infer<typeof ShowTripsInput>, ctx: VisitorContext): Promise<ToolOutcome> {
+  const trips = await getPublishedTrips();
+  const items: TripPick[] = [];
+  const missing: string[] = [];
+  for (const p of i.picks) {
+    const t = trips.find((x) => x.slug === p.slug);
+    if (!t) { missing.push(p.slug); continue; }
+    const deps = await getDepartures(t.id);
+    const dep = p.date ? deps.find((d) => d.date === p.date) ?? null : deps.find((d) => d.date === t.cheapestDate) ?? null;
+    const visa = visaShort(await visaFor(t, ctx.passport));
+    items.push({
+      ...card(t, adultPrice(t.price, dep ? dep.priceDelta : t.minDelta, t.flight, ctx.from), dep, visa),
+      date: dep?.date ?? null, seats: dep?.seatsLeft ?? null, badge: p.badge, why: p.why, rating: t.rating, flight: t.flight,
+    });
+  }
+  if (!items.length) return { status: "", result: { error: `Unknown trips: ${missing.join(", ")}. Use slugs from search results.` } };
+  return { status: "", ui: [{ kind: "trips", id: uiId("trips"), title: i.title, items }], result: { shown: items.map((x) => ({ slug: x.slug, date: x.date, price_per_adult: x.price })), ...(missing.length ? { not_found: missing } : {}) } };
+}
+
+async function actionsTool(i: z.infer<typeof ActionsInput>): Promise<ToolOutcome> {
+  const items = i.actions.filter((a) => a.say || a.href).map((a) => ({ ...a, say: a.href ? undefined : a.say }));
+  return { status: "", ui: items.length ? [{ kind: "actions", id: uiId("act"), items }] : [], result: { shown: true } };
+}
+
 /* ---------------- dispatcher ---------------- */
 
 const REGISTRY = {
@@ -626,6 +740,9 @@ const REGISTRY = {
   show_options: { schema: OptionsInput, run: showOptionsTool },
   forex_rate: { schema: FxInput, run: fxTool },
   remember: { schema: RememberInput, run: rememberTool },
+  ask: { schema: AskInput, run: askTool },
+  show_trips: { schema: ShowTripsInput, run: showTripsTool },
+  suggest_actions: { schema: ActionsInput, run: actionsTool },
 } as const;
 
 export const TOOL_STATUS: Record<string, string> = {
@@ -636,6 +753,24 @@ export const TOOL_STATUS: Record<string, string> = {
   get_visa_checklist: "Checking your documents…", watch_price: "Setting a price alert…",
   show_options: "Getting your options…", forex_rate: "Checking exchange rates…", remember: "Noting that…",
 };
+
+/** Past-tense label for a finished step in Riya's work trail. */
+const STEP_DONE: Record<string, string> = {
+  search_trips: "Searched trips", find_hot_deals: "Found the best deals", get_trip: "Opened the trip", check_visa: "Checked visa rules",
+  quote_trip: "Worked out the exact price", start_mission: "Set up your trip plan", choose_trip: "Saved your choice", propose_price_hold: "Prepared a price hold",
+  request_service: "Prepared your request", update_mission_task: "Updated your plan", get_mission: "Checked your trip", get_visa_checklist: "Checked your documents",
+  watch_price: "Set a price alert", show_options: "Got your options", forex_rate: "Checked exchange rates", remember: "Noted your preferences",
+};
+export function stepDone(name: string, o: ToolOutcome & { isError?: boolean }): { label: string; detail?: string; failed: boolean } {
+  const r = (o.result ?? {}) as Record<string, unknown>;
+  const failed = !!o.isError || typeof r.error === "string";
+  const detail = failed ? undefined
+    : o.cards?.length ? `${o.cards.length} match${o.cards.length > 1 ? "es" : ""}`
+    : o.approval ? "ready for your OK"
+    : o.mission ? o.mission.title
+    : undefined;
+  return { label: failed ? `${STEP_DONE[name] ?? "Looked that up"}: needs another try` : STEP_DONE[name] ?? "Done", detail, failed };
+}
 
 /** Validates the model's input against the schema, then runs the tool. Errors come back as results, never throws. */
 export async function runTool(name: string, input: unknown, ctx: VisitorContext): Promise<ToolOutcome & { isError?: boolean }> {
