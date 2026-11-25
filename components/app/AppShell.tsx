@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Assistant from "../assistant/Assistant";
+import { PwaBoot, forgetDevice } from "../me/PhoneSetup";
 import { usePrefs } from "../Prefs";
 import type { Currency } from "@/lib/pricing";
 
@@ -10,6 +11,7 @@ const NAV = [
   { href: "/me", label: "Overview", icon: "✦" },
   { href: "/me/trips", label: "My trips", icon: "🧭", count: "trips" },
   { href: "/me/bookings", label: "Bookings", icon: "🎟️", count: "bookings" },
+  { href: "/me/wallet", label: "Wallet", icon: "🗂️" },
   { href: "/me/alerts", label: "Alerts & updates", icon: "🔔", count: "alerts" },
   { href: "/me/profile", label: "Profile & memory", icon: "🧠" },
 ] as const;
@@ -52,6 +54,7 @@ export default function AppShell({ me, counts, children }: { me: { name: string 
 
   return (
     <div className={`app ${collapsed ? "riya-collapsed" : ""} ${riya ? "riya-open" : ""}`}>
+      <PwaBoot />
       <aside className="app-side" aria-label="Your travel app">
         <Link href="/me" className="app-brand"><img src="/img/logo.png" alt="Ribriz" height={30} /><span>Travel HQ</span></Link>
         <nav className="app-nav">
@@ -75,7 +78,7 @@ export default function AppShell({ me, counts, children }: { me: { name: string 
           <div className="app-me">
             <span className="app-av">{initial}</span>
             <span className="app-me-txt"><b>{me.name ?? "You"}</b><small>{me.email}</small></span>
-            <form action="/api/logout" method="post"><button className="link-btn" title="Sign out">Sign out</button></form>
+            <form action="/api/logout" method="post" onSubmit={(e) => { const f = e.currentTarget; if (f.dataset.go) return; e.preventDefault(); f.dataset.go = "1"; forgetDevice().finally(() => f.submit()); }}><button className="link-btn" title="Sign out">Sign out</button></form>
           </div>
         </div>
       </aside>
@@ -100,7 +103,7 @@ export default function AppShell({ me, counts, children }: { me: { name: string 
         <Link href="/me" className={active("/me") && path === "/me" ? "on" : ""}><span>✦</span>Home</Link>
         <Link href="/me/trips" className={active("/me/trips") ? "on" : ""}><span>🧭</span>Trips</Link>
         <button onClick={() => setRiya(true)} className="tab-riya" aria-label="Talk to Riya"><span className="mini-orb" /></button>
-        <Link href="/me/bookings" className={active("/me/bookings") ? "on" : ""}><span>🎟️</span>Bookings</Link>
+        <Link href="/me/wallet" className={active("/me/wallet") ? "on" : ""}><span>🗂️</span>Wallet</Link>
         <Link href="/me/profile" className={active("/me/profile") ? "on" : ""}><span>🧠</span>Profile</Link>
       </nav>
     </div>

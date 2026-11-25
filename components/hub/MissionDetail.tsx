@@ -14,6 +14,8 @@ import Notices from "@/components/hub/Notices";
 import Bookings from "@/components/hub/Bookings";
 import { bookingsFor } from "@/lib/offers";
 import { markSeen, noticesFor } from "@/lib/notifications";
+import LiveTrip from "@/components/me/LiveTrip";
+import { liveTrips } from "@/lib/live";
 
 
 const STATUS: Record<string, { label: string; icon: string }> = {
@@ -32,6 +34,7 @@ export default async function MissionDetail({ id, backHref, backLabel = "← All
   const visa = m.trip ? await visaChecklist(owner, m.id) : null;
   const [notices, bookings] = await Promise.all([noticesFor(owner, { missionId: m.id, take: 6 }), bookingsFor(m.id)]);
   await markSeen(owner, notices.filter((n) => n.unread).map((n) => n.id)); // shown as new this once
+  const live = backHref.startsWith("/me") ? (await liveTrips(owner)).find((t) => t.missionId === m.id) : undefined;
 
   return (
     <div className="wrap hub">
@@ -52,6 +55,7 @@ export default async function MissionDetail({ id, backHref, backLabel = "← All
 
       <div className="hub-layout">
         <div className="hub-main">
+          {live && <LiveTrip t={live} />}
           {pending.length > 0 && (
             <section className="panel">
               <h2>{pending.some((c) => c.action === "accept_offer") ? "Choose and approve" : "Waiting for your OK"}</h2>

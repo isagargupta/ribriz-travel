@@ -7,6 +7,7 @@ import { logEvent } from "../missions";
 import { detectAll, type Alert } from "./detect";
 import { writeNote } from "./digest";
 import { oneClickUrl, unsubscribeUrl } from "./optout";
+import { pushToCustomer, pushToEmail } from "../push";
 
 /** Most urgent first: these decide the email's subject. */
 const URGENCY: Record<Alert["kind"], number> = { hold_expiring: 0, sold_out: 1, visa_deadline: 2, hold_expired: 3, docs_missing: 4, pre_trip: 5, price_drop: 6, review_request: 7 };
@@ -19,6 +20,8 @@ async function save(a: Alert) {
       data: { dedupeKey: a.dedupeKey, kind: a.kind, title: a.title, body: a.body, url: a.url, missionId: a.missionId, customerId: a.customerId, anonId: a.anonId, email: a.email?.toLowerCase() ?? null },
     });
     if (a.missionId) await logEvent(a.missionId, "agent", `${a.title}. ${a.body}`);
+    const msg = { title: a.title, body: a.body, url: a.url, tag: a.dedupeKey };
+    await (a.customerId ? pushToCustomer(a.customerId, msg) : a.email ? pushToEmail(a.email, msg) : 0);
     return true;
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") return false;

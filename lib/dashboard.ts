@@ -9,7 +9,7 @@ import { ownedBy, type Owner } from "./owner";
 import { addDays, daysBetween, isoDate } from "./pricing";
 import { getProfile } from "./profile";
 import { describePrefs } from "./profile-rules";
-import { getDepartures, getPublishedTrips } from "./trips";
+import { getPublishedTrips } from "./trips";
 import { OFFER_LABEL } from "./offers";
 
 /** Everything the traveller dashboard shows, in one round trip. */
@@ -49,10 +49,12 @@ export async function getDashboard(owner: Owner, me: Customer): Promise<Dashboar
     prisma.notification.findMany({ where: { OR: [{ customerId: me.id }, { email: me.email }] }, orderBy: { createdAt: "desc" }, take: 10 }),
   ]);
 
+  // the traveller's own departures, even once they're in the past or closed for sale
+  const deps = await prisma.departure.findMany({ where: { id: { in: missions.map((m) => m.departureId).filter((x): x is string => !!x) } }, select: { id: true, date: true } });
   const shaped: DashTrip[] = [];
   for (const m of missions) {
     const t = m.tripId ? trips.find((x) => x.id === m.tripId) : null;
-    const dep = t && m.departureId ? (await getDepartures(t.id)).find((d) => d.id === m.departureId) ?? null : null;
+    const dep = t ? deps.find((d) => d.id === m.departureId) ?? null : null;
     const tasks = m.tasks.map((x) => ({ kind: x.kind, title: x.title, status: x.status, note: x.note }));
     shaped.push({
       id: m.id, title: m.title, dest: t?.dest ?? null, image: t?.image ?? null, status: m.status,
@@ -80,6 +82,8 @@ export async function getDashboard(owner: Owner, me: Customer): Promise<Dashboar
   // Riya's one-glance status, most important first
   const status: string[] = [];
   if (approvals.length) status.push(`${approvals.length} thing${approvals.length > 1 ? "s need" : " needs"} your OK`);
+  const away = active.find((x) => x.daysToGo !== null && x.daysToGo < 0 && x.returnDate !== null);
+  if (away) status.push(`day ${1 - away.daysToGo!} in ${away.dest}. Enjoy every minute`);
   const soon = active.filter((x) => x.daysToGo !== null && x.daysToGo >= 0).sort((a, b) => a.daysToGo! - b.daysToGo!)[0];
   if (soon) status.push(soon.daysToGo === 0 ? `${soon.dest} is today. Have a wonderful trip!` : `${soon.dest} in ${soon.daysToGo} day${soon.daysToGo === 1 ? "" : "s"}`);
   const working = active.reduce((n, x) => n + x.tasks.filter((t) => t.status === "in_progress" || t.status === "waiting").length, 0);

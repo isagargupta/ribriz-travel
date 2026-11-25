@@ -3,6 +3,7 @@ import { prisma } from "../db";
 import { purgeExpiredDocs } from "../documents";
 import { syncVisaData } from "../visa-data";
 import { runAgents } from "./run";
+import { pushTripMornings } from "../live-push";
 
 /**
  * Everything that runs once a day, in one scheduled call (Vercel's Hobby plan
@@ -22,5 +23,6 @@ export async function daily(now = new Date()) {
   // visa rules change slowly: refresh weekly, on Mondays
   const visa = now.getUTCDay() === 1 ? await part("visaSync", () => syncVisaData()) : {};
   const agents = await part("agents", () => runAgents());
-  return { ...cleanup, ...visa, ...agents };
+  const mornings = await part("tripMornings", () => pushTripMornings());
+  return { ...cleanup, ...visa, ...agents, ...mornings };
 }

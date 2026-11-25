@@ -4,6 +4,7 @@ import { sendEmail, teamInbox } from "./email";
 import { paymentReceiptEmail, paymentTeamEmail, bookingConfirmedEmail, enquiryReceivedEmail, holdConfirmationEmail, offerChosenTeamEmail, offersReadyEmail, statusUpdateEmail, teamAlertEmail, welcomeEmail } from "./email-templates";
 import { OFFER_LABEL } from "./offers";
 import { quote } from "./pricing";
+import { pushToEmail } from "./push";
 
 async function load(ref: string) {
   return prisma.enquiry.findUnique({ where: { ref }, include: { trip: { select: { slug: true, nights: true, price: true, flight: true } }, dep: { select: { priceDelta: true } } } });
@@ -53,6 +54,7 @@ export async function notifyStatus(enquiryId: string) {
   if (!e) return { ok: false };
   const mail = statusUpdateEmail({ ref: e.ref, name: e.name, status: e.status, tripTitle: e.tripTitle, date: e.departure });
   if (!mail) return { ok: false };
+  if (e.status === "booked") await pushToEmail(e.email, { title: "You're booked ✓", body: `${e.tripTitle ?? "Your trip"} is confirmed (${e.ref}).`, url: e.missionId ? `/me/trips/${e.missionId}` : "/me/bookings", tag: `status-${e.ref}` });
   return sendEmail({ to: e.email, idempotencyKey: `status-${e.ref}-${e.status}`, ...mail });
 }
 
@@ -66,6 +68,7 @@ const offerLine = (o: { title: string; lines: string; priceInr: number | null })
 export async function notifyOffers(enquiryId: string) {
   const e = await prisma.enquiry.findUnique({ where: { id: enquiryId }, include: { offers: { where: { status: "offered" }, orderBy: { createdAt: "asc" } } } });
   if (!e?.missionId || !e.offers.length) return;
+  await pushToEmail(e.email, { title: `${OFFER_LABEL[e.type] ?? "Travel"} options are ready`, body: `${e.offers.length} option${e.offers.length > 1 ? "s" : ""} to choose from. Tap to pick one.`, url: `/me/trips/${e.missionId}`, tag: `offers-${e.ref}` });
   await sendEmail({
     to: e.email, idempotencyKey: `offers-${e.offers.map((o) => o.id).join("-")}`,
     ...offersReadyEmail({ name: e.name, label: OFFER_LABEL[e.type] ?? "Travel", ref: e.ref, offers: e.offers.map(offerLine), validUntil: e.offers[0].validUntil, missionId: e.missionId }),
@@ -85,6 +88,7 @@ export async function notifyOfferChosen(offerId: string) {
 export async function notifyBooked(offerId: string) {
   const o = await prisma.serviceOffer.findUnique({ where: { id: offerId }, include: { enquiry: true } });
   if (!o?.confirmation) return;
+  await pushToEmail(o.enquiry.email, { title: `${OFFER_LABEL[o.service] ?? "Booking"} confirmed ✓`, body: `${o.title}. Reference ${o.confirmation}, saved in your wallet.`, url: "/me/wallet", tag: `booked-${o.id}` });
   await sendEmail({
     to: o.enquiry.email, idempotencyKey: `booked-${o.id}-${o.confirmation}`,
     ...bookingConfirmedEmail({ name: o.enquiry.name, label: OFFER_LABEL[o.service] ?? "Service", ref: o.enquiry.ref, offer: offerLine(o), confirmation: o.confirmation, missionId: o.missionId }),
@@ -102,6 +106,7 @@ export async function notifyPayment(enquiryId: string, amount: number, kind: str
   const last = e.payments[0];
   const balanceDue = e.departure ? new Date(Date.parse(e.departure + "T00:00:00Z") - BALANCE_DAYS * 864e5).toISOString().slice(0, 10) : null;
   const tripTitle = e.tripTitle ?? "Your trip";
+  await pushToEmail(e.email, { title: "Payment received ✓", body: `₹${amount.toLocaleString("en-IN")} for ${tripTitle}. Your receipt is in your wallet.`, url: "/me/wallet", tag: `paid-${last?.id ?? e.id}` });
   await Promise.all([
     sendEmail({
       to: e.email, idempotencyKey: `paid-${last?.id ?? e.id}`,

@@ -26,6 +26,8 @@ export async function sendTeamEmail(i: { enquiryId: string; subject: string; bod
   await prisma.teamMessage.create({ data: { enquiryId: e.id, channel: "email", subject, body, author: i.author, drafted: i.drafted } });
   await markContacted(e.id);
   if (e.missionId) await logEvent(e.missionId, "team", `Emailed you: “${subject}”`);
+  const { pushToEmail } = await import("./push");
+  await pushToEmail(e.email, { title: "New message from the Ribriz team", body: subject, url: e.missionId ? `/me/trips/${e.missionId}` : "/me", tag: `team-${e.ref}` });
 }
 
 /** Records a WhatsApp message the team opened from the inbox (sent from their own WhatsApp). */

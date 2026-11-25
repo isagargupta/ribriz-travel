@@ -453,3 +453,18 @@ model Payment {
 
   @@index([enquiryId, status])
 }
+
+/// A phone or browser that asked for Riya's updates as push notifications.
+model PushSub {
+  id         String    @id @default(cuid())
+  customerId String
+  endpoint   String    @unique
+  p256dh     String
+  auth       String
+  /// short device label, e.g. "iPhone" or "Chrome on Mac"
+  device     String?
+  createdAt  DateTime  @default(now())
+  lastSentAt DateTime?
+
+  @@index([customerId])
+}

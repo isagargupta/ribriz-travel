@@ -56,3 +56,12 @@ export async function removePrivate(keys: string[]) {
   if (!sb || !keys.length) return;
   await sb.storage.from(DOC_BUCKET).remove(keys);
 }
+
+/** The file's bytes, for the traveller's offline wallet. */
+export async function downloadPrivate(key: string) {
+  const sb = supabaseAdmin();
+  if (!sb) throw new Error("Document storage needs SUPABASE_SECRET_KEY.");
+  const { data, error } = await sb.storage.from(DOC_BUCKET).download(key);
+  if (error || !data) throw new Error("Couldn't open the document.");
+  return data;
+}

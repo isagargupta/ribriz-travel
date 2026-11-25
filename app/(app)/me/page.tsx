@@ -8,7 +8,10 @@ import NeedsYou from "@/components/me/NeedsYou";
 import RiyaOrb from "@/components/me/RiyaOrb";
 import TripCardX from "@/components/me/TripCardX";
 import TypedStatus from "@/components/me/TypedStatus";
+import LiveTrip from "@/components/me/LiveTrip";
+import PhoneSetup from "@/components/me/PhoneSetup";
 import { myDashboard } from "@/lib/dashboard";
+import { liveTrips } from "@/lib/live";
 import { fmt, fmtDate } from "@/lib/pricing";
 
 export const metadata: Metadata = { title: "Travel HQ", robots: { index: false } };
@@ -17,7 +20,11 @@ const WORKING: Record<string, string> = { in_progress: "is sorting", waiting: "i
 const TASK_PHRASE: Record<string, string> = { choose_trip: "the best trip and date", price_hold: "your price hold", visa: "your visa", insurance: "travel insurance", forex: "your forex", flights: "your flights", hotels: "your hotels", prep: "your pre-trip checklist" };
 
 export default async function Overview() {
-  const { d } = (await myDashboard())!; // the layout already sent signed-out visitors to sign in
+  const { d, owner } = (await myDashboard())!; // the layout already sent signed-out visitors to sign in
+  const live = await liveTrips(owner);
+  // while travelling, today's plan is the first thing on the screen
+  const away = live.filter((t) => t.phase !== "leaving_soon");
+  const soon = live.filter((t) => t.phase === "leaving_soon");
   const first = d.name?.split(" ")[0];
   const working = d.trips.flatMap((t) => t.tasks.filter((x) => WORKING[x.status]).map((x) => `${WORKING[x.status]} ${TASK_PHRASE[x.kind] ?? x.title.toLowerCase()} for ${t.dest ?? t.title}`));
   const mood = d.approvals.length ? "attention" : working.length ? "working" : "idle";
@@ -25,6 +32,7 @@ export default async function Overview() {
 
   return (
     <div className="me">
+      {away.length > 0 && <div className="wrap me-away">{away.map((t, i) => <LiveTrip key={t.missionId} t={t} compact={i > 0} />)}</div>}
       <section className="me-hero">
         <div className="me-aurora" aria-hidden="true" />
         <div className="wrap me-hero-in">
@@ -47,6 +55,7 @@ export default async function Overview() {
       </section>
 
       <div className="wrap me-body">
+        {soon.map((t, i) => <LiveTrip key={t.missionId} t={t} compact={away.length > 0 || i > 0} />)}
         {d.approvals.length > 0 && <NeedsYou cards={d.approvals} />}
         {d.dues.length > 0 && (
           <section className="dues">
@@ -80,6 +89,7 @@ export default async function Overview() {
             <LiveFeed items={d.feed} working={working} />
           </section>
           <aside className="me-side">
+            <PhoneSetup />
             <Link href="/me/alerts" className="panel me-tile tile-link">
               <h2>🔔 Price alerts</h2>
               {d.watching.length ? <ul className="tile-list">{d.watching.slice(0, 4).map((w) => <li key={w.id}><span>{w.dest}</span><span>under {fmt(w.price)}</span></li>)}</ul>

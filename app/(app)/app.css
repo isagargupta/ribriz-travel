@@ -98,3 +98,113 @@ body.in-app .tray, body.in-app .ai-launch { display: none }
 .rvf.done { text-align: center; justify-items: center }
 .rvf-big { font-size: 34px; animation: pop .5s cubic-bezier(.2, .9, .3, 1.6) both }
 .del-box { margin-top: 14px; padding: 14px; border: 1.5px solid #f3c4c4; border-radius: 14px; background: #fff6f6; display: grid; gap: 10px; animation: fadeUp .25s ease-out both } .del-box p { margin: 0 } .del-box .in { display: block; margin-top: 4px; max-width: 220px }
+
+/* ============ Live trip ============ */
+.live { container-type: inline-size; margin-bottom: 22px; border-radius: 22px; overflow: hidden; background: #fff; box-shadow: var(--shadow); border: 1px solid var(--line) }
+.live-hero { position: relative; min-height: 190px; color: #fff; display: flex; align-items: flex-end }
+.live-hero img { object-fit: cover }
+.live-hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(11, 18, 64, .15), rgba(11, 18, 64, .82)) }
+.live.on .live-hero::after { background: linear-gradient(180deg, rgba(11, 18, 64, .1), rgba(11, 18, 64, .85)), linear-gradient(120deg, rgba(15, 182, 143, .35), transparent 60%) }
+.live-hero-in { position: relative; z-index: 1; padding: 20px 22px; width: 100% }
+.live-kicker { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; color: #e3e6ff }
+.live-pill { display: inline-flex; align-items: center; gap: 7px; padding: 4px 10px; border-radius: 999px; background: rgba(255, 255, 255, .16); backdrop-filter: blur(6px); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; font-size: 11px; color: #fff }
+.live-pill i { width: 8px; height: 8px; border-radius: 50%; background: var(--sun) }
+.live.on .live-pill i { background: #3df5b8; box-shadow: 0 0 0 0 rgba(61, 245, 184, .7); animation: live-ping 1.8s infinite }
+@keyframes live-ping { 70% { box-shadow: 0 0 0 9px rgba(61, 245, 184, 0) } 100% { box-shadow: 0 0 0 0 rgba(61, 245, 184, 0) } }
+.live-hero h2 { margin: 6px 0 10px; font-family: var(--f-display); font-size: clamp(24px, 5cqi, 34px); line-height: 1.1; color: #fff }
+.live-days { display: flex; gap: 4px; margin-bottom: 12px; max-width: 420px }
+.live-days i { flex: 1; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, .25) }
+.live-days i.past { background: rgba(255, 255, 255, .75) }
+.live-days i.now { background: #3df5b8; animation: live-glow 1.6s ease-in-out infinite alternate }
+@keyframes live-glow { from { opacity: .55 } to { opacity: 1 } }
+.live-facts { display: flex; flex-wrap: wrap; gap: 8px }
+.live-facts > span { padding: 6px 12px; border-radius: 999px; background: rgba(255, 255, 255, .14); backdrop-filter: blur(8px); font-weight: 700; font-size: 14px }
+.live-facts small { font-weight: 500; opacity: .85 }
+.live-body { display: grid; gap: 16px; padding: 18px 20px 20px }
+@container (min-width: 760px) { .live-body { grid-template-columns: 1.3fr 1fr } .live-more { grid-column: 1 / -1 } }
+.live-today { padding: 14px 16px; border-radius: 16px; background: linear-gradient(135deg, #eafff7, #eef3ff); border: 1px solid #c9f1e2 }
+.live-today small, .live-tmr small { display: block; font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; color: var(--good) }
+.live-today b { display: block; margin-top: 4px; font-size: 19px; line-height: 1.3 }
+.live-tmr { margin-top: 10px; padding: 0 16px }
+.live-tmr small { color: var(--muted) }
+.live-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px }
+.live-check-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px }
+.live-check-head span { font-size: 13px; font-weight: 700; color: var(--muted) }
+.live-check ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px }
+.live-check label { display: flex; gap: 10px; align-items: flex-start; padding: 9px 12px; border-radius: 12px; background: var(--surface-2); cursor: pointer; transition: background .2s }
+.live-check label.ok { background: var(--good-bg) }
+.live-check label.ok span { text-decoration: line-through; color: var(--muted) }
+.live-check input { margin-top: 3px; accent-color: var(--good); width: 17px; height: 17px }
+.live-wx { margin: 10px 0 0; font-size: 14px }
+.live-side { display: grid; gap: 10px; align-content: start }
+.live-card { padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: #fbfbff }
+.live-card > b { display: block; margin-bottom: 6px; font-size: 14px }
+.live-card ul { list-style: none; margin: 0 0 6px; padding: 0; display: grid; gap: 4px; font-size: 14px }
+.live-card li { display: flex; justify-content: space-between; gap: 10px }
+.live-card li span:first-child { color: var(--muted) }
+.live-card small { font-size: 12.5px; color: var(--muted) }
+.live-card.sos { border-color: #ffd3c4; background: #fff6f2 }
+.live-card.sos a[href^="tel:"] { font-weight: 800; font-size: 16px; color: var(--bad); text-decoration: none; padding: 0 8px; border-radius: 8px; background: #ffe3da }
+.live-card code { font-family: var(--f-mono); font-weight: 700; font-size: 13px }
+
+/* ============ Wallet ============ */
+.ok-txt { color: var(--good); font-weight: 700 }
+.wallet .w-trip { margin-bottom: 18px; padding: 18px 20px }
+.w-head { display: flex; align-items: center; gap: 14px; margin-bottom: 6px }
+.w-head h2 { margin: 0; font-size: 20px }
+.w-thumb { position: relative; flex: none; width: 56px; height: 56px; border-radius: 14px; overflow: hidden }
+.w-thumb img { object-fit: cover }
+.w-open { margin-left: auto }
+.w-block { margin-top: 16px }
+.w-block h3 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .09em; color: var(--muted) }
+.w-refs, .w-pays, .w-docs ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px }
+.w-refs li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: linear-gradient(135deg, #f7f5ff, #f0f6ff); border: 1px solid #e4ddff }
+.w-ref-l { display: grid; gap: 1px; min-width: 0 } .w-ref-l small { font-size: 11.5px; font-weight: 800; color: var(--riya, #6a4cff); text-transform: uppercase; letter-spacing: .06em } .w-ref-l .muted { font-size: 13px }
+.w-code { font-family: var(--f-mono); font-weight: 800; font-size: 16px; letter-spacing: .06em; padding: 6px 10px; border-radius: 10px; background: #fff; border: 1px dashed #b9adff; white-space: nowrap }
+.w-pays li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 14.5px }
+.w-pays li:last-child { border-bottom: 0 }
+.w-refund { color: var(--warn); font-weight: 700 }
+.w-docs li { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: #fff; transition: border-color .2s, background .2s }
+.w-docs li.saved { border-color: #b8ecd9; background: #f4fffb }
+.w-ico { font-size: 22px; text-align: center }
+.w-doc { display: grid; gap: 1px; min-width: 0; text-decoration: none; color: inherit }
+.w-doc b { font-size: 14.5px } .w-doc small { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.w-doc:hover b { color: var(--blue) }
+.w-save { font: inherit; font-size: 12.5px; font-weight: 700; padding: 6px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); color: var(--fg); cursor: pointer; white-space: nowrap }
+.w-save.on { background: var(--good-bg); border-color: #b8ecd9; color: var(--good) }
+.w-del { font: inherit; border: 0; background: none; color: var(--muted); cursor: pointer; padding: 6px; border-radius: 8px }
+.w-del:hover { color: var(--bad); background: #fff0ec }
+.w-none { margin: 0 0 8px }
+.w-add { display: flex; gap: 8px; align-items: center; margin-top: 10px }
+.w-add select { font: inherit; font-size: 13.5px; padding: 7px 10px; border-radius: 10px; border: 1px solid var(--line); background: #fff }
+.w-add label.btn { cursor: pointer } .w-add label.disabled { opacity: .6; pointer-events: none }
+.w-note { font-size: 13px; text-align: center; margin: 8px 0 0 }
+@media (max-width: 560px) { .w-docs li { grid-template-columns: 30px minmax(0, 1fr) auto; } .w-del { grid-column: 3; grid-row: 1 } .w-save { grid-column: 2 / -1; justify-self: start } .w-refs li { flex-direction: column; align-items: flex-start } }
+
+/* ============ Receipt ============ */
+.receipt { max-width: 720px; margin: 10px auto 30px; padding: 32px; background: #fff; border-radius: 18px; border: 1px solid var(--line); box-shadow: var(--shadow-sm) }
+.rc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; padding-bottom: 18px; border-bottom: 2px solid var(--fg) }
+.rc-top img { height: 34px; width: auto }
+.rc-co { text-align: right; font-size: 12.5px; color: var(--muted); line-height: 1.5 }
+.rc-co b { color: var(--fg) }
+.receipt h1 { font-size: 22px; margin: 22px 0 4px }
+.rc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; margin: 18px 0; font-size: 14.5px }
+.rc-grid small { display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; font-weight: 700 }
+.rc-amt { display: flex; justify-content: space-between; align-items: baseline; padding: 16px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font-size: 15px }
+.rc-amt b { font-family: var(--f-display); font-size: 28px }
+.rc-foot { margin-top: 18px; font-size: 12.5px; color: var(--muted) }
+.rc-actions { display: flex; gap: 8px; justify-content: center; margin-bottom: 10px }
+@media print {
+  .app-side, .app-top, .app-riya, .app-tabs, .rc-actions, .cookie-notice { display: none !important }
+  .app { display: block } body.in-app { background: #fff } .receipt { box-shadow: none; border: 0; margin: 0 }
+}
+
+/* ============ Phone setup ============ */
+.phone-setup { position: relative; background: linear-gradient(135deg, #f7f5ff, #eefaff) }
+.phone-setup h2 { margin: 0 0 6px; font-size: 16px }
+.phone-setup p { margin: 0 0 10px; font-size: 14px }
+.ps-x { position: absolute; top: 10px; right: 10px; border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 13px }
+.ps-acts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
+.ps-steps { margin: 0 0 6px; padding-left: 20px; font-size: 14px; display: grid; gap: 4px }
+.ps-msg { margin: 10px 0 0 !important; font-size: 13px; font-weight: 700; color: var(--good) }
+.me-away { padding-top: 14px } .me-away .live { margin-bottom: 0 }

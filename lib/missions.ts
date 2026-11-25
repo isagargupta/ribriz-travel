@@ -140,7 +140,8 @@ export async function missionView(owner: Owner, id: string): Promise<MissionView
   if (!m) return null;
   const trips = await getPublishedTrips();
   const trip = m.tripId ? trips.find((t) => t.id === m.tripId) ?? null : null;
-  const dep = trip && m.departureId ? (await getDepartures(trip.id)).find((d) => d.id === m.departureId) ?? null : null;
+  // the booked departure, even after it has left or closed for sale
+  const dep = trip && m.departureId ? await prisma.departure.findUnique({ where: { id: m.departureId }, select: { date: true } }) : null;
   return {
     id: m.id, title: m.title, goal: m.goal, status: m.status, createdAt: m.createdAt.toISOString(), updatedAt: m.updatedAt.toISOString(),
     trip: trip ? { slug: trip.slug, title: trip.title, image: trip.image, dest: trip.dest, nights: trip.nights } : null,
