@@ -7,7 +7,7 @@ import { payUrl } from "@/lib/payments";
 
 /** 48-hour price hold on a specific departure. The server re-prices before saving. */
 export async function POST(req: Request) {
-  if (rateLimited("hold:" + clientIp(req))) return fail("Too many requests. Please wait a few minutes and try again.", 429);
+  if (await rateLimited("hold:" + clientIp(req))) return fail("Too many requests. Please wait a few minutes and try again.", 429);
   const parsed = await readJson(req, holdSchema);
   if ("res" in parsed) return parsed.res;
   const r = await createHold(parsed.data);

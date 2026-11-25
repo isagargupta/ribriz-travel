@@ -5,7 +5,7 @@ import { priceWatchSchema } from "@/lib/schemas";
 import { WatchError, stopWatch, watchPrice } from "@/lib/watches";
 
 export async function POST(req: Request) {
-  if (rateLimited("watch:" + clientIp(req), 10)) return fail("Too many requests. Try again later.", 429);
+  if (await rateLimited("watch:" + clientIp(req), 10)) return fail("Too many requests. Try again later.", 429);
   const parsed = await readJson(req, priceWatchSchema);
   if ("res" in parsed) return parsed.res;
   try {

@@ -23,3 +23,8 @@ export async function currentCustomer(): Promise<Customer | null> {
   if (!id) return null;
   return prisma.customer.findUnique({ where: { id } });
 }
+
+/** The signed-in customer's id from the cookie alone, without a database lookup. */
+export async function currentCustomerId(): Promise<string | null> {
+  return readToken((await cookies()).get(COOKIE)?.value);
+}

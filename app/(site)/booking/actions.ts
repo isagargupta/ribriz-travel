@@ -19,7 +19,7 @@ export type LookupState = { error?: string; booking?: BookingView } | undefined;
 export async function lookupBooking(_: LookupState, fd: FormData): Promise<LookupState> {
   const h = await headers();
   const ip = h.get("x-forwarded-for")?.split(",")[0].trim() || "local";
-  if (rateLimited("lookup:" + ip, 10)) return { error: "Too many attempts. Please wait a few minutes." };
+  if (await rateLimited("lookup:" + ip, 10)) return { error: "Too many attempts. Please wait a few minutes." };
 
   const parsed = lookupSchema.safeParse({ ref: fd.get("ref"), email: fd.get("email") });
   if (!parsed.success) return { error: firstError(parsed.error) };

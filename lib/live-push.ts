@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "./db";
 import { liveTrips, type LiveTrip } from "./live";
 import { pushToCustomer } from "./push";
+import { inShard, type Shard } from "./agents/shard";
 
 function message(t: LiveTrip) {
   const wx = t.weather ? ` ${t.weather.icon} ${t.weather.max}°.` : "";
@@ -16,8 +17,8 @@ function message(t: LiveTrip) {
  * weather and where their tickets are. Once per trip per day, and only to
  * travellers who turned notifications on. Shown in their alerts too, never emailed.
  */
-export async function pushTripMornings(today = new Date().toISOString().slice(0, 10)) {
-  const customers = [...new Set((await prisma.pushSub.findMany({ select: { customerId: true } })).map((s) => s.customerId))];
+export async function pushTripMornings(today = new Date().toISOString().slice(0, 10), shard: Shard | null = null) {
+  const customers = [...new Set((await prisma.pushSub.findMany({ select: { customerId: true } })).map((s) => s.customerId))].filter((id) => inShard(id, shard));
   let sent = 0;
   for (const customerId of customers) {
     const trips = await liveTrips({ customerId, anonId: null, email: null, name: null, phone: null });

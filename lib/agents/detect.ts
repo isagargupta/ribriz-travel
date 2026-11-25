@@ -1,4 +1,5 @@
 import "server-only";
+import { inShard, type Shard } from "./shard";
 import { prisma } from "../db";
 import { visaChecklist } from "../documents";
 import { addDays, adultPrice, daysBetween, fmt, fmtDate, isoDate } from "../pricing";
@@ -25,21 +26,20 @@ export interface Alert {
 }
 
 /** dry: report only, change nothing (for previews). */
-interface Ctx { now: Date; today: string; trips: TripDTO[]; dry: boolean }
+interface Ctx { now: Date; today: string; trips: TripDTO[]; dry: boolean; shard: Shard | null }
 
 const dayWord = (n: number) => (n <= 0 ? "today" : n === 1 ? "tomorrow" : `in ${n} days`);
 const dateRange = (t: TripDTO, date: string) => `${fmtDate(date)} – ${fmtDate(addDays(date, t.nights))}`;
 
 /** Missions still being worked on, with what every detector needs. */
-async function openMissions() {
-  return prisma.mission.findMany({
-    where: { status: { in: ["planning", "active"] } },
-    include: {
-      tasks: true,
-      requests: { orderBy: { createdAt: "desc" }, take: 1, select: { email: true } },
-    },
-    take: 2000,
-  });
+/** Open trips in this slice: ids first (cheap), then the full rows in chunks, so any number of trips is covered. */
+async function openMissions(shard: Shard | null) {
+  const ids = (await prisma.mission.findMany({ where: { status: { in: ["planning", "active"] } }, select: { id: true, customerId: true, anonId: true } }))
+    .filter((m) => inShard(m.customerId ?? m.anonId ?? m.id, shard)).map((m) => m.id);
+  const include = { tasks: true, requests: { orderBy: { createdAt: "desc" as const }, take: 1, select: { email: true } } };
+  const out = [];
+  for (let k = 0; k < ids.length; k += 500) out.push(...(await prisma.mission.findMany({ where: { id: { in: ids.slice(k, k + 500) } }, include })));
+  return out;
 }
 type OpenMission = Awaited<ReturnType<typeof openMissions>>[number];
 
@@ -58,7 +58,7 @@ const task = (m: OpenMission, kind: string) => m.tasks.find((t) => t.kind === ki
 /* ---------------- price watches ---------------- */
 
 async function priceWatches(c: Ctx): Promise<Alert[]> {
-  const watches = await prisma.priceWatch.findMany({ where: { active: true }, take: 5000 });
+  const watches = (await prisma.priceWatch.findMany({ where: { active: true } })).filter((w) => inShard(w.email, c.shard));
   if (!watches.length) return [];
   const deps = await prisma.departure.findMany({ where: { id: { in: watches.map((w) => w.departureId).filter(Boolean) as string[] } } });
   const depById = new Map(deps.map((d) => [d.id, d]));
@@ -92,7 +92,7 @@ async function priceWatches(c: Ctx): Promise<Alert[]> {
 /* ---------------- missions ---------------- */
 
 async function missionAlerts(c: Ctx): Promise<Alert[]> {
-  const missions = await openMissions();
+  const missions = await openMissions(c.shard);
   if (!missions.length) return [];
   const emailOf = await emailsFor(missions);
   const deps = await prisma.departure.findMany({ where: { id: { in: missions.map((m) => m.departureId).filter(Boolean) as string[] } } });
@@ -201,7 +201,7 @@ async function holds(c: Ctx): Promise<Alert[]> {
     include: { mission: { select: { id: true, customerId: true, anonId: true } }, dep: true },
   });
   const out: Alert[] = [];
-  for (const e of rows) {
+  for (const e of rows.filter((r) => inShard(r.email, c.shard))) {
     const stage = holdStage(e.createdAt, c.now);
     const t = c.trips.find((x) => x.id === e.tripId);
     if (!stage || !t) continue;
@@ -224,8 +224,8 @@ async function holds(c: Ctx): Promise<Alert[]> {
 }
 
 /** Runs every detector. Each one is independent: one failing doesn't stop the rest. */
-export async function detectAll(now = new Date(), dry = false) {
-  const c: Ctx = { now, today: isoDate(now), trips: await getPublishedTrips(), dry };
+export async function detectAll(now = new Date(), dry = false, shard: Shard | null = null) {
+  const c: Ctx = { now, today: isoDate(now), trips: await getPublishedTrips(), dry, shard };
   const results = await Promise.allSettled([priceWatches(c), missionAlerts(c), holds(c)]);
   const errors = results.filter((r): r is PromiseRejectedResult => r.status === "rejected").map((r) => String(r.reason?.message ?? r.reason));
   return { alerts: results.flatMap((r) => (r.status === "fulfilled" ? r.value : [])), errors };

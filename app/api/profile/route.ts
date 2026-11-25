@@ -15,7 +15,7 @@ export async function GET() {
 /** The /you editor saves the whole set of preferences, and can add a note. */
 const Put = z.object({ prefs: PrefsSchema, note: z.string().max(200).optional() });
 export async function PUT(req: Request) {
-  if (rateLimited("profile:" + clientIp(req), 30)) return fail("Too many requests.", 429);
+  if (await rateLimited("profile:" + clientIp(req), 30)) return fail("Too many requests.", 429);
   const parsed = await readJson(req, Put);
   if ("res" in parsed) return parsed.res;
   const owner = await getOwner(true);

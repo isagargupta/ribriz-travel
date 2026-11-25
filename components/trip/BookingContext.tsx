@@ -28,6 +28,14 @@ export function BookingProvider({ trip, departures, initialDate, children }: {
   const [question, setQuestion] = useState(false);
 
   useEffect(() => { addRecent(trip.id); }, [trip.id, addRecent]);
+  // a date in the link (?date=2027-03-10) picks that departure; read here so the page can be cached
+  useEffect(() => {
+    if (initialDate) return;
+    const want = new URLSearchParams(window.location.search).get("date");
+    if (!want || !/^\d{4}-\d{2}-\d{2}$/.test(want)) return;
+    const d = departures.find((x) => x.date >= want);
+    if (d) setSelId(d.id);
+  }, [initialDate, departures]);
 
   const selected = departures.find((d) => d.id === selId) ?? null;
   const q = useMemo(

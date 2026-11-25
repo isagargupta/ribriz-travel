@@ -7,7 +7,7 @@ const Body = z.object({ razorpay_order_id: z.string().max(60), razorpay_payment_
 
 /** Razorpay Checkout's success handler posts here; we verify the signature and the payment itself. */
 export async function POST(req: Request) {
-  if (rateLimited("payverify:" + clientIp(req), 20)) return fail("Too many attempts.", 429);
+  if (await rateLimited("payverify:" + clientIp(req), 20)) return fail("Too many attempts.", 429);
   const parsed = await readJson(req, Body);
   if ("res" in parsed) return parsed.res;
   try {

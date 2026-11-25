@@ -8,6 +8,8 @@ import { detectAll, type Alert } from "./detect";
 import { writeNote } from "./digest";
 import { oneClickUrl, unsubscribeUrl } from "./optout";
 import { pushToCustomer, pushToEmail } from "../push";
+import { pushTripMornings } from "../live-push";
+import { inShard, mergeStats, shardCount, type Shard } from "./shard";
 
 /** Most urgent first: these decide the email's subject. */
 const URGENCY: Record<Alert["kind"], number> = { hold_expiring: 0, sold_out: 1, visa_deadline: 2, hold_expired: 3, docs_missing: 4, pre_trip: 5, price_drop: 6, review_request: 7 };
@@ -30,13 +32,13 @@ async function save(a: Alert) {
 }
 
 /** One email per traveller with everything new since the last run. */
-async function sendDigests(today: string) {
+async function sendDigests(today: string, shard: Shard | null = null) {
   const pending = await prisma.notification.findMany({
     where: { emailedAt: null, email: { not: null }, createdAt: { gte: new Date(Date.now() - 3 * 864e5) } },
     orderBy: { createdAt: "asc" }, take: 2000,
   });
   const byEmail = new Map<string, typeof pending>();
-  for (const n of pending) byEmail.set(n.email!, [...(byEmail.get(n.email!) ?? []), n]);
+  for (const n of pending) if (inShard(n.email, shard)) byEmail.set(n.email!, [...(byEmail.get(n.email!) ?? []), n]);
 
   const optedOut = new Set((await prisma.emailOptOut.findMany({ where: { email: { in: [...byEmail.keys()] } } })).map((o) => o.email));
   let sent = 0, failed = 0, skipped = 0, ai = 0;
@@ -68,24 +70,66 @@ async function sendDigests(today: string) {
   return { emailsSent: sent, emailsFailed: failed, optedOut: skipped, aiWritten: ai };
 }
 
+/** Round 1 for one slice of travellers: find what's new and store each alert once (it's pushed as it's stored). */
+export async function detectSlice(shard: Shard | null) {
+  const { alerts, errors } = await detectAll(new Date(), false, shard);
+  let created = 0;
+  for (const a of alerts) if (await save(a)) created++;
+  const byKind = alerts.reduce<Record<string, number>>((m, a) => ((m[a.kind] = (m[a.kind] ?? 0) + 1), m), {});
+  return { found: alerts.length, new: created, byKind, detectorErrors: errors };
+}
+
+/** Round 2 for one slice: one email per traveller with everything new, and the morning trip push. */
+export async function deliverSlice(shard: Shard | null, opts: { email?: boolean } = {}) {
+  const today = new Date().toISOString().slice(0, 10);
+  const mail = opts.email === false ? {} : await sendDigests(today, shard);
+  const m = await pushTripMornings(today, shard);
+  return { ...mail, morningTravellers: m.travellers, morningPushes: m.sent };
+}
+
+/** How much work there is today, to decide how many slices to run. */
+async function workload() {
+  const [missions, watches, pending] = await Promise.all([
+    prisma.mission.count({ where: { status: { in: ["planning", "active"] } } }),
+    prisma.priceWatch.count({ where: { active: true } }),
+    prisma.notification.count({ where: { emailedAt: null, email: { not: null } } }),
+  ]);
+  return Math.max(missions + watches, pending);
+}
+
+/** Runs one round on every slice in parallel, each as its own function call with its own time limit. */
+async function fanOut(origin: string, step: "detect" | "deliver", n: number) {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) throw new Error("CRON_SECRET is needed to run the daily job in slices.");
+  const results = await Promise.allSettled(Array.from({ length: n }, async (_, i) => {
+    const r = await fetch(`${origin}/api/cron/daily/work?step=${step}&i=${i}&n=${n}`, { headers: { Authorization: `Bearer ${secret}` }, cache: "no-store", signal: AbortSignal.timeout(295_000) });
+    if (!r.ok) throw new Error(`slice ${i + 1}/${n} ${step}: HTTP ${r.status}`);
+    return (await r.json()).stats as Record<string, unknown>;
+  }));
+  const ok = results.filter((r): r is PromiseFulfilledResult<Record<string, unknown>> => r.status === "fulfilled").map((r) => r.value);
+  const failed = results.filter((r): r is PromiseRejectedResult => r.status === "rejected").map((r) => String(r.reason?.message ?? r.reason));
+  return { ...mergeStats(ok), ...(failed.length ? { sliceErrors: failed } : {}) };
+}
+
 /**
  * The background agent: looks at every open trip, raises what's new, and sends
- * each traveller one note. Safe to run twice: alerts are de-duplicated, and a
- * run already in progress makes a second one exit early.
+ * each traveller one note. With more than ~1,500 travellers the work is split
+ * into slices that run in parallel (each a separate call to /api/cron/daily/work),
+ * first detecting for everyone, then delivering. A slice that fails or times out
+ * is picked up the next day: alerts are de-duplicated and unsent ones stay queued.
+ * A run already in progress makes a second one exit early.
  */
-export async function runAgents(opts: { email?: boolean } = {}) {
+export async function runAgents(opts: { email?: boolean; origin?: string } = {}) {
   const busy = await prisma.agentRun.findFirst({ where: { finishedAt: null, startedAt: { gt: new Date(Date.now() - 10 * 60e3) } } });
   if (busy) return { skipped: "Another run is in progress." };
   const run = await prisma.agentRun.create({ data: {} });
-  const now = new Date();
   try {
-    const { alerts, errors } = await detectAll(now);
-    let created = 0;
-    for (const a of alerts) if (await save(a)) created++;
-    const byKind = alerts.reduce<Record<string, number>>((m, a) => ((m[a.kind] = (m[a.kind] ?? 0) + 1), m), {});
-    const mail = opts.email === false ? null : await sendDigests(now.toISOString().slice(0, 10));
-    const stats = { found: alerts.length, new: created, byKind, ...(mail ?? {}), detectorErrors: errors };
-    await prisma.agentRun.update({ where: { id: run.id }, data: { finishedAt: new Date(), stats: JSON.stringify(stats), error: errors.length ? errors.join("; ").slice(0, 1000) : null } });
+    const n = opts.origin ? shardCount(await workload()) : 1;
+    const detected = n === 1 ? await detectSlice(null) : await fanOut(opts.origin!, "detect", n);
+    const delivered = n === 1 ? await deliverSlice(null, opts) : await fanOut(opts.origin!, "deliver", n);
+    const stats = { slices: n, ...detected, ...delivered } as Record<string, unknown>;
+    const errs = [...((stats.detectorErrors as string[]) ?? []), ...((stats.sliceErrors as string[]) ?? [])];
+    await prisma.agentRun.update({ where: { id: run.id }, data: { finishedAt: new Date(), stats: JSON.stringify(stats), error: errs.length ? errs.join("; ").slice(0, 1000) : null } });
     return stats;
   } catch (e) {
     await prisma.agentRun.update({ where: { id: run.id }, data: { finishedAt: new Date(), error: String((e as Error).message).slice(0, 1000) } });

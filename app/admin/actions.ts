@@ -2,6 +2,7 @@
 import { randomBytes } from "node:crypto";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { after } from "next/server";
+import { headers } from "next/headers";
 import { notifyStatus } from "@/lib/notify";
 import { logEvent, setTask, type TaskKind } from "@/lib/missions";
 
@@ -249,7 +250,8 @@ export async function generateDepartures(fd: FormData) {
 export async function runAgentsNow() {
   await requireAdmin();
   const { runAgents } = await import("@/lib/agents/run");
-  await runAgents();
+  const h = await headers();
+  await runAgents({ origin: `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}` });
   revalidatePath("/admin");
 }
 

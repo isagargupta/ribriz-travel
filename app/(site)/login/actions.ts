@@ -18,14 +18,14 @@ const safeNext = (n: unknown) => (typeof n === "string" && n.startsWith("/") && 
 export async function requestCustomerCode(rawEmail: string): Promise<CodeResult> {
   const e = emailSchema.safeParse(rawEmail);
   if (!e.success) return { ok: false, error: e.error.issues[0].message };
-  if (rateLimited("otp-ip:" + (await ip()), 10)) return { ok: false, error: "Too many attempts from this network. Please wait a few minutes." };
+  if (await rateLimited("otp-ip:" + (await ip()), 10)) return { ok: false, error: "Too many attempts from this network. Please wait a few minutes." };
   return sendLoginCode(e.data, "customer");
 }
 
 export async function verifyCustomerCode(rawEmail: string, code: string, next?: string): Promise<CodeResult> {
   const e = emailSchema.safeParse(rawEmail);
   if (!e.success) return { ok: false, error: e.error.issues[0].message };
-  if (rateLimited("otp-verify:" + (await ip()), 30)) return { ok: false, error: "Too many attempts. Please wait a few minutes." };
+  if (await rateLimited("otp-verify:" + (await ip()), 30)) return { ok: false, error: "Too many attempts. Please wait a few minutes." };
   const r = await verifyLoginCode(e.data, "customer", code.trim());
   if (!r.ok) return r;
 

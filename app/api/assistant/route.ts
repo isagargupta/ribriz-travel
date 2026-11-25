@@ -8,7 +8,8 @@ import { watchesFor } from "@/lib/watches";
 import { getProfile } from "@/lib/profile";
 import { describePrefs } from "@/lib/profile-rules";
 import { getOwner } from "@/lib/owner";
-import { clientIp, fail, rateLimited } from "@/lib/http";
+import { clientIp, dayKey, fail, rateLimited } from "@/lib/http";
+import { RIYA_LIMITS } from "@/lib/limits";
 import { FROM_CITIES, RATES, isoDate, type Currency } from "@/lib/pricing";
 import { countryName } from "@/lib/visa";
 
@@ -45,7 +46,8 @@ const getClient = () => (client ??= new Anthropic());
  */
 export async function POST(req: Request) {
   if (!process.env.ANTHROPIC_API_KEY) return fail("The assistant isn't switched on yet. Please try again later or email hello@ribriztravel.com.", 503);
-  if (rateLimited("ai:" + clientIp(req), 20)) return fail("You're sending messages quickly. Please wait a few minutes.", 429);
+  const ip = clientIp(req);
+  if (await rateLimited("ai:" + ip, 20)) return fail("You're sending messages quickly. Please wait a few minutes.", 429);
 
   let body: z.infer<typeof Body>;
   try { body = Body.parse(await req.json()); } catch { return fail("Invalid request."); }
@@ -55,6 +57,16 @@ export async function POST(req: Request) {
 
   // gives first-time visitors a browser id so their missions persist without sign-up
   const owner = await getOwner(true);
+  // daily caps keep the AI bill bounded: per traveller, per network, and for the whole site
+  const day = dayKey(), DAY = 26 * 3600e3;
+  const who = owner.customerId ? `c:${owner.customerId}` : owner.anonId ? `a:${owner.anonId}` : `ip:${ip}`;
+  if (await rateLimited(`ai-day:${who}:${day}`, owner.customerId ? RIYA_LIMITS.signedIn : RIYA_LIMITS.guest, DAY))
+    return fail(owner.customerId ? "You've reached today's limit for chatting with Riya. She'll be back tomorrow; for anything urgent, email hello@ribriztravel.com." : "You've reached today's limit for chatting with Riya. Sign in to keep going, or come back tomorrow.", 429, { limit: "daily" });
+  if (await rateLimited(`ai-day:ip:${ip}:${day}`, RIYA_LIMITS.network, DAY)) return fail("Lots of messages from this network today. Please try again tomorrow or email hello@ribriztravel.com.", 429, { limit: "daily" });
+  if (await rateLimited(`ai-day:all:${day}`, RIYA_LIMITS.site, DAY)) {
+    console.error("Riya site-wide daily cap reached", day);
+    return fail("Riya is very busy right now. Please try again in a little while or email hello@ribriztravel.com.", 503, { limit: "site" });
+  }
   const ctx: VisitorContext = { ...body.context, name: owner.name, owner };
   const [missions, alerts, watches, profile] = await Promise.all([missionsForContext(owner), noticesFor(owner, { take: 5, sinceDays: 7 }), watchesFor(owner), getProfile(owner)]);
 

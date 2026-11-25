@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { UploadError, uploadDoc, visaChecklist } from "@/lib/documents";
-import { clientIp, fail, rateLimited } from "@/lib/http";
+import { clientIp, dayKey, fail, rateLimited } from "@/lib/http";
 import { getOwner } from "@/lib/owner";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +14,9 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 
 /** Upload one document (multipart: file, optional kind). It's checked by AI before this returns. */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  if (rateLimited("upload:" + clientIp(req), 30)) return fail("Too many uploads. Please wait a few minutes.", 429);
+  if (await rateLimited("upload:" + clientIp(req), 30)) return fail("Too many uploads. Please wait a few minutes.", 429);
+  // every upload is read by AI: cap it per network per day too
+  if (await rateLimited(`upload-day:${clientIp(req)}:${dayKey()}`, 80, 26 * 3600e3)) return fail("That's a lot of uploads for one day. Please try again tomorrow.", 429);
   const { id } = await params;
   let form: FormData;
   try { form = await req.formData(); } catch { return fail("Upload a file."); }

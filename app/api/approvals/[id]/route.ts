@@ -15,7 +15,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 
 /** The traveller approves or declines an action the assistant prepared. */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  if (rateLimited("approve:" + clientIp(req), 20)) return fail("Too many requests. Please wait a moment.", 429);
+  if (await rateLimited("approve:" + clientIp(req), 20)) return fail("Too many requests. Please wait a moment.", 429);
   const { id } = await params;
   let body: unknown;
   try { body = await req.json(); } catch { return fail("Invalid request."); }

@@ -12,5 +12,5 @@ export async function GET(req: Request) {
   if (!secret || !safeEqual(req.headers.get("authorization") ?? "", `Bearer ${secret}`)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   // ?preview=1 shows what would be sent, without sending or changing anything
   if (new URL(req.url).searchParams.get("preview") === "1") return NextResponse.json({ ok: true, preview: await previewAgents() });
-  return NextResponse.json({ ok: true, ...(await daily()) });
+  return NextResponse.json({ ok: true, ...(await daily(new Date(), new URL(req.url).origin)) });
 }

@@ -25,8 +25,8 @@ type Counts = { trips: number; needs: number; bookings: number; alerts: number }
 
 /**
  * The traveller app: sidebar on the left, the page in the middle, Riya docked on
- * the right. Anything Riya does in chat refreshes the page at once; the page
- * also refreshes itself every 30 s while open. On phones the sidebar becomes a
+ * the right. Anything Riya does in chat refreshes the page at once; otherwise
+ * it reloads only when its change fingerprint moves (see lib/pulse.ts). On phones the sidebar becomes a
  * bottom tab bar and Riya opens full screen.
  */
 export default function AppShell({ me, counts, children }: { me: { name: string | null; email: string }; counts: Counts; children: React.ReactNode }) {
@@ -37,15 +37,32 @@ export default function AppShell({ me, counts, children }: { me: { name: string 
   const [collapsed, setCollapsed] = useState(false); // wide screens: hide Riya to give the page room
 
   useEffect(() => {
+    // Reload the page's data only when something actually changed: right after
+    // Riya acts here, when a push arrives, or when the tiny /api/me/pulse
+    // fingerprint moves (checked every 45 s while the tab is visible, and on return).
     let t: ReturnType<typeof setTimeout> | null = null;
+    let last: string | null = null;
     const refresh = () => { if (t) clearTimeout(t); t = setTimeout(() => router.refresh(), 250); };
-    const tick = () => { if (document.visibilityState === "visible") router.refresh(); };
+    const check = async () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const r = await fetch("/api/me/pulse", { cache: "no-store" });
+        if (!r.ok) return;
+        const { v } = await r.json();
+        if (last !== null && v !== last) refresh();
+        last = v;
+      } catch { /* offline: try again next time */ }
+    };
+    const onChanged = () => { refresh(); setTimeout(() => { last = null; check(); }, 1500); };
     const onAsk = () => { setRiya(true); setCollapsed(false); };
-    window.addEventListener("ribriz:changed", refresh);
+    const onSw = (e: MessageEvent) => { if (e.data?.type === "pushed") onChanged(); };
+    window.addEventListener("ribriz:changed", onChanged);
     window.addEventListener("ribriz:ask", onAsk);
-    document.addEventListener("visibilitychange", tick);
-    const poll = setInterval(tick, 30_000);
-    return () => { window.removeEventListener("ribriz:changed", refresh); window.removeEventListener("ribriz:ask", onAsk); document.removeEventListener("visibilitychange", tick); clearInterval(poll); };
+    document.addEventListener("visibilitychange", check);
+    navigator.serviceWorker?.addEventListener("message", onSw);
+    check();
+    const poll = setInterval(check, 45_000);
+    return () => { window.removeEventListener("ribriz:changed", onChanged); window.removeEventListener("ribriz:ask", onAsk); document.removeEventListener("visibilitychange", check); navigator.serviceWorker?.removeEventListener("message", onSw); clearInterval(poll); };
   }, [router]);
   useEffect(() => { document.body.classList.add("in-app"); return () => document.body.classList.remove("in-app"); }, []);
 

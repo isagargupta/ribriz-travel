@@ -17,7 +17,11 @@ import { BOARDS, BOARD_DETAIL, KINDS, ratingWord, seeded } from "@/lib/pricing";
 import { publishedReviews } from "@/lib/reviews";
 import Stars from "@/components/Stars";
 
-type Props = { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | undefined>> };
+type Props = { params: Promise<{ slug: string }> };
+
+// Built once and served from the CDN; refreshed hourly and whenever trips or reviews change.
+// (?date= is read in the browser, so the page itself stays static.)
+export const revalidate = 3600;
 
 export async function generateStaticParams() {
   return (await getPublishedTrips()).map((t) => ({ slug: t.slug }));
@@ -34,13 +38,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function TripPage({ params, searchParams }: Props) {
-  const [{ slug }, sp] = await Promise.all([params, searchParams]);
+export default async function TripPage({ params }: Props) {
+  const { slug } = await params;
   const r = await getTripBySlug(slug);
   if (!r) notFound();
   const { trip: t, departures } = r;
   const [inRules, passports, reviews] = await Promise.all([getVisaRules(DEFAULT_PASSPORT), getPassports(), publishedReviews(t.id)]);
-  const initialDate = sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : undefined;
 
   const inclusions: [string, boolean][] = [
     ["Return flights", t.flight],
@@ -69,7 +72,7 @@ export default async function TripPage({ params, searchParams }: Props) {
   };
 
   return (
-    <BookingProvider trip={t} departures={departures} initialDate={initialDate}>
+    <BookingProvider trip={t} departures={departures}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div className="trip-hero">
         <Image src={t.image} alt={`${t.dest}: ${t.highlights[0] ?? t.title}`} fill priority sizes="100vw" />

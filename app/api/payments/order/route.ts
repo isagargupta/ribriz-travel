@@ -8,7 +8,7 @@ const Body = z.object({ ref: z.string().regex(/^RB-[A-Z0-9]{4,12}$/), t: z.strin
 
 /** Creates a Razorpay order for what's due next on a booking. The amount is decided here, not by the browser. */
 export async function POST(req: Request) {
-  if (rateLimited("payorder:" + clientIp(req), 12)) return fail("Too many attempts. Please wait a minute.", 429);
+  if (await rateLimited("payorder:" + clientIp(req), 12)) return fail("Too many attempts. Please wait a minute.", 429);
   const parsed = await readJson(req, Body);
   if ("res" in parsed) return parsed.res;
   try {

@@ -13,7 +13,7 @@ const Body = z.object({
 
 /** Personal picks for the home page. Private per visitor, never cached. */
 export async function POST(req: Request) {
-  if (rateLimited("fy:" + clientIp(req), 40)) return fail("Too many requests.", 429);
+  if (await rateLimited("fy:" + clientIp(req), 40)) return fail("Too many requests.", 429);
   const parsed = await readJson(req, Body);
   if ("res" in parsed) return parsed.res;
   const owner = await getOwner();

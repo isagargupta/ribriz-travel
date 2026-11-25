@@ -328,6 +328,7 @@ model PriceWatch {
 
   @@unique([email, tripId, departureId])
   @@index([active])
+  @@index([customerId])
 }
 
 /// One run of the background agents, for the admin dashboard.
@@ -467,4 +468,14 @@ model PushSub {
   lastSentAt DateTime?
 
   @@index([customerId])
+}
+
+/// Shared request counters for rate limits and daily caps (one row per key and window).
+/// Every server instance sees the same counts, unlike an in-memory limiter.
+model RateHit {
+  key     String   @id
+  count   Int      @default(0)
+  resetAt DateTime
+
+  @@index([resetAt])
 }

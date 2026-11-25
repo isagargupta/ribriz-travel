@@ -64,6 +64,8 @@ self.addEventListener("message", (e) => {
 self.addEventListener("push", (e) => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch { d = { body: e.data && e.data.text() }; }
+  // tell open app windows to refresh their data
+  self.clients.matchAll({ type: "window" }).then((ws) => ws.forEach((w) => w.postMessage({ type: "pushed" })));
   e.waitUntil(self.registration.showNotification(d.title || "Ribriz Travel", {
     body: d.body || "",
     icon: "/icon.png",

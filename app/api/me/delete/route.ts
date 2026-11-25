@@ -6,7 +6,7 @@ import { getOwner } from "@/lib/owner";
 
 /** Permanently deletes the signed-in traveller's account. Requires typing DELETE. */
 export async function POST(req: Request) {
-  if (rateLimited("del:" + clientIp(req), 5)) return fail("Too many requests.", 429);
+  if (await rateLimited("del:" + clientIp(req), 5)) return fail("Too many requests.", 429);
   const me = await currentCustomer();
   if (!me) return fail("Please sign in.", 401);
   const body = (await req.json().catch(() => ({}))) as { confirm?: string };
