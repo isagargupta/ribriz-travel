@@ -18,7 +18,7 @@ export async function GET(req: Request) {
   if (!Number.isInteger(i) || !Number.isInteger(n) || n < 1 || n > 64 || i < 0 || i >= n || (step !== "detect" && step !== "deliver" && step !== "preview")) return NextResponse.json({ error: "Bad slice" }, { status: 400 });
   const shard = { i, n };
   // preview: what this slice would raise, without saving or sending anything (used to check the slicing)
-  if (step === "preview") { const r = await detectAll(new Date(), true, shard); return NextResponse.json({ ok: true, keys: r.alerts.map((a) => a.dedupeKey), errors: r.errors }); }
+  if (step === "preview") { const r = await detectAll(new Date(), true, shard); return NextResponse.json({ ok: true, stats: { found: r.alerts.length, keys: r.alerts.map((a) => a.dedupeKey), detectorErrors: r.errors } }); }
   const stats = step === "detect" ? await detectSlice(shard) : await deliverSlice(shard);
   return NextResponse.json({ ok: true, stats });
 }

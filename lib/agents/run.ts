@@ -98,7 +98,7 @@ async function workload() {
 }
 
 /** Runs one round on every slice in parallel, each as its own function call with its own time limit. */
-async function fanOut(origin: string, step: "detect" | "deliver", n: number) {
+async function fanOut(origin: string, step: "detect" | "deliver" | "preview", n: number) {
   const secret = process.env.CRON_SECRET;
   if (!secret) throw new Error("CRON_SECRET is needed to run the daily job in slices.");
   const results = await Promise.allSettled(Array.from({ length: n }, async (_, i) => {
@@ -135,6 +135,11 @@ export async function runAgents(opts: { email?: boolean; origin?: string } = {})
     await prisma.agentRun.update({ where: { id: run.id }, data: { finishedAt: new Date(), error: String((e as Error).message).slice(0, 1000) } });
     throw e;
   }
+}
+
+/** Preview through the real slicing: n parallel slice calls, nothing saved or sent. Checks the fan-out works. */
+export async function previewSliced(origin: string, n: number) {
+  return fanOut(origin, "preview", Math.max(1, Math.min(24, n)));
 }
 
 /** Preview: what the agents would raise right now, without saving or sending anything. */
