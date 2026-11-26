@@ -34,7 +34,8 @@ export type HoldResult =
 export async function createHold(input: z.infer<typeof holdSchema>): Promise<HoldResult> {
   const dep = await prisma.departure.findUnique({ where: { id: input.departureId }, include: { trip: true } });
   if (!dep || !dep.trip.published) return { ok: false, code: "not_found", message: "That departure is no longer available. Please pick another date." };
-  if (dep.status !== "open" || dep.date < isoDate(new Date())) return { ok: false, code: "closed", message: "Bookings for this date have closed. Please pick another date." };
+  // the same 2-day cut-off the site uses, checked again here so a stale page can't hold a date that's about to leave
+  if (dep.status !== "open" || dep.date < isoDate(new Date(Date.now() + 2 * 864e5))) return { ok: false, code: "closed", message: "Bookings for this date have closed. Please pick another date." };
 
   const party = input.adults + input.childAges.length;
   if (dep.seatsLeft !== null && dep.seatsLeft < party)

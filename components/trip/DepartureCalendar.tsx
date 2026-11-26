@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { adultPrice, addDays, fmtDate, fmtK, parseISO } from "@/lib/pricing";
 import { usePrefs } from "../Prefs";
 import { useBooking } from "./BookingContext";
@@ -14,6 +14,9 @@ export default function DepartureCalendar() {
   const months = useMemo(() => [...new Set(departures.map((d) => d.date.slice(0, 7)))], [departures]);
   const [mi, setMi] = useState(() => Math.max(0, months.indexOf(selected?.date.slice(0, 7) ?? "")));
   const month = months[mi];
+  // when the selection moves to another month (a dated link, "jump to cheapest", Riya), show that month
+  const selMonth = selected?.date.slice(0, 7);
+  useEffect(() => { const i = selMonth ? months.indexOf(selMonth) : -1; if (i >= 0) setMi(i); }, [selMonth, months]);
 
   const priced = useMemo(() => departures.map((d) => ({ ...d, p: adultPrice(trip.price, d.priceDelta, trip.flight, from) })), [departures, trip, from]);
   const byDate = useMemo(() => new Map(priced.map((d) => [d.date, d])), [priced]);

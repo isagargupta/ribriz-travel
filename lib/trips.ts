@@ -11,10 +11,9 @@ export const TRIPS_TAG = "trips";
  * Bump when the shape of cached data changes (new fields). Vercel keeps cached
  * results across deploys, so old entries would otherwise be served to new code.
  */
-export const DATA_VERSION = "4";
+export const DATA_VERSION = "5";
 
 const lines = (s: string) => s.split("\n").map((x) => x.trim()).filter(Boolean);
-const today = () => isoDate(new Date());
 
 function toDTO(t: Trip & { departures: Departure[] }, score?: { avg: number; n: number }): TripDTO {
   const deps = t.departures; // already filtered to upcoming + open, sorted by date
@@ -37,7 +36,10 @@ function toDTO(t: Trip & { departures: Departure[] }, score?: { avg: number; n: 
   };
 }
 
-const upcoming = () => ({ where: { status: "open", date: { gte: today() }, OR: [{ seatsLeft: null }, { seatsLeft: { gt: 0 } }] }, orderBy: { date: "asc" as const } });
+/** Departures sell until 2 days before: time to confirm flights and rooms, and to pay before it leaves. */
+export const MIN_LEAD_DAYS = 2;
+const firstSellable = () => isoDate(new Date(Date.now() + MIN_LEAD_DAYS * 864e5));
+const upcoming = () => ({ where: { status: "open", date: { gte: firstSellable() }, OR: [{ seatsLeft: null }, { seatsLeft: { gt: 0 } }] }, orderBy: { date: "asc" as const } });
 
 /** All trips on sale. Cached for an hour and refreshed instantly when the admin saves. */
 export const getPublishedTrips = unstable_cache(
@@ -92,7 +94,7 @@ export interface CalendarDay { date: string; options: { base: number; flight: bo
 /** Departures in the next `days` days grouped by date, for the home page price calendar. */
 export const getCalendar = unstable_cache(
   async (days = 14): Promise<CalendarDay[]> => {
-    const start = today();
+    const start = firstSellable();
     const end = isoDate(new Date(Date.now() + days * 864e5));
     const rows = await prisma.departure.findMany({
       where: { status: "open", date: { gte: start, lt: end }, trip: { published: true }, OR: [{ seatsLeft: null }, { seatsLeft: { gt: 0 } }] },

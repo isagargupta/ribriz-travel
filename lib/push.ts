@@ -7,6 +7,7 @@ export interface PushMessage { title: string; body: string; url?: string | null;
 let ready: boolean | null = null;
 function configured() {
   if (ready !== null) return ready;
+  if (process.env.E2E === "1") return (ready = false); // browser tests never send pushes
   const pub = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY, priv = process.env.VAPID_PRIVATE_KEY;
   ready = !!(pub && priv);
   if (ready) webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:hello@ribriztravel.com", pub!, priv!);

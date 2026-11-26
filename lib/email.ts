@@ -20,6 +20,8 @@ const FROM = () => process.env.EMAIL_FROM || "Ribriz Travel <hello@ribriztravel.
  * Never throws: email problems must not break a booking.
  */
 export async function sendEmail(e: Email): Promise<{ ok: boolean; id?: string; error?: string }> {
+  // the browser tests run the app with E2E=1: nothing is emailed to customers or the team
+  if (process.env.E2E === "1") return { ok: true, id: "e2e" };
   const key = process.env.RESEND_API_KEY;
   if (!key) {
     if (process.env.NODE_ENV !== "production") {

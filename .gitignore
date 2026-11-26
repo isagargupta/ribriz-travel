@@ -19,3 +19,6 @@ prisma/*.db-journal
 .claude/
 .vercel
 .env*
+e2e/.state.json
+test-results/
+playwright-report/

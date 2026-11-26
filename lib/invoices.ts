@@ -23,8 +23,11 @@ export class InvoiceError extends Error {}
 
 type Tx = Prisma.TransactionClient;
 
+/** Browser tests (E2E=1) number their documents in a separate TS/ series so real numbering never has gaps. */
+const testSeries = () => process.env.E2E === "1";
+
 async function takeNumber(tx: Tx, kind: "invoice" | "credit_note", fy: string) {
-  const key = `${kind}:${fy}`;
+  const key = `${testSeries() ? "test:" : ""}${kind}:${fy}`;
   const rows = await tx.$queryRaw<{ seq: number }[]>`
     INSERT INTO "DocCounter" ("key", "next") VALUES (${key}, 2)
     ON CONFLICT ("key") DO UPDATE SET "next" = "DocCounter"."next" + 1
@@ -62,7 +65,7 @@ export async function issueInvoice(enquiryId: string, opts: { requireFullyPaid?:
     const seq = await takeNumber(tx, "invoice", fy);
     return tx.invoice.create({
       data: {
-        kind: "invoice", number: docNumber("invoice", fy, seq), fy, seq, enquiryId, issuedAt: now,
+        kind: "invoice", number: testSeries() ? docNumber("invoice", fy, seq).replace(/^RB/, "TS") : docNumber("invoice", fy, seq), fy, seq, enquiryId, issuedAt: now,
         buyerName: (e.billingName || e.name).slice(0, 120), buyerEmail: e.email, buyerGstin: gstin, buyerAddress: e.billingAddress?.slice(0, 300) ?? null,
         posCode: pos.code, posName: pos.name, sac: HOLIDAY_SAC, description: description.slice(0, 400), rate: HOLIDAY_GST_RATE,
         taxable: tax.taxable, cgst: tax.cgst, sgst: tax.sgst, igst: tax.igst, total: tax.total,
@@ -86,7 +89,7 @@ export async function issueCreditNote(invoiceId: string, rupees: number, reason:
     const seq = await takeNumber(tx, "credit_note", fy);
     return tx.invoice.create({
       data: {
-        kind: "credit_note", number: docNumber("credit_note", fy, seq), fy, seq, enquiryId: inv.enquiryId, againstId: inv.id, issuedAt: now,
+        kind: "credit_note", number: testSeries() ? docNumber("credit_note", fy, seq).replace(/^CN/, "TC") : docNumber("credit_note", fy, seq), fy, seq, enquiryId: inv.enquiryId, againstId: inv.id, issuedAt: now,
         buyerName: inv.buyerName, buyerEmail: inv.buyerEmail, buyerGstin: inv.buyerGstin, buyerAddress: inv.buyerAddress,
         posCode: inv.posCode, posName: inv.posName, sac: inv.sac, description: `Credit against invoice ${inv.number}: ${reason}`.slice(0, 400), rate: inv.rate,
         taxable: tax.taxable, cgst: tax.cgst, sgst: tax.sgst, igst: tax.igst, total: tax.total, reason: reason.slice(0, 200),

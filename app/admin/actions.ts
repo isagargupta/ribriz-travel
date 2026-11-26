@@ -30,7 +30,7 @@ import { refreshEasyVisaFlags } from "@/lib/visa-data";
 
 /** Clear cached trip data so the public site shows changes immediately. */
 function refreshSite() {
-  revalidateTag(TRIPS_TAG);
+  revalidateTag(TRIPS_TAG, { expire: 0 });
   revalidatePath("/", "layout");
 }
 

@@ -54,5 +54,5 @@ export async function submitReview(customerId: string, input: z.infer<typeof Rev
 /** Admin: publish or reject. Publishing updates the trip's rating everywhere. */
 export async function setReviewStatus(id: string, status: "published" | "rejected" | "pending") {
   await prisma.review.update({ where: { id }, data: { status, publishedAt: status === "published" ? new Date() : null } });
-  revalidateTag(TRIPS_TAG);
+  revalidateTag(TRIPS_TAG, { expire: 0 });
 }

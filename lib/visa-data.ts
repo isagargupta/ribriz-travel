@@ -80,6 +80,6 @@ export async function refreshEasyVisaFlags() {
     const easy = codes.every((c) => c === DEFAULT_PASSPORT || isEasy(rules.get(c) ?? "required"));
     if (easy !== t.easyVisa) await prisma.trip.update({ where: { id: t.id }, data: { easyVisa: easy } });
   }
-  revalidateTag(VISA_TAG);
-  revalidateTag(TRIPS_TAG);
+  revalidateTag(VISA_TAG, { expire: 0 });
+  revalidateTag(TRIPS_TAG, { expire: 0 });
 }

@@ -58,7 +58,7 @@ export async function deleteAccount(me: Customer, owner: Owner) {
     prisma.loginCode.deleteMany({ where: { email: me.email } }),
     prisma.customer.delete({ where: { id: me.id } }),
   ]);
-  revalidateTag(TRIPS_TAG); // their reviews no longer count towards trip ratings
+  revalidateTag(TRIPS_TAG, { expire: 0 }); // their reviews no longer count towards trip ratings
   await endCustomerSession();
   (await cookies()).delete("ribriz_anon");
   return { keptBookings: kept };
