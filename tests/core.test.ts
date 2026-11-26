@@ -84,3 +84,10 @@ test("addMonths uses calendar months and clamps month ends", () => {
   assert.equal(addMonths("2026-08-31", 6), "2027-02-28");
   assert.equal(addMonths("2026-12-15", 1), "2027-01-15");
 });
+
+test("search looks at the itinerary too, but ranks the destination first", () => {
+  const eu = { id: "eu", dest: "Europe", country: "Switzerland · France · Italy", region: "Europe", title: "Alps and Rome", themes: [], highlights: ["Eiffel Tower"], days: ["Arrive Zurich", "TGV to Paris"] };
+  const fr = { id: "fr", dest: "Paris", country: "France", region: "Europe", title: "Paris in spring", themes: [], highlights: [], days: [] };
+  assert.deepEqual(searchItems("paris", [eu, fr], tripFields).map((t) => t.id), ["fr", "eu"]);
+  assert.equal(searchItems("zurich", [eu, fr], tripFields)[0].id, "eu");
+});

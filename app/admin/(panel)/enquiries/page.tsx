@@ -6,8 +6,9 @@ import OffersPanel from "@/components/admin/OffersPanel";
 import PaymentsPanel from "@/components/admin/PaymentsPanel";
 import { inrFor } from "@/lib/fx";
 import { detailLines } from "@/lib/service-fields";
+import { payUrl } from "@/lib/payments";
 
-const SERVICE_TYPES = ["visa", "forex", "insurance", "flight", "hotel"];
+const SERVICE_TYPES = ["custom", "visa", "forex", "insurance", "flight", "hotel"];
 
 /** Market-rate hint for the team when quoting forex. */
 async function forexHint(details: string | null) {
@@ -84,6 +85,7 @@ export default async function Enquiries({ searchParams }: { searchParams: Promis
                   <small className="muted">Links open for 2 minutes. Documents are deleted automatically 30 days after the trip.</small>
                 </div>
               )}
+              {e.quotedTotal ? <p style={{ fontSize: 13, margin: "8px 0 0" }}><b>Customer pay link:</b> <code style={{ userSelect: "all" }}>{(process.env.NEXT_PUBLIC_SITE_URL || "https://www.ribriztravel.com").replace(/\/$/, "") + payUrl(e.ref)}</code></p> : null}
               <PaymentsPanel total={e.quotedTotal ?? 0} payments={e.payments.map((p) => ({ id: p.id, kind: p.kind, amount: p.amount, status: p.status, method: p.method, paymentId: p.paymentId, paidAt: p.paidAt?.toISOString() ?? null, refunded: p.refundedAmount }))} />
               {e.messages.length > 0 && (
                 <ul className="ib-hist" style={{ marginTop: 10 }}>
@@ -98,6 +100,9 @@ export default async function Enquiries({ searchParams }: { searchParams: Promis
                   <select className="in" name="status" defaultValue={e.status} style={{ width: 150 }}>
                     <option value="new">New</option><option value="contacted">Contacted</option><option value="booked">Booked</option><option value="closed">Closed</option>
                   </select>
+                </label>
+                <label className="lab" title="What the customer pays online at their pay link. Locked once a payment is made.">Price for online payment (₹)
+                  <input className="in" name="total" inputMode="numeric" defaultValue={e.quotedTotal ?? ""} placeholder="e.g. 85000" style={{ width: 150 }} disabled={e.payments.some((p) => p.status !== "created")} />
                 </label>
                 <label className="lab" style={{ flex: 1, minWidth: 200 }}>Internal note
                   <input className="in" name="note" defaultValue={e.note ?? ""} placeholder="e.g. Called, sending quote by email" />

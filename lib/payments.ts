@@ -37,10 +37,13 @@ export function mayPay(e: Loaded, token: string | null, owner: Owner) {
 
 const paidOf = (e: Loaded) => e.payments.reduce((n, p) => n + (p.status === "paid" || p.status === "partially_refunded" ? p.amount - p.refundedAmount : 0), 0);
 
+/** Holidays can be booked with a deposit; services are paid in full once priced. */
+const HOLIDAY_TYPES = ["hold", "custom", "enquiry"];
+
 export function planOf(e: Loaded): Plan {
   const paid = paidOf(e);
   const holdExpired = e.type === "hold" && paid === 0 && e.status !== "booked" && Date.now() - e.createdAt.getTime() > HOLD_HOURS * 3600e3;
-  return paymentPlan({ total: e.quotedTotal ?? 0, paid, departure: e.departure, today: isoDate(new Date()), status: e.status, holdExpired });
+  return paymentPlan({ total: e.quotedTotal ?? 0, paid, departure: e.departure, today: isoDate(new Date()), status: e.status, holdExpired, fullOnly: !HOLIDAY_TYPES.includes(e.type) });
 }
 
 export interface PayView {
@@ -48,15 +51,17 @@ export interface PayView {
   departure: string | null; nights: number | null; adults: number; children: number; total: number;
   plan: Plan; payments: { kind: string; amount: number; status: string; paidAt: string | null; method: string | null; refunded: number }[];
   enabled: boolean; missionId: string | null;
+  /** hold | custom | flight | hotel | visa | insurance | forex | enquiry */
+  type: string;
 }
 
 export async function payView(ref: string, token: string | null, owner: Owner): Promise<PayView | null> {
   const e = await load(ref);
-  if (!e || e.type !== "hold" || !mayPay(e, token, owner)) return null;
+  if (!e || !mayPay(e, token, owner)) return null;
   return {
     ref: e.ref, name: e.name, email: e.email, phone: e.phone, tripTitle: e.trip?.title ?? e.tripTitle, tripSlug: e.trip?.slug ?? null, image: e.trip?.image ?? null,
     departure: e.departure, nights: e.trip?.nights ?? null, adults: e.adults, children: e.children, total: e.quotedTotal ?? 0,
-    plan: planOf(e), enabled: rzpConfigured(), missionId: e.mission?.id ?? null,
+    plan: planOf(e), enabled: rzpConfigured(), missionId: e.mission?.id ?? null, type: e.type,
     payments: e.payments.filter((p) => p.status !== "created").map((p) => ({ kind: p.kind, amount: p.amount, status: p.status, paidAt: p.paidAt?.toISOString() ?? null, method: p.method, refunded: p.refundedAmount })),
   };
 }
@@ -64,7 +69,7 @@ export async function payView(ref: string, token: string | null, owner: Owner): 
 /** Creates a Razorpay order for whatever is due next. */
 export async function startPayment(ref: string, token: string | null, owner: Owner) {
   const e = await load(ref);
-  if (!e || e.type !== "hold" || !mayPay(e, token, owner)) throw new PayError("We couldn't find that booking.");
+  if (!e || !mayPay(e, token, owner)) throw new PayError("We couldn't find that booking.");
   if (!rzpConfigured()) throw new PayError("Online payment isn't switched on yet. Reply to your confirmation email and we'll help.");
   const plan = planOf(e);
   if (!plan.next) {
@@ -92,7 +97,7 @@ async function settle(orderId: string, paymentId: string) {
   if (!pay) throw new PayError("Unknown order.");
   if (pay.status === "paid") return { already: true, pay };
   let p;
-  try { p = await fetchPayment(paymentId); } catch { throw new PayError("We couldn't confirm this payment with Razorpay yet. If money left your account, it will show here within a few minutes, or email hello@ribriztravel.com with your booking reference."); }
+  try { p = await fetchPayment(paymentId); } catch { throw new PayError("We couldn't confirm this payment with Razorpay yet. If money left your account, it will show here within a few minutes, or ask Riya (the chat button) to send it to our team with your booking reference."); }
   if (p.order_id !== orderId || p.currency !== "INR" || p.amount !== pay.amount * 100) throw new PayError("Payment details don't match this order.");
   if (p.status === "authorized") p = await capturePayment(p.id, p.amount);
   if (p.status !== "captured") throw new PayError(p.status === "failed" ? "The payment failed. Nothing was charged; please try again." : "The payment isn't complete yet.");
@@ -104,7 +109,7 @@ async function settle(orderId: string, paymentId: string) {
 
 /** Browser handler: verify Razorpay's checkout signature, then settle. */
 export async function confirmFromCheckout(orderId: string, paymentId: string, signature: string) {
-  if (!checkoutSignatureOk(orderId, paymentId, signature, rzpSecret())) throw new PayError("We couldn't verify this payment. If money left your account, email hello@ribriztravel.com with your booking reference and we'll sort it out quickly.");
+  if (!checkoutSignatureOk(orderId, paymentId, signature, rzpSecret())) throw new PayError("We couldn't verify this payment. If money left your account, ask Riya (the chat button) to send it to our team with your booking reference and we'll sort it out quickly.");
   return settle(orderId, paymentId);
 }
 export const confirmFromWebhook = settle;
@@ -117,6 +122,19 @@ async function afterPaid(enquiryId: string, kind: string, amount: number) {
   const e = await prisma.enquiry.findUniqueOrThrow({ where: { id: enquiryId }, include: { payments: true } });
   const paid = e.payments.reduce((n, p) => n + (p.status === "paid" || p.status === "partially_refunded" ? p.amount - p.refundedAmount : 0), 0);
   const full = paid >= (e.quotedTotal ?? 0);
+  if (!HOLIDAY_TYPES.includes(e.type)) {
+    // a service (flight, hotel, visa, insurance, forex): paid, and now the team books it with the supplier
+    if (e.status === "new") await setEnquiryStatus(e.id, "contacted", `Paid in full online (${fmt(amount)}). Book it now.`);
+    if (e.missionId) {
+      const { OFFER_TASK } = await import("./offers");
+      const task = OFFER_TASK[e.type];
+      if (task) await setTask(e.missionId, task, { status: "waiting", note: `Paid ${fmt(paid)}. Our team is booking it now; the confirmation will appear here.` });
+      await logEvent(e.missionId, "traveller", `Paid ${fmt(amount)} online for ${e.tripTitle ?? e.type}.`);
+    }
+    const { notifyPayment } = await import("./notify");
+    await notifyPayment(e.id, amount, kind).catch((err) => console.error("payment email failed", err));
+    return;
+  }
   if (e.status !== "booked") await setEnquiryStatus(e.id, "booked", `${kind === "full" ? "Paid in full" : "Deposit paid"} online (${fmt(amount)}).`);
   if (e.missionId) {
     await setTask(e.missionId, "price_hold", { status: "done", note: full ? `Booked and paid in full (${fmt(paid)}). Ref ${e.ref}.` : `Booked! Deposit ${fmt(amount)} paid. Balance ${fmt((e.quotedTotal ?? 0) - paid)} due 30 days before you leave. Ref ${e.ref}.` });

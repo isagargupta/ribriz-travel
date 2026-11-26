@@ -2,7 +2,7 @@ import "server-only";
 import { prisma } from "./db";
 import { addDays, fmtDate } from "./pricing";
 import { completeDetails, type ServiceKind } from "./service-fields";
-import { getDepartures, getPublishedTrips } from "./trips";
+import { getTripsForTravellers } from "./trips";
 import { countryName } from "./visa";
 
 /** What the trip already tells us, keyed by the service field names. */
@@ -13,11 +13,12 @@ export async function knownDetails(missionId: string | null | undefined): Promis
   const ages = JSON.parse(m.childAges) as number[];
   const travellers = `${m.adults} adult${m.adults > 1 ? "s" : ""}${ages.length ? `, ${ages.length} child${ages.length > 1 ? "ren" : ""} (age${ages.length > 1 ? "s" : ""} ${ages.join(", ")})` : ""}`;
   const k: Record<string, string> = { travellers, guests: travellers, from: m.fromCity, delivery_city: m.fromCity };
-  const trip = m.tripId ? (await getPublishedTrips()).find((t) => t.id === m.tripId) : null;
+  const trip = m.tripId ? (await getTripsForTravellers()).find((t) => t.id === m.tripId) : null;
   if (!trip) return k;
   const countries = trip.countryCodes.filter((c) => c !== m.passport).map(countryName).join(", ") || trip.country;
   Object.assign(k, { countries, destinations: countries, to: trip.dest, city: trip.dest });
-  const dep = m.departureId ? (await getDepartures(trip.id)).find((d) => d.id === m.departureId) : null;
+  // the booked departure, even once it has filled up or closed for sale
+  const dep = m.departureId ? await prisma.departure.findUnique({ where: { id: m.departureId }, select: { date: true } }) : null;
   if (dep) {
     const back = addDays(dep.date, trip.nights);
     const long = { day: "numeric", month: "short", year: "numeric" } as const;

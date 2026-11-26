@@ -2,9 +2,10 @@
 import { useState } from "react";
 import Consent from "@/components/legal/Consent";
 import { usePrefs } from "./Prefs";
+import { FROM_CITIES } from "@/lib/pricing";
 
 export default function PlanForm() {
-  const { adults, childAges, from } = usePrefs();
+  const { adults, childAges, from, set } = usePrefs();
   const [f, setF] = useState({ name: "", phone: "", email: "", dest: "", month: "", budget: "", style: "", message: "" });
   const [state, setState] = useState<{ busy: boolean; ok?: string; err?: string }>({ busy: false });
   const up = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
@@ -46,7 +47,13 @@ export default function PlanForm() {
         <option value="">Any</option><option>Honeymoon</option><option>Family</option><option>Group tour</option><option>Adventure</option><option>Luxury</option>
       </select></label>
       <label className="full">Anything else?<textarea value={f.message} onChange={up("message")} placeholder="Hotels you like, food preferences, must-see places…" /></label>
-      <p className="full muted" style={{ margin: 0, fontSize: 13 }}>Travellers: {adults} adult{adults > 1 ? "s" : ""}{childAges.length ? `, ${childAges.length} child${childAges.length > 1 ? "ren" : ""}` : ""} from {from}. Change these in the search box on the home page.</p>
+      <label>Adults<select value={adults} onChange={(e) => set({ adults: Number(e.target.value) })}>
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => <option key={n} value={n}>{n} adult{n > 1 ? "s" : ""}</option>)}
+      </select></label>
+      <label>Flying from<select value={from} onChange={(e) => set({ from: e.target.value })}>
+        {Object.keys(FROM_CITIES).map((c) => <option key={c}>{c}</option>)}
+      </select></label>
+      {childAges.length > 0 && <p className="full muted" style={{ margin: 0, fontSize: 13 }}>Plus {childAges.length} child{childAges.length > 1 ? "ren" : ""} (ages {childAges.join(", ")}).</p>}
       {state.err && <div className="notice err full">{state.err}</div>}
       <Consent action="sending this request" />
       <button className="btn hot full" type="submit" disabled={state.busy} style={{ padding: 14 }}>{state.busy ? <span className="spinner light" aria-label="Sending" /> : "Send my trip request"}</button>

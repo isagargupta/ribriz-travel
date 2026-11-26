@@ -3,6 +3,7 @@ import { prisma } from "../db";
 import { purgeExpiredDocs } from "../documents";
 import { syncVisaData } from "../visa-data";
 import { runAgents } from "./run";
+import { resetLapsedHolds } from "../missions";
 
 /**
  * Everything that runs once a day, in one scheduled call (Vercel's Hobby plan
@@ -17,6 +18,7 @@ export async function daily(now = new Date(), origin?: string) {
     approvalsExpired: (await prisma.approval.updateMany({ where: { status: "pending", expiresAt: { lt: now } }, data: { status: "expired" } })).count,
     optionsExpired: (await prisma.serviceOffer.updateMany({ where: { status: "offered", validUntil: { lt: now } }, data: { status: "expired" } })).count,
     oldCodesDeleted: (await prisma.loginCode.deleteMany({ where: { createdAt: { lt: new Date(now.getTime() - 7 * 864e5) } } })).count,
+    lapsedHoldsReset: await resetLapsedHolds(now),
     oldRateRowsDeleted: (await prisma.rateHit.deleteMany({ where: { resetAt: { lt: now } } })).count,
     oldRunsDeleted: (await prisma.agentRun.deleteMany({ where: { startedAt: { lt: new Date(now.getTime() - 90 * 864e5) } } })).count,
   }));

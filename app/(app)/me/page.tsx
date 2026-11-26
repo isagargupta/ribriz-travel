@@ -48,7 +48,7 @@ export default async function Overview() {
           <div className="me-stats">
             <Link href="/me/trips"><b><CountUp to={d.trips.length} /></b><span>trip{d.trips.length === 1 ? "" : "s"} in motion</span></Link>
             <Link href={next ? `/me/trips/${next.id}` : "/me/trips"}><b>{next ? <CountUp to={next.daysToGo!} /> : "–"}</b><span>{next ? `days to ${next.dest}` : "next trip: not booked yet"}</span></Link>
-            <Link href="/me/bookings"><b><CountUp to={d.bookings.filter((b) => b.status === "booked").length} /></b><span>bookings confirmed</span></Link>
+            <Link href="/me/bookings"><b><CountUp to={d.bookings.filter((b) => b.status === "booked").length + d.holidays.filter((h) => h.state === "deposit_paid" || h.state === "paid" || h.state === "booked").length} /></b><span>bookings confirmed</span></Link>
             <Link href="/me/alerts"><b><CountUp to={d.watching.length} /></b><span>prices Riya is watching</span></Link>
           </div>
         </div>
@@ -62,7 +62,7 @@ export default async function Overview() {
             {d.dues.map((x) => (
               <Link key={x.ref} href={x.payPath} className="due">
                 <span className="due-ico" aria-hidden="true">🔒</span>
-                <span className="due-txt"><b>{x.kind === "balance" ? "Pay the balance" : "Pay the deposit to book"}</b><small>{x.title} · {x.ref}{x.kind === "balance" && x.balanceDue ? ` · due ${fmtDate(x.balanceDue, { day: "numeric", month: "short" })}` : ""}</small></span>
+                <span className="due-txt"><b>{x.kind === "balance" ? "Pay the balance" : x.kind === "full" ? "Pay in full to book" : "Pay the deposit to book"}</b><small>{x.title} · {x.ref}{x.kind === "balance" && x.balanceDue ? ` · due ${fmtDate(x.balanceDue, { day: "numeric", month: "short" })}` : ""}</small></span>
                 <span className="due-amt">{fmt(x.amount)} →</span>
               </Link>
             ))}

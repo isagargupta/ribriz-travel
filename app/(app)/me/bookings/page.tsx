@@ -8,6 +8,10 @@ export const metadata: Metadata = { title: "Bookings", robots: { index: false } 
 const ICON: Record<string, string> = { Flights: "✈️", Hotel: "🏨", "Travel insurance": "🛡️", Forex: "💱", "Visa service": "🛂" };
 const REQ: Record<string, string> = { hold: "Price hold", enquiry: "Question", custom: "Custom trip", visa: "Visa", forex: "Forex", insurance: "Insurance", flight: "Flights", hotel: "Hotel" };
 const REQ_ICON: Record<string, string> = { hold: "🔒", enquiry: "💬", custom: "🗺️", visa: "🛂", forex: "💱", insurance: "🛡️", flight: "✈️", hotel: "🏨" };
+const HOLIDAY: Record<string, { label: string; cls: string }> = {
+  held: { label: "Price held", cls: "contacted" }, expired: { label: "Hold ended", cls: "closed" }, deposit_paid: { label: "Booked · deposit paid", cls: "booked" },
+  paid: { label: "Booked · fully paid", cls: "booked" }, booked: { label: "Booked", cls: "booked" }, closed: { label: "Closed", cls: "closed" },
+};
 const STATUS: Record<string, string> = { new: "Received", contacted: "In progress", booked: "Booked", closed: "Closed" };
 
 export default async function Bookings() {
@@ -15,10 +19,27 @@ export default async function Bookings() {
   return (
     <div className="wrap">
       <div className="app-page-head"><div><h1>Bookings</h1><p>Everything confirmed, with reference numbers, and every request you&apos;ve made.</p></div></div>
+      {d.holidays.length > 0 && (
+        <section className="app-sec">
+          <h2>Your holidays</h2>
+          <div className="app-list">
+            {d.holidays.map((h, i) => (
+              <div key={h.ref} className="app-row" style={{ ["--i" as string]: i }}>
+                <span className="ar-ico">🏝️</span>
+                <span className="ar-main"><small>{h.ref}{h.date ? ` · ${fmtDate(h.date, { day: "numeric", month: "short", year: "numeric" })}` : ""}</small><b>{h.title}</b></span>
+                <span className="mono">{h.paid > 0 ? `${fmt(h.paid)} of ${fmt(h.total)} paid` : h.total ? fmt(h.total) : ""}</span>
+                <span className={`status ${HOLIDAY[h.state].cls}`}>{HOLIDAY[h.state].label}</span>
+                {h.payPath && <Link className="btn sm hot" href={h.payPath}>{h.paid > 0 ? "Pay balance" : "Pay to book"}</Link>}
+                {h.missionId ? <Link className="btn sm" href={`/me/trips/${h.missionId}`}>Trip</Link> : <Link className="btn sm" href={`/booking?ref=${h.ref}`}>Details</Link>}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
       <section className="app-sec">
-        <h2>Confirmed and in progress</h2>
+        <h2>Flights, hotels and services</h2>
         {d.bookings.length === 0 ? (
-          <div className="app-empty"><b>Nothing booked yet</b><p>When you choose a flight, hotel, insurance plan or forex option, it appears here with its confirmation number.</p><AskButton className="btn" q="What can you book for my trip?">Ask Riya what to book</AskButton></div>
+          <div className="app-empty"><b>No flights, hotels or services yet</b><p>When you choose a flight, hotel, insurance plan or forex option, it appears here with its confirmation number.</p><AskButton className="btn" q="What can you book for my trip?">Ask Riya what to book</AskButton></div>
         ) : (
           <div className="app-list">
             {d.bookings.map((b, i) => (
@@ -42,7 +63,7 @@ export default async function Bookings() {
                 <span className="ar-main"><small>{REQ[r.type] ?? r.type} · {r.ref} · {fmtDate(r.createdAt.slice(0, 10), { day: "numeric", month: "short" })}</small><b>{r.title ?? REQ[r.type]}</b></span>
                 {r.total ? <span className="mono">{fmt(r.total)}</span> : null}
                 <span className={`status ${r.status}`}>{STATUS[r.status] ?? r.status}</span>
-                {d.dues.find((x) => x.ref === r.ref) ? <Link className="btn sm hot" href={d.dues.find((x) => x.ref === r.ref)!.payPath}>Pay {fmt(d.dues.find((x) => x.ref === r.ref)!.amount)}</Link> : <Link className="btn sm" href={`/booking?ref=${r.ref}`}>Details</Link>}
+                {d.dues.find((x) => x.ref === r.ref) ? <Link className="btn sm hot" href={d.dues.find((x) => x.ref === r.ref)!.payPath}>Pay {fmt(d.dues.find((x) => x.ref === r.ref)!.amount)}</Link> : <Link className="btn sm" href={r.missionId ? `/me/trips/${r.missionId}` : `/booking?ref=${r.ref}`}>Details</Link>}
               </div>
             ))}
           </div>

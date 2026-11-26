@@ -2,7 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { prisma } from "./db";
 import { createHold, withRef } from "./bookings";
-import { logEvent, setTask, approvalView, type ApprovalView, type TaskKind } from "./missions";
+import { logEvent, markHeld, setTask, approvalView, type ApprovalView, type TaskKind } from "./missions";
 import { ownsRecord, type Owner } from "./owner";
 import { addDays, fmt, fmtDate, quote } from "./pricing";
 import { getDepartures, getPublishedTrips } from "./trips";
@@ -21,6 +21,7 @@ import { inrFor } from "./fx";
 const TTL_MS = 2 * 3600e3;
 
 export const SERVICES = {
+  custom: { label: "Custom trip from our trip designers", task: "choose_trip", promise: "A trip designer will send a day-by-day plan with the full price, usually within one working day." },
   visa: { label: "Visa application help", task: "visa", promise: "A visa expert will contact you within 4 working hours with the document list and fee." },
   forex: { label: "Forex order", task: "forex", promise: "Our forex partner will confirm the rate and delivery within 2 working hours." },
   insurance: { label: "Travel insurance", task: "insurance", promise: "We'll send plan options and a quote within 2 working hours." },
@@ -170,13 +171,9 @@ export async function decide(owner: Owner, id: string, body: unknown): Promise<D
         if (a.missionId) await setTask(a.missionId, "price_hold", { status: "todo", note: r.message });
         return { ok: false, error: r.message };
       }
-      await prisma.enquiry.update({ where: { ref: r.ref }, data: { missionId: a.missionId } });
       await prisma.approval.update({ where: { id }, data: { status: "done", result: JSON.stringify({ ref: r.ref, total: r.total }) } });
-      if (a.missionId) {
-        const until = new Date(Date.now() + 48 * 3600e3);
-        await setTask(a.missionId, "price_hold", { status: "done", note: `Held ${fmt(r.total)} until ${until.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}. Ref ${r.ref}.`, data: { ref: r.ref } });
-        await logEvent(a.missionId, "traveller", `Approved the price hold. Reference ${r.ref}.`);
-      }
+      // links the request and saves the held date as the trip's date (it may differ from the one first chosen)
+      if (a.missionId) await markHeld(a.missionId, { ref: r.ref, total: r.total, departureId: String(payload.departureId), actor: "traveller" });
       return { ok: true, status: "done", ref: r.ref, message: `Done! ${fmt(r.total)} is held for 48 hours (ref ${r.ref}). Pay the deposit to book any time at /pay/${r.ref}, or wait for our expert to confirm flights and rooms by email within 2 working hours.` };
     }
 
@@ -200,7 +197,7 @@ export async function decide(owner: Owner, id: string, body: unknown): Promise<D
   } catch (err) {
     console.error("approval failed", err);
     await prisma.approval.update({ where: { id }, data: { status: "failed", result: JSON.stringify({ error: "server" }) } });
-    return { ok: false, error: "Something went wrong on our side. Nothing was charged. Please try again or email hello@ribriztravel.com." };
+    return { ok: false, error: "Something went wrong on our side. Nothing was charged. Please try again, or ask me to pass it to our team." };
   }
 }
 

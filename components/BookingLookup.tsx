@@ -8,8 +8,8 @@ import Money from "./ui/Money";
 
 const STAGES = [
   { key: "new", label: "Request received", hint: "We have your details and price." },
-  { key: "contacted", label: "Expert in touch", hint: "We've called or emailed to confirm flights and rooms." },
-  { key: "booked", label: "Booked", hint: "Deposit paid. Your trip is confirmed." },
+  { key: "contacted", label: "Expert in touch", hint: "We've emailed you to confirm the details." },
+  { key: "booked", label: "Booked", hint: "Confirmed. Your booking is in place." },
 ];
 
 function useCountdown(iso: string | null) {

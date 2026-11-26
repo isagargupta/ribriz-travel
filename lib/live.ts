@@ -4,7 +4,7 @@ import { countryInfo, dayPlan, leavingChecklist, offsetFromIndia, tripClock, wea
 import { OFFER_LABEL } from "./offers";
 import { ownedBy, type Owner } from "./owner";
 import { addDays } from "./pricing";
-import { getPublishedTrips } from "./trips";
+import { getTripsForTravellers } from "./trips";
 import { countryName } from "./visa";
 
 export interface Weather { now: number; max: number; min: number; rain: number | null; label: string; icon: string; tomorrow: { max: number; min: number; label: string; icon: string } | null }
@@ -66,7 +66,7 @@ export async function liveTrips(owner: Owner): Promise<LiveTrip[]> {
   });
   if (!missions.length) return [];
   const [trips, deps] = await Promise.all([
-    getPublishedTrips(),
+    getTripsForTravellers(),
     // the traveller's own departure, even once it's in the past or closed for sale
     prisma.departure.findMany({ where: { id: { in: missions.map((m) => m.departureId!) } }, select: { id: true, date: true } }),
   ]);

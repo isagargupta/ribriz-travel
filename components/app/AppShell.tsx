@@ -18,6 +18,7 @@ const NAV = [
 const EXPLORE = [
   { href: "/trips", label: "Explore holidays", icon: "🌍" },
   { href: "/trips?deal=lm", label: "Last-minute deals", icon: "🔥" },
+  { href: "/saved", label: "Saved trips", icon: "♥" },
   { href: "/visa", label: "Visa checker", icon: "🛂" },
 ];
 

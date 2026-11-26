@@ -3,7 +3,7 @@ import { prisma } from "./db";
 import { bookingsFor, type BookingView } from "./offers";
 import { ownedBy, type Owner } from "./owner";
 import { addDays } from "./pricing";
-import { getPublishedTrips } from "./trips";
+import { getTripsForTravellers } from "./trips";
 import { DOC_LABELS, type DocKind } from "./visa-docs";
 
 export interface WalletDoc { id: string; kind: string; label: string; fileName: string; mime: string; size: number; status: string; findings: string[]; createdAt: string; deleteAfter: string | null }
@@ -27,7 +27,7 @@ export async function walletFor(owner: Owner, email: string): Promise<WalletTrip
       where: { AND: [ownedBy(owner), { status: { not: "cancelled" } }] }, orderBy: { updatedAt: "desc" }, take: 20,
       include: { documents: { orderBy: { createdAt: "desc" } } },
     }),
-    getPublishedTrips(),
+    getTripsForTravellers(),
     prisma.payment.findMany({
       where: { status: { in: PAID }, enquiry: { email: { equals: email, mode: "insensitive" } } },
       include: { enquiry: { select: { ref: true, missionId: true, tripTitle: true } } }, orderBy: { paidAt: "desc" },

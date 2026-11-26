@@ -72,10 +72,13 @@ export function searchItems<T>(query: string, items: T[], fields: (t: T) => Fiel
 }
 
 /** Standard field set for trips. */
-export const tripFields = (t: { dest: string; country: string; region: string; title: string; themes: string[] }): Field[] => [
+export const tripFields = (t: { dest: string; country: string; region: string; title: string; themes: string[]; highlights?: string[]; days?: string[] }): Field[] => [
   { text: t.dest, weight: 3 },
   { text: t.country, weight: 2.5 },
   { text: t.region, weight: 1.5 },
   { text: t.title, weight: 1.2 },
   { text: t.themes.join(" "), weight: 1 },
+  // cities and sights on the way: "Paris" finds the Europe tour, "Ubud" finds Bali
+  ...(t.highlights?.length ? [{ text: t.highlights.join(" "), weight: 0.8 }] : []),
+  ...(t.days?.length ? [{ text: t.days.join(" "), weight: 0.6 }] : []),
 ];

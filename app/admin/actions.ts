@@ -79,6 +79,22 @@ export async function updateEnquiry(fd: FormData) {
   const status = String(fd.get("status"));
   const note = String(fd.get("note") ?? "").slice(0, 2000);
   if (!STATUSES.includes(status)) return;
+  // the price the customer can pay online (custom trips and services the team has priced)
+  const rawTotal = String(fd.get("total") ?? "").replace(/[^\d]/g, "");
+  if (rawTotal) {
+    const total = Number(rawTotal);
+    const paid = await prisma.payment.count({ where: { enquiryId: id, status: { not: "created" } } });
+    const prev = await prisma.enquiry.findUnique({ where: { id }, select: { quotedTotal: true, missionId: true, email: true, ref: true } });
+    if (prev && total > 0 && total < 10_000_000 && !paid && total !== prev.quotedTotal) {
+      await prisma.enquiry.update({ where: { id }, data: { quotedTotal: total } });
+      // tell the traveller it's ready to pay: in their trip timeline and as a push
+      const { payUrl } = await import("@/lib/payments");
+      const { fmt } = await import("@/lib/pricing");
+      if (prev.missionId) await logEvent(prev.missionId, "team", `Your price is ready: ${fmt(total)} (ref ${prev.ref}). Pay securely online whenever you're ready.`);
+      const { pushToEmail } = await import("@/lib/push");
+      after(() => pushToEmail(prev.email, { title: "Your price is ready", body: `${fmt(total)} for ${prev.ref}. Tap to pay securely online.`, url: payUrl(prev.ref), tag: `price-${prev.ref}` }).then(() => undefined));
+    }
+  }
   const before = await prisma.enquiry.findUnique({ where: { id }, select: { status: true } });
   await setEnquiryStatus(id, status, note || null);
   await syncMissionFromEnquiry(id, status);

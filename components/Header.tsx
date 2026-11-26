@@ -11,7 +11,7 @@ import { askRiya } from "./assistant/Assistant";
 /** Four top-level items; everything else lives in their menus. */
 type Item = { href?: string; ask?: string; label: string; desc?: string; icon: string; hot?: boolean };
 type Group = { title: string; items: Item[] };
-const MENUS: { id: string; label: string; groups: Group[]; feature?: { title: string; text: string; href: string; cta: string } }[] = [
+const MENUS: { id: string; label: string; groups: Group[]; feature?: { title: string; text: string; href?: string; ask?: string; cta: string } }[] = [
   {
     id: "holidays", label: "Holidays",
     groups: [
@@ -32,7 +32,7 @@ const MENUS: { id: string; label: string; groups: Group[]; feature?: { title: st
         { href: "/trips", label: "All holidays", icon: "🧭" },
       ] },
     ],
-    feature: { title: "Not sure where?", text: "Tell Riya your budget and dates. She finds the best trip and handles the rest.", href: "/plan", cta: "Plan with Riya" },
+    feature: { title: "Not sure where?", text: "Tell Riya your budget and dates. She finds the best trip and handles the rest.", ask: "Help me plan a trip", cta: "Plan with Riya" },
   },
   {
     id: "services", label: "Services",
@@ -124,12 +124,17 @@ export default function Header({ index }: { index: TripIndexItem[] }) {
                     {g.items.map((it) => <MenuItem key={it.label} it={it} onPick={close} />)}
                   </div>
                 ))}
-                {m.feature && (
-                  <Link href={m.feature.href} className="mega-feature" onClick={close}>
+                {m.feature && (m.feature.ask ? (
+                  <button type="button" className="mega-feature" onClick={() => { close(); askRiya(m.feature!.ask); }}>
+                    <span className="mf-orb" aria-hidden="true" />
+                    <b>{m.feature.title}</b><p>{m.feature.text}</p><span className="mf-cta">{m.feature.cta} →</span>
+                  </button>
+                ) : (
+                  <Link href={m.feature.href ?? "/"} className="mega-feature" onClick={close}>
                     <span className="mf-orb" aria-hidden="true" />
                     <b>{m.feature.title}</b><p>{m.feature.text}</p><span className="mf-cta">{m.feature.cta} →</span>
                   </Link>
-                )}
+                ))}
               </div>
             </div>
           ))}

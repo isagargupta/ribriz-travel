@@ -23,6 +23,7 @@ import { OFFERS } from "../company";
 import type { TripPick, UiBlock } from "./ui";
 import { getProfile, updateProfile } from "../profile";
 import { PACES, REGIONS, THEME_KEYS as PROFILE_THEMES, TRAVELS_WITH, describePrefs, type Prefs } from "../profile-rules";
+import { CARE_DONE, CARE_REGISTRY, CARE_STATUS, CARE_TOOLS } from "./care-tools";
 
 /** Who is asking: set by the server from the visitor's saved preferences, never by the model. */
 export interface VisitorContext { from: string; passport: string; adults: number; childAges: number[]; currency: string; name?: string | null; owner: Owner }
@@ -84,7 +85,7 @@ const HoldInput = z.object({
 }).strict();
 const ServiceInput = z.object({
   mission_id: z.string().max(40).optional(),
-  service: z.enum(["visa", "forex", "insurance", "flight", "hotel"]),
+  service: z.enum(["custom", "visa", "forex", "insurance", "flight", "hotel"]),
   details: z.record(z.string().max(40), z.union([z.string().max(300), z.number(), z.array(z.string().max(80)).max(10)])).refine((d) => Object.keys(d).length <= 12, "Too many details"),
 }).strict();
 const TaskInput = z.object({
@@ -255,7 +256,7 @@ export const TOOLS: Anthropic.Beta.BetaTool[] = [
   },
   {
     name: "quote_trip",
-    description: "Exact price for one departure date of a trip and the traveller's group, calculated by Ribriz's pricing engine: per-person lines, 5% GST, total, deposit and EMI. Always use this for a final price; never compute totals yourself.",
+    description: "Exact price for one departure date of a trip and the traveller's group, calculated by Ribriz's pricing engine: per-person lines, 5% GST, total and the deposit to book. Always use this for a final price; never compute totals yourself.",
     eager_input_streaming: true,
     input_schema: {
       type: "object",
@@ -300,13 +301,13 @@ export const TOOLS: Anthropic.Beta.BetaTool[] = [
   },
   {
     name: "request_service",
-    description: `Prepare a request to Ribriz's team for a visa application, forex, travel insurance, flights or hotels. Shows the traveller an approval card; only sent if they approve. Dates, travellers, destinations and the home city are filled in from the mission automatically, so only pass what the traveller told you. If the result lists missing details, ask for just those (in one short question) and call again. Detail keys: ${Object.entries(SERVICE_FIELDS).map(([k, fs]) => `${k}: ${fs.map((f) => f.key + (f.required ? "*" : "")).join(", ")}`).join("; ")} (* required). After approval the team sends options, which the traveller picks with one tap; show_options shows them in chat.`,
+    description: `Prepare a request to Ribriz's team for a custom trip (any destination or trip we don't sell as a package: our trip designers build it and price it), a visa application, forex, travel insurance, flights or hotels. Shows the traveller an approval card; only sent if they approve. Dates, travellers, destinations and the home city are filled in from the mission automatically, so only pass what the traveller told you. If the result lists missing details, ask for just those (in one short question) and call again. Detail keys: ${Object.entries(SERVICE_FIELDS).map(([k, fs]) => `${k}: ${fs.map((f) => f.key + (f.required ? "*" : "")).join(", ")}`).join("; ")} (* required). After approval the team sends options, which the traveller picks with one tap; show_options shows them in chat.`,
     eager_input_streaming: true,
     input_schema: {
       type: "object", additionalProperties: false, required: ["service", "details"],
       properties: {
         mission_id: { type: "string" },
-        service: { type: "string", enum: ["visa", "forex", "insurance", "flight", "hotel"] },
+        service: { type: "string", enum: ["custom", "visa", "forex", "insurance", "flight", "hotel"] },
         details: { type: "object", description: "Flat key-value pairs, short values, e.g. {\"countries\":\"Japan\",\"dates\":\"3-12 Apr 2027\",\"travellers\":\"2 adults\"}" },
       },
     },
@@ -379,6 +380,7 @@ export const TOOLS: Anthropic.Beta.BetaTool[] = [
     eager_input_streaming: true,
     input_schema: { type: "object", additionalProperties: false, properties: { mission_id: { type: "string" } } },
   },
+  ...CARE_TOOLS,
 ];
 
 /* ---------------- helpers ---------------- */
@@ -744,6 +746,7 @@ const REGISTRY = {
   ask: { schema: AskInput, run: askTool },
   show_trips: { schema: ShowTripsInput, run: showTripsTool },
   suggest_actions: { schema: ActionsInput, run: actionsTool },
+  ...CARE_REGISTRY,
 } as const;
 
 export const TOOL_STATUS: Record<string, string> = {
@@ -753,6 +756,7 @@ export const TOOL_STATUS: Record<string, string> = {
   request_service: "Preparing your request…", update_mission_task: "Updating your plan…", get_mission: "Checking your trip…",
   get_visa_checklist: "Checking your documents…", watch_price: "Setting a price alert…",
   show_options: "Getting your options…", forex_rate: "Checking exchange rates…", remember: "Noting that…",
+  ...CARE_STATUS,
 };
 
 /** Past-tense label for a finished step in Riya's work trail. */
@@ -761,6 +765,7 @@ const STEP_DONE: Record<string, string> = {
   quote_trip: "Worked out the exact price", start_mission: "Set up your trip plan", choose_trip: "Saved your choice", propose_price_hold: "Prepared a price hold",
   request_service: "Prepared your request", update_mission_task: "Updated your plan", get_mission: "Checked your trip", get_visa_checklist: "Checked your documents",
   watch_price: "Set a price alert", show_options: "Got your options", forex_rate: "Checked exchange rates", remember: "Noted your preferences",
+  ...CARE_DONE,
 };
 export function stepDone(name: string, o: ToolOutcome & { isError?: boolean }): { label: string; detail?: string; failed: boolean } {
   const r = (o.result ?? {}) as Record<string, unknown>;

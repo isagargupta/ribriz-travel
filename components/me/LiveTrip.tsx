@@ -92,7 +92,7 @@ export default function LiveTrip({ t, compact = false }: { t: LT; compact?: bool
             <div className="live-card sos">
               <b>Emergency{t.countryName ? ` · ${t.countryName}` : ""}</b>
               <ul>{t.emergency.map((e) => <li key={e.number}><span>{e.label}</span><a href={`tel:${e.number}`}>{e.number}</a></li>)}</ul>
-              <small>Then message Riya or <a href="mailto:hello@ribriztravel.com">hello@ribriztravel.com</a> and we&apos;ll take it from there.</small>
+              <small>Then tap <b>I need help</b>: Riya gets our team on it straight away.</small>
             </div>
             {t.bookings.length > 0 && (
               <div className="live-card">

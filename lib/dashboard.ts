@@ -9,7 +9,7 @@ import { ownedBy, type Owner } from "./owner";
 import { addDays, daysBetween, isoDate } from "./pricing";
 import { getProfile } from "./profile";
 import { describePrefs } from "./profile-rules";
-import { getPublishedTrips } from "./trips";
+import { getTripsForTravellers } from "./trips";
 import { OFFER_LABEL } from "./offers";
 
 /** Everything the traveller dashboard shows, in one round trip. */
@@ -26,9 +26,11 @@ export interface Dashboard {
   feed: FeedItem[];
   watching: { id: string; dest: string; slug: string; price: number }[];
   bookings: { id: string; label: string; title: string; confirmation: string | null; status: string; tripId: string | null }[];
-  requests: { ref: string; type: string; title: string | null; status: string; createdAt: string; total: number | null; departure: string | null }[];
+  requests: { ref: string; type: string; title: string | null; status: string; createdAt: string; total: number | null; departure: string | null; missionId: string | null }[];
   memory: string[];
   status: string[];
+  /** holidays they've held or booked (package holds), with what's paid */
+  holidays: { ref: string; title: string; image: string | null; date: string | null; total: number; paid: number; state: "held" | "expired" | "deposit_paid" | "paid" | "booked" | "closed"; missionId: string | null; payPath: string | null }[];
   /** online payments due on the traveller's holds and bookings */
   dues: { ref: string; title: string; kind: string; amount: number; balanceDue: string | null; payPath: string }[];
 }
@@ -42,10 +44,10 @@ export async function getDashboard(owner: Owner, me: Customer): Promise<Dashboar
       where: ownedBy(owner), orderBy: { updatedAt: "desc" }, take: 20,
       include: { tasks: { orderBy: { order: "asc" } }, events: { orderBy: { createdAt: "desc" }, take: 12 }, approvals: { where: { status: "pending", expiresAt: { gt: new Date() } }, select: { id: true } } },
     }),
-    getPublishedTrips(),
+    getTripsForTravellers(),
     getProfile(owner),
     prisma.priceWatch.findMany({ where: { active: true, OR: [{ customerId: me.id }, { email: me.email }] }, take: 12 }),
-    prisma.enquiry.findMany({ where: { email: me.email }, orderBy: { createdAt: "desc" }, take: 30, select: { ref: true, type: true, tripTitle: true, status: true, createdAt: true, quotedTotal: true, departure: true } }),
+    prisma.enquiry.findMany({ where: { email: me.email }, orderBy: { createdAt: "desc" }, take: 30, select: { ref: true, type: true, tripTitle: true, status: true, createdAt: true, quotedTotal: true, departure: true, missionId: true } }),
     prisma.notification.findMany({ where: { OR: [{ customerId: me.id }, { email: me.email }] }, orderBy: { createdAt: "desc" }, take: 10 }),
   ]);
 
@@ -94,20 +96,30 @@ export async function getDashboard(owner: Owner, me: Customer): Promise<Dashboar
   // what they can pay online now (holds and bookings made with their email)
   const { payUrl, planOf } = await import("./payments");
   const payable = await prisma.enquiry.findMany({
-    where: { email: me.email, type: "hold", status: { in: ["new", "contacted", "booked"] } },
+    where: { email: me.email, status: { in: ["new", "contacted", "booked"] }, quotedTotal: { gt: 0 } },
     include: { payments: { orderBy: { createdAt: "asc" } }, trip: { select: { title: true, slug: true, image: true, nights: true } }, mission: { select: { id: true, customerId: true, anonId: true } }, dep: { select: { status: true, seatsLeft: true } } },
     take: 20,
+  });
+  const holdRows = await prisma.enquiry.findMany({
+    where: { email: me.email, type: { in: ["hold", "custom"] }, OR: [{ type: "hold" }, { quotedTotal: { gt: 0 } }] },
+    include: { payments: true, trip: { select: { title: true, image: true } } }, orderBy: { createdAt: "desc" }, take: 20,
+  });
+  const holidays: Dashboard["holidays"] = holdRows.map((e) => {
+    const plan = planOf(e as Parameters<typeof planOf>[0]);
+    const state = e.status === "closed" ? "closed" : plan.blocked === "hold_expired" ? "expired" : plan.balance === 0 && plan.paid > 0 ? "paid"
+      : plan.paid > 0 ? "deposit_paid" : e.status === "booked" ? "booked" : "held";
+    return { ref: e.ref, title: e.trip?.title ?? e.tripTitle ?? "Custom trip", image: e.trip?.image ?? null, date: e.departure, total: e.quotedTotal ?? 0, paid: plan.paid, state, missionId: e.missionId, payPath: plan.next ? payUrl(e.ref) : null };
   });
   const dues = payable.map((e) => ({ e, plan: planOf(e) })).filter((x) => x.plan.next)
     .map(({ e, plan }) => ({ ref: e.ref, title: e.trip?.title ?? e.tripTitle ?? "Your trip", kind: plan.next!.kind, amount: plan.next!.amount, balanceDue: plan.balanceDue, payPath: payUrl(e.ref) }));
   if (dues.length) status.splice(approvals.length ? 1 : 0, 0, `${dues.length} payment${dues.length > 1 ? "s" : ""} ready to book`);
 
   return {
-    dues,
+    dues, holidays,
     name: me.name, email: me.email, trips: active, past: shaped.filter(isPast), approvals, feed,
     watching: watches.map((w) => { const t = trips.find((x) => x.id === w.tripId); return t ? { id: w.id, dest: t.dest, slug: t.slug, price: w.lastPrice } : null; }).filter((x): x is NonNullable<typeof x> => !!x),
     bookings: offers.map((o) => ({ id: o.id, label: OFFER_LABEL[o.service] ?? o.service, title: o.title, confirmation: o.confirmation, status: o.status, tripId: o.missionId })),
-    requests: requests.map((r) => ({ ref: r.ref, type: r.type, title: r.tripTitle, status: r.status, createdAt: r.createdAt.toISOString(), total: r.quotedTotal, departure: r.departure })),
+    requests: requests.map((r) => ({ ref: r.ref, type: r.type, title: r.tripTitle, status: r.status, createdAt: r.createdAt.toISOString(), total: r.quotedTotal, departure: r.departure, missionId: r.missionId })),
     memory, status,
   };
 }

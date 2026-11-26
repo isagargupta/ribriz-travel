@@ -6,7 +6,7 @@ import { getOwnedMission, logEvent, setTask } from "./missions";
 import type { Owner } from "./owner";
 import { addDays } from "./pricing";
 import { removePrivate, uploadPrivate } from "./supabase";
-import { getPublishedTrips } from "./trips";
+import { getTripsForTravellers } from "./trips";
 import { getVisaRules } from "./visa-data";
 import { DOC_LABELS, requirementsFor, type DocKind, type DocRequirement } from "./visa-docs";
 import { PROCESSING_DAYS, VISA_META, countryName, type VisaCategory } from "./visa";
@@ -30,7 +30,7 @@ const view = (d: { id: string; kind: string; fileName: string; status: string; f
 });
 
 async function tripContext(mission: { tripId: string | null; departureId: string | null; passport: string }) {
-  const trip = mission.tripId ? (await getPublishedTrips()).find((t) => t.id === mission.tripId) ?? null : null;
+  const trip = mission.tripId ? (await getTripsForTravellers()).find((t) => t.id === mission.tripId) ?? null : null;
   // the booked departure, even after it has left or closed for sale
   const dep = trip && mission.departureId ? await prisma.departure.findUnique({ where: { id: mission.departureId }, select: { date: true } }) : null;
   const returnDate = trip && dep ? addDays(dep.date, trip.nights) : null;

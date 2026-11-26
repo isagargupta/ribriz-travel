@@ -18,6 +18,8 @@ export interface PlanInput {
   status: string;
   /** a hold that hasn't been paid and is past 48 hours */
   holdExpired: boolean;
+  /** services (flights, hotels, visa, insurance, forex) are paid in full, not by deposit */
+  fullOnly?: boolean;
 }
 export interface Plan {
   next: { kind: "deposit" | "balance" | "full"; amount: number } | null;
@@ -39,7 +41,7 @@ export function paymentPlan(p: PlanInput): Plan {
   if (p.departure && p.departure <= p.today) return { ...base, next: null, blocked: "departed" };
   if (p.paid === 0) {
     if (p.holdExpired) return { ...base, next: null, blocked: "hold_expired" };
-    const late = !!balanceDue && balanceDue <= p.today;
+    const late = p.fullOnly || (!!balanceDue && balanceDue <= p.today);
     if (late) return { ...base, next: { kind: "full", amount: balance } };
     return { ...base, next: { kind: "deposit", amount: Math.min(balance, Math.max(MIN_DEPOSIT, Math.round(p.total * DEPOSIT_RATE))) } };
   }

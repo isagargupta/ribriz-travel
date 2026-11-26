@@ -3,7 +3,7 @@ import type { Mission, MissionTask } from "@prisma/client";
 import { prisma } from "./db";
 import type { Owner } from "./owner";
 import { ownedBy } from "./owner";
-import { getDepartures, getPublishedTrips } from "./trips";
+import { getDepartures, getPublishedTrips, getTripsForTravellers } from "./trips";
 import { getVisaRules } from "./visa-data";
 import { PROCESSING_DAYS, VISA_META, countryName, type VisaCategory } from "./visa";
 import { addDays, adultPrice, fmt, fmtDate } from "./pricing";
@@ -138,7 +138,7 @@ export async function missionView(owner: Owner, id: string): Promise<MissionView
     include: { tasks: { orderBy: { order: "asc" } }, approvals: { orderBy: { createdAt: "desc" }, take: 10 }, events: { orderBy: { createdAt: "desc" }, take: 40 } },
   });
   if (!m) return null;
-  const trips = await getPublishedTrips();
+  const trips = await getTripsForTravellers();
   const trip = m.tripId ? trips.find((t) => t.id === m.tripId) ?? null : null;
   // the booked departure, even after it has left or closed for sale
   const dep = trip && m.departureId ? await prisma.departure.findUnique({ where: { id: m.departureId }, select: { date: true } }) : null;
@@ -155,7 +155,7 @@ export async function missionView(owner: Owner, id: string): Promise<MissionView
 
 export async function listMissions(owner: Owner) {
   const ms = await prisma.mission.findMany({ where: ownedBy(owner), orderBy: { updatedAt: "desc" }, take: 30, include: { tasks: true } });
-  const trips = await getPublishedTrips();
+  const trips = await getTripsForTravellers();
   return ms.map((m) => {
     const trip = m.tripId ? trips.find((t) => t.id === m.tripId) : null;
     const pending = m.tasks.filter((t) => t.status === "needs_approval").length;
@@ -171,7 +171,7 @@ export async function listMissions(owner: Owner) {
 export async function missionsForContext(owner: Owner) {
   if (!owner.customerId && !owner.anonId) return [];
   const ms = await prisma.mission.findMany({ where: { AND: [ownedBy(owner), { status: { in: ["planning", "active"] } }] }, orderBy: { updatedAt: "desc" }, take: 3, include: { tasks: { orderBy: { order: "asc" } } } });
-  const trips = await getPublishedTrips();
+  const trips = await getTripsForTravellers();
   return ms.map((m) => ({
     id: m.id, title: m.title, goal: m.goal,
     trip: m.tripId ? trips.find((t) => t.id === m.tripId)?.slug ?? null : null,
@@ -179,3 +179,61 @@ export async function missionsForContext(owner: Owner) {
   }));
 }
 
+
+/** "27 Nov 2026, 3:30 pm" in India time, whatever the server's time zone. */
+export const istTime = (d: Date) => d.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" }) + " IST";
+
+/**
+ * Records a price hold on its trip plan: links the request, saves the held
+ * date as the trip's date, and marks the hold step done. Used for holds
+ * approved in chat and holds made on the trip page.
+ */
+export async function markHeld(missionId: string, h: { ref: string; total: number; departureId: string; actor: "traveller" | "agent" }) {
+  await prisma.enquiry.update({ where: { ref: h.ref }, data: { missionId } });
+  await prisma.mission.update({ where: { id: missionId }, data: { departureId: h.departureId, status: "active" } });
+  const until = new Date(Date.now() + 48 * 3600e3);
+  await setTask(missionId, "price_hold", { status: "done", note: `Held ${fmt(h.total)} until ${istTime(until)}. Ref ${h.ref}.`, data: { ref: h.ref, until: until.toISOString() } });
+  await logEvent(missionId, h.actor, `Price hold placed. Reference ${h.ref}.`);
+}
+
+/**
+ * A hold made on the trip page (not through Riya) becomes a trip plan too, so
+ * it gets live trip mode, the wallet, the document checklist and reminders.
+ * Joins the traveller's open plan for the same trip, or starts one.
+ */
+export async function linkHoldToMission(owner: Owner, ref: string) {
+  if (!owner.customerId && !owner.anonId) return null;
+  const e = await prisma.enquiry.findUnique({ where: { ref }, include: { trip: true, dep: true } });
+  if (!e?.trip || !e.dep || e.missionId) return e?.missionId ?? null;
+  let m = await prisma.mission.findFirst({ where: { AND: [ownedBy(owner), { status: { in: ["planning", "active"] }, tripId: e.trip.id }] }, orderBy: { updatedAt: "desc" } });
+  if (!m) {
+    m = await createMission(owner, {
+      title: `${e.trip.dest}, ${fmtDate(e.dep.date, { month: "short", year: "numeric" })}`, goal: `Booked ${e.trip.title} on the website.`,
+      adults: e.adults, childAges: e.childAges ? JSON.parse(e.childAges) : [], fromCity: e.fromCity ?? "Mumbai", passport: "IN",
+      needs: e.trip.countryCodes.split(",").some((c) => c && c !== "IN") ? ["insurance", "forex"] : [],
+    });
+  }
+  try { await chooseTrip(m.id, e.trip.slug, e.dep.date); } catch { /* date just closed: the hold still stands */ }
+  await markHeld(m.id, { ref, total: e.quotedTotal ?? 0, departureId: e.dep.id, actor: "traveller" });
+  return m.id;
+}
+
+/**
+ * Daily: a price hold that ended without a payment no longer counts as done, so
+ * the plan (and the agents watching prices and seats) treat the trip as not held.
+ */
+export async function resetLapsedHolds(now = new Date()) {
+  const ended = await prisma.enquiry.findMany({
+    where: { type: "hold", status: { in: ["new", "contacted"] }, missionId: { not: null }, createdAt: { lt: new Date(now.getTime() - 48 * 3600e3), gt: new Date(now.getTime() - 30 * 864e5) }, payments: { none: { status: { in: ["paid", "partially_refunded"] } } } },
+    select: { ref: true, missionId: true },
+  });
+  let reset = 0;
+  for (const e of ended) {
+    const t = await prisma.missionTask.findUnique({ where: { missionId_kind: { missionId: e.missionId!, kind: "price_hold" } } });
+    if (t?.status !== "done" || !t.data?.includes(e.ref)) continue; // a newer hold or a payment took over
+    await setTask(e.missionId!, "price_hold", { status: "todo", note: `Your hold ${e.ref} ended without a deposit. Ask me to hold it again; I'll check the price first.` });
+    await logEvent(e.missionId!, "agent", `Price hold ${e.ref} ended without a deposit.`);
+    reset++;
+  }
+  return reset;
+}

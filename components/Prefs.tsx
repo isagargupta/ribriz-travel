@@ -19,7 +19,7 @@ interface Prefs {
   passport: string;
 }
 
-export interface Me { email: string; name: string | null; phone: string | null }
+export interface Me { email: string; name: string | null; phone: string | null; saved?: string[] }
 
 interface Toast { id: number; msg: string; tone: "info" | "ok" | "err"; action?: { label: string; run: () => void } }
 
@@ -56,7 +56,17 @@ export function PrefsProvider({ children }: { children: React.ReactNode }) {
 
   // who is signed in (pages stay static; this is fetched per visitor)
   useEffect(() => {
-    fetch("/api/me", { cache: "no-store" }).then((r) => r.json()).then(setMe).catch(() => setMe(null));
+    fetch("/api/me", { cache: "no-store" }).then((r) => r.json()).then((m: Me | null) => {
+      setMe(m);
+      // signed in: this browser's hearts and the account's hearts become one list, on every device
+      if (m?.saved) setP((cur) => {
+        const merged = [...new Set([...cur.saved, ...m.saved!])];
+        if (merged.length !== m.saved!.length) fetch("/api/me", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ saved: merged }) }).catch(() => {});
+        const next = { ...cur, saved: merged };
+        try { localStorage.setItem(KEY, JSON.stringify(next)); } catch {}
+        return next;
+      });
+    }).catch(() => setMe(null));
   }, []);
 
   // keep tabs in sync
@@ -84,9 +94,11 @@ export function PrefsProvider({ children }: { children: React.ReactNode }) {
 
   const toggleSaved = useCallback((id: string) => {
     const on = !p.saved.includes(id);
-    set({ saved: on ? [id, ...p.saved] : p.saved.filter((x) => x !== id) });
+    const saved = on ? [id, ...p.saved] : p.saved.filter((x) => x !== id);
+    set({ saved });
+    if (me) fetch("/api/me", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ saved }) }).catch(() => {});
     return on;
-  }, [p.saved, set]);
+  }, [p.saved, set, me]);
 
   const toggleCompare = useCallback((id: string): "added" | "removed" | "full" => {
     if (p.compare.includes(id)) { set({ compare: p.compare.filter((x) => x !== id) }); return "removed"; }

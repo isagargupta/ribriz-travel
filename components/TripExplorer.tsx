@@ -7,6 +7,7 @@ import { MAX_BUDGET, parseFilters, toQuery, type Filters } from "@/lib/filters";
 import { scoreFields, tripFields } from "@/lib/search";
 import { usePrefs } from "./Prefs";
 import TripCard from "./TripCard";
+import { askRiya } from "./assistant/Assistant";
 import Sheet from "./ui/Sheet";
 
 type Ignore = "region" | "board" | "kind" | null;
@@ -176,10 +177,11 @@ export default function TripExplorer({ trips, initial }: { trips: TripDTO[]; ini
           </div>
         ) : (
           <div className="empty">
-            <h3>No trips match all of these</h3>
-            <p>Try removing a filter{f.date ? ", widening your dates" : ""} or raising your budget.</p>
-            <div className="chips" style={{ justifyContent: "center" }}>
-              {chips.slice(0, 4).map(([l, fn]) => <button key={l} onClick={fn}>Remove “{l}”</button>)}
+            <h3>{f.q ? `We don't have a ${f.q} package yet` : "No trips match all of these"}</h3>
+            <p>{f.q ? "Our trip designers can build one for you, priced in about a day. Or loosen the filters." : `Try removing a filter${f.date ? ", widening your dates" : ""} or raising your budget, or let Riya plan it for you.`}</p>
+            <button className="btn hot" style={{ marginTop: 6 }} onClick={() => askRiya(f.q ? `Plan a trip to ${f.q} for me${f.date ? ` around ${f.date}` : ""}` : "Help me find a trip: nothing matched my filters")}>✦ Ask Riya to plan it</button>
+            <div className="chips" style={{ justifyContent: "center", marginTop: 12 }}>
+              {chips.slice(0, 4).map(([l, fn]) => <button key={l} onClick={fn}>Remove {l}</button>)}
             </div>
             <button className="btn primary" onClick={reset} style={{ marginTop: 14 }}>Clear all filters</button>
           </div>

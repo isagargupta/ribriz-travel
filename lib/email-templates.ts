@@ -79,6 +79,7 @@ export function holdConfirmationEmail(h: HoldInfo): Built {
 }
 
 const SERVICE_COPY: Record<string, { subject: string; heading: string; line: string }> = {
+  custom: { subject: "Your custom trip request", heading: "We're designing your trip", line: "a trip designer will send a day-by-day plan with the full price, usually within one working day." },
   visa: { subject: "Your visa request", heading: "We're on your visa", line: "a visa expert will contact you within 4 working hours with the exact documents and fee." },
   forex: { subject: "Your forex request", heading: "We're arranging your forex", line: "our forex partner will confirm your rate and delivery within 2 working hours." },
   insurance: { subject: "Your travel insurance request", heading: "We're finding your insurance", line: "we'll send plan options and a quote within 2 working hours." },
@@ -289,7 +290,7 @@ export function paymentReceiptEmail(d: { name: string; ref: string; tripTitle: s
           ...(d.paymentId ? [["Payment ID", `<span style="font-family:Menlo,Consolas,monospace">${esc(d.paymentId)}</span>`] as [string, string]] : []),
         ]) +
         p(balance > 0 ? "We'll remind you before the balance is due, and you can pay it any time from the button below." : "Your vouchers and final travel documents will follow before you leave.") +
-        p("Your GST invoice will be sent separately."),
+        p("Need a GST invoice? Reply to this email or ask Riya, and our team will send it."),
       cta: balance > 0 ? { label: "Pay the balance", url: d.payLink } : d.hubUrl ? { label: "Open my trip", url: d.hubUrl } : undefined,
     }),
     text: `${heading}\nReference ${d.ref} · ${d.tripTitle}\n${what}: ${fmt(d.amount)}\nPaid so far: ${fmt(d.paidTotal)} of ${fmt(d.total)}\n${balance > 0 ? `Balance ${fmt(balance)}${d.balanceDue ? ` due by ${d.balanceDue}` : ""}: ${d.payLink}` : "Fully paid."}\nPayment ID: ${d.paymentId ?? "-"}`,

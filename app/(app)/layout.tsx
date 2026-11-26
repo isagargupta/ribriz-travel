@@ -14,7 +14,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <AppShell
       me={{ name: me.name, email: me.email }}
-      counts={{ trips: d.trips.length, needs: d.approvals.length, bookings: d.bookings.length, alerts: d.watching.length }}
+      counts={{ trips: d.trips.length, needs: d.approvals.length, bookings: d.bookings.length + d.holidays.filter((h) => h.state !== "closed" && h.state !== "expired").length, alerts: d.watching.length }}
     >
       {children}
     </AppShell>

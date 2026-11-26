@@ -56,6 +56,20 @@ export const getPublishedTrips = unstable_cache(
   { tags: [TRIPS_TAG], revalidate: 3600 },
 );
 
+/**
+ * Every trip, including ones taken off sale. For travellers' own trips: a trip
+ * someone booked must keep its image, itinerary and dates even if the team
+ * unpublishes it later. Never use this for anything shown as "on sale".
+ */
+export const getTripsForTravellers = unstable_cache(
+  async (): Promise<TripDTO[]> => {
+    const rows = await prisma.trip.findMany({ orderBy: { createdAt: "asc" }, include: { departures: upcoming() } });
+    return rows.map((r) => toDTO(r));
+  },
+  [`all-trips-v${DATA_VERSION}`],
+  { tags: [TRIPS_TAG], revalidate: 3600 },
+);
+
 export async function getTripBySlug(slug: string): Promise<{ trip: TripDTO; departures: DepartureDTO[] } | null> {
   const all = await getPublishedTrips();
   const trip = all.find((t) => t.slug === slug);

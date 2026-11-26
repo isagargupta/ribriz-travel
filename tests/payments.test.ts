@@ -37,3 +37,11 @@ test("signatures: genuine passes, tampered fails", () => {
   assert.ok(webhookSignatureOk(body, createHmac("sha256", "wh").update(body).digest("hex"), "wh"));
   assert.ok(!webhookSignatureOk(body + " ", createHmac("sha256", "wh").update(body).digest("hex"), "wh"));
 });
+
+test("services are paid in full once priced, even far from departure", async () => {
+  const { paymentPlan } = await import("../lib/payment-rules.ts");
+  const p = paymentPlan({ total: 42000, paid: 0, departure: "2027-06-01", today: "2026-11-26", status: "contacted", holdExpired: false, fullOnly: true });
+  assert.deepEqual(p.next, { kind: "full", amount: 42000 });
+  const noDate = paymentPlan({ total: 9000, paid: 0, departure: null, today: "2026-11-26", status: "new", holdExpired: false, fullOnly: true });
+  assert.deepEqual(noDate.next, { kind: "full", amount: 9000 });
+});

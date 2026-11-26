@@ -12,6 +12,7 @@ export const metadata: Metadata = { title: "Pay for your trip", robots: { index:
 export const dynamic = "force-dynamic";
 
 const KIND: Record<string, string> = { deposit: "Deposit", balance: "Balance", full: "Full payment" };
+const SERVICE: Record<string, string> = { flight: "Flights", hotel: "Hotel stay", visa: "Visa service", insurance: "Travel insurance", forex: "Forex", custom: "Your custom trip", enquiry: "Your trip" };
 const BLOCKED: Record<string, string> = {
   hold_expired: "This price hold has ended, so the price may have changed. Ask Riya to hold today's price again, then pay here.",
   closed: "This booking is closed.", departed: "This trip has already started.", no_total: "We'll send your final price before you pay.",
@@ -32,7 +33,7 @@ export default async function PayPage({ params, searchParams }: { params: Promis
           {v.image && <span className="pay-img"><Image src={v.image} alt="" fill sizes="200px" /></span>}
           <div>
             <small className="muted mono">{v.ref}</small>
-            <h1>{v.tripTitle ?? "Your trip"}</h1>
+            <h1>{v.tripTitle ?? SERVICE[v.type] ?? "Your trip"}{v.tripTitle && SERVICE[v.type] && v.type !== "hold" && v.type !== "custom" && v.type !== "enquiry" ? ` · ${SERVICE[v.type]}` : ""}</h1>
             <p className="muted">{v.departure ? `${fmtDate(v.departure)}${v.nights ? ` – ${fmtDate(addDays(v.departure, v.nights), long)}` : ""}` : ""} · {v.adults} adult{v.adults > 1 ? "s" : ""}{v.children ? `, ${v.children} child${v.children > 1 ? "ren" : ""}` : ""}</p>
           </div>
         </div>
@@ -48,7 +49,7 @@ export default async function PayPage({ params, searchParams }: { params: Promis
           !v.enabled ? <p className="notice warn">Online payment isn&apos;t switched on yet. Reply to your confirmation email and we&apos;ll help you pay.</p> : (
             <>
               <div className="pay-due">
-                <span>{plan.next.kind === "deposit" ? "Pay the deposit to book" : plan.next.kind === "full" ? "Pay in full to book (you leave within 30 days)" : "Pay the balance"}</span>
+                <span>{plan.next.kind === "deposit" ? "Pay the deposit to book" : plan.next.kind === "full" ? (v.type === "hold" ? "Pay in full to book (you leave within 30 days)" : "Pay in full and we book it") : "Pay the balance"}</span>
                 <b>{fmt(plan.next.amount)}</b>
               </div>
               <PayButton refCode={v.ref} token={t ?? null} label={`Pay ${fmt(plan.next.amount)} securely`} />

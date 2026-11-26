@@ -11,8 +11,8 @@ import { fmt } from "./pricing";
  *   4. the team books it and records the confirmation, which lands in the hub
  */
 
-export const OFFER_TASK: Record<string, TaskKind> = { visa: "visa", forex: "forex", insurance: "insurance", flight: "flights", hotel: "hotels" };
-export const OFFER_LABEL: Record<string, string> = { visa: "Visa service", forex: "Forex", insurance: "Travel insurance", flight: "Flights", hotel: "Hotel" };
+export const OFFER_TASK: Record<string, TaskKind> = { custom: "choose_trip", visa: "visa", forex: "forex", insurance: "insurance", flight: "flights", hotel: "hotels" };
+export const OFFER_LABEL: Record<string, string> = { custom: "Custom trip", visa: "Visa service", forex: "Forex", insurance: "Travel insurance", flight: "Flights", hotel: "Hotel" };
 
 export interface NewOffer { title: string; lines: string[]; priceInr: number | null }
 
@@ -73,12 +73,16 @@ export async function acceptOffer(approvalId: string, offerId: string) {
   const claimed = await prisma.serviceOffer.updateMany({ where: { id: offer.id, status: "offered" }, data: { status: "chosen" } });
   if (claimed.count !== 1) return { ok: false as const, error: "This option is already being processed." };
   await withdrawOpen(offer.enquiryId, "You chose another option.", offer.id);
+  // the chosen option's price is what the traveller pays online (in full)
+  if (offer.priceInr) await prisma.enquiry.update({ where: { id: offer.enquiryId }, data: { quotedTotal: offer.priceInr } });
   await prisma.approval.update({ where: { id: approvalId }, data: { status: "done", result: JSON.stringify({ ref: offer.enquiry.ref, offerId: offer.id }) } });
   if (offer.missionId) {
     await setTask(offer.missionId, OFFER_TASK[offer.service], { status: "waiting", note: `You chose ${offer.title}${offer.priceInr ? ` (${fmt(offer.priceInr)})` : ""}. Our team is booking it and will send the confirmation here.`, data: { ref: offer.enquiry.ref, offerId: offer.id } });
     await logEvent(offer.missionId, "traveller", `Chose ${OFFER_LABEL[offer.service].toLowerCase()}: ${offer.title}.`);
   }
-  return { ok: true as const, offer, ref: offer.enquiry.ref, message: `Great choice. Our team is booking ${offer.title} now and will confirm in your trip hub, usually within a few working hours.` };
+  return { ok: true as const, offer, ref: offer.enquiry.ref, message: offer.priceInr
+    ? `Great choice. Pay ${fmt(offer.priceInr)} securely at /pay/${offer.enquiry.ref} and our team books ${offer.title} straight away; the confirmation appears in your trip hub.`
+    : `Great choice. Our team is booking ${offer.title} now and will confirm in your trip hub, usually within a few working hours.` };
 }
 
 /** The traveller passed on one option. When none are left, the step goes back to Riya. */

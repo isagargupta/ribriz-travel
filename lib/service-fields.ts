@@ -1,7 +1,7 @@
 // What each service request needs, so the team never has to ask the traveller
 // again. Pure (no server imports) so it's unit-tested and shared with the tools.
 
-export type ServiceKind = "visa" | "forex" | "insurance" | "flight" | "hotel";
+export type ServiceKind = "visa" | "forex" | "insurance" | "flight" | "hotel" | "custom";
 
 export interface Field { key: string; label: string; required: boolean; hint: string; fallback?: string }
 
@@ -33,6 +33,16 @@ export const SERVICE_FIELDS: Record<ServiceKind, Field[]> = {
     { key: "travellers", label: "Travellers", required: true, hint: "e.g. 2 adults, 1 child (5)" },
     { key: "cabin", label: "Cabin", required: false, hint: "Economy, Premium economy, Business", fallback: "Economy" },
     { key: "preferences", label: "Preferences", required: false, hint: "non-stop, times, airline" },
+  ],
+  custom: [
+    { key: "destination", label: "Destination", required: true, hint: "places they want to see, e.g. Singapore and Bintan" },
+    { key: "travel_dates", label: "When", required: true, hint: "dates or month, e.g. mid-Feb 2027" },
+    { key: "nights", label: "Nights", required: false, hint: "e.g. 5", fallback: "Flexible" },
+    { key: "travellers", label: "Travellers", required: true, hint: "e.g. 2 adults" },
+    { key: "from", label: "From", required: true, hint: "home city" },
+    { key: "budget", label: "Budget", required: false, hint: "total or per person, INR", fallback: "Not set" },
+    { key: "style", label: "Style", required: false, hint: "honeymoon, family, relaxed, adventure, hotel stars" },
+    { key: "must_haves", label: "Must-haves", required: false, hint: "things they asked for" },
   ],
   hotel: [
     { key: "city", label: "City", required: true, hint: "city or area" },

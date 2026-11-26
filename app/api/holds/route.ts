@@ -4,6 +4,8 @@ import { createHold } from "@/lib/bookings";
 import { clientIp, fail, rateLimited, readJson } from "@/lib/http";
 import { holdSchema } from "@/lib/schemas";
 import { payUrl } from "@/lib/payments";
+import { getOwner } from "@/lib/owner";
+import { linkHoldToMission } from "@/lib/missions";
 
 /** 48-hour price hold on a specific departure. The server re-prices before saving. */
 export async function POST(req: Request) {
@@ -12,6 +14,8 @@ export async function POST(req: Request) {
   if ("res" in parsed) return parsed.res;
   const r = await createHold(parsed.data);
   if (!r.ok) return fail(r.message, r.code === "price_changed" ? 409 : 410, { code: r.code, total: r.total });
+  // the booking becomes a trip plan (live trip, wallet, documents, reminders), for signed-in travellers and guests alike
+  const missionId = await linkHoldToMission(await getOwner(true), r.ref).catch((e) => { console.error("link hold failed", e); return null; });
   after(() => notifyHold(r.ref)); // emails go out after the customer has their answer
-  return NextResponse.json({ ...r, payPath: payUrl(r.ref) }, { status: 201 });
+  return NextResponse.json({ ...r, payPath: payUrl(r.ref), missionId }, { status: 201 });
 }

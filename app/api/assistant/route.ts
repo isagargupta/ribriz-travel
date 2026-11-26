@@ -91,6 +91,9 @@ export async function POST(req: Request) {
         // trips found by searches; shown only if Riya doesn't present her own picks
         const found = new Map<string, Record<string, unknown>>();
         let presented = false;
+        let visible = 0; // characters of reply the traveller can currently see
+        let worked = false; // ran at least one real tool
+        let owed: Anthropic.Beta.BetaToolResultBlockParam[] | null = null; // results not yet sent back when the loop stopped on buttons
         for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
           const run = getClient().beta.messages.stream({
             model: MODEL,
@@ -105,18 +108,21 @@ export async function POST(req: Request) {
           }, { signal: req.signal });
 
           let roundChars = 0;
-          run.on("text", (delta) => { roundChars += delta.length; send({ t: "text", v: delta }); });
+          run.on("text", (delta) => { roundChars += delta.length; visible += delta.length; send({ t: "text", v: delta }); });
           const msg = await run.finalMessage();
 
           if (msg.stop_reason === "refusal") {
-            send({ t: "text", v: "\n\nSorry, I can't help with that one. Our team can, though: email hello@ribriztravel.com or send a request at /plan." });
+            send({ t: "text", v: "\n\nSorry, I can't help with that one. Our team can, though: send them a request at /plan." });
             break;
           }
           const calls = msg.content.filter((b): b is Anthropic.Beta.BetaToolUseBlock => b.type === "tool_use");
           if (msg.stop_reason !== "tool_use" || calls.length === 0) break;
           const onlyUi = calls.every((c) => UI_TOOLS.has(c.name));
-          // text written before data tools is a working note; text before on-screen blocks is the answer
-          if (roundChars && !onlyUi) send({ t: "retract", v: roundChars });
+          const ending = calls.some((c) => c.name === "ask" || c.name === "suggest_actions" || c.name === "show_trips");
+          // text written before data tools alone is a working note ("let me check…"); text that comes with
+          // on-screen blocks is the answer, so it stays even when a data tool runs in the same step
+          if (roundChars && !onlyUi && !ending) { send({ t: "retract", v: roundChars }); visible -= roundChars; }
+          if (!onlyUi) worked = true;
 
           messages.push({ role: "assistant", content: msg.content });
           for (const c of calls) if (!UI_TOOLS.has(c.name)) send({ t: "step", v: { id: c.id, label: TOOL_STATUS[c.name] ?? "Looking that up…", state: "run" } });
@@ -135,18 +141,29 @@ export async function POST(req: Request) {
             if (o.approval) send({ t: "approval", v: o.approval });
             for (const a of o.approvals ?? []) send({ t: "approval", v: a });
           }
+          const results = calls.map((c, n) => ({
+            type: "tool_result" as const,
+            tool_use_id: c.id,
+            content: JSON.stringify(outcomes[n].result),
+            ...(outcomes[n].isError ? { is_error: true } : {}),
+          }));
           // finished once Riya hands the turn back with a form or next-step buttons
-          if (onlyUi && calls.some((c) => c.name === "ask" || c.name === "suggest_actions")) break;
+          if (onlyUi && calls.some((c) => c.name === "ask" || c.name === "suggest_actions")) { owed = results; break; }
           // all results for this round go back together in one user message
-          messages.push({
-            role: "user",
-            content: calls.map((c, n) => ({
-              type: "tool_result" as const,
-              tool_use_id: c.id,
-              content: JSON.stringify(outcomes[n].result),
-              ...(outcomes[n].isError ? { is_error: true } : {}),
-            })),
-          });
+          messages.push({ role: "user", content: results });
+        }
+        // Never leave the traveller with only buttons: if Riya did work but no words are on screen,
+        // ask her (with tools off) for the short answer.
+        if (visible < 20 && worked && !req.signal.aborted) {
+          if (owed) messages.push({ role: "user", content: owed });
+          else if (messages[messages.length - 1]?.role === "assistant") messages.push({ role: "user", content: [{ type: "text", text: "(continue)" }] });
+          messages.push({ role: "user", content: [{ type: "text", text: "[System] The traveller can see your steps and buttons but no words from you. In 1–3 short sentences, tell them what you found or did and answer their question directly (including what you can and can't do). Don't call tools." }] });
+          const fin = getClient().beta.messages.stream({
+            model: MODEL, max_tokens: 600, betas: ["server-side-fallback-2026-07-01"], fallbacks: "default",
+            output_config: { effort: "low" }, system: SYSTEM_PROMPT, tools: TOOLS, tool_choice: { type: "none" }, messages,
+          }, { signal: req.signal });
+          fin.on("text", (delta) => send({ t: "text", v: delta }));
+          await fin.finalMessage();
         }
         if (!presented && found.size) send({ t: "ui", v: { kind: "trips", id: `found-${Date.now().toString(36)}`, items: [...found.values()].slice(0, 6) } });
         send({ t: "done" });
