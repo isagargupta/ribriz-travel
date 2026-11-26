@@ -23,7 +23,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const file = form.get("file");
   if (!(file instanceof File) || file.size === 0) return fail("Choose a file to upload.");
   try {
-    const r = await uploadDoc(await getOwner(), id, file, typeof form.get("kind") === "string" ? String(form.get("kind")) : null);
+    const r = await uploadDoc(await getOwner(), id, file, typeof form.get("kind") === "string" ? String(form.get("kind")) : null, Number(form.get("applicant") ?? 0));
     return NextResponse.json(r);
   } catch (e) {
     if (e instanceof UploadError) return fail(e.message);

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { fmt } from "@/lib/pricing";
-import { creditNoteAction, deleteEnquiry, issueInvoiceAction, setBillingAction, updateEnquiry } from "../../actions";
+import { creditNoteAction, deleteEnquiry, issueInvoiceAction, setBillingAction, setVisaStageAction, updateEnquiry, uploadIssuedVisaAction } from "../../actions";
+import { STAGES } from "@/lib/visa-service-rules";
 import { DOC_TITLE, inr, type DocKind } from "@/lib/gst-rules";
 import OffersPanel from "@/components/admin/OffersPanel";
 import PaymentsPanel from "@/components/admin/PaymentsPanel";
@@ -22,12 +23,12 @@ async function forexHint(details: string | null) {
 const FILTERS = ["all", "new", "contacted", "booked", "closed"];
 const TYPE_LABELS: Record<string, string> = { hold: "48-hour price hold", enquiry: "Question about a trip", custom: "Custom trip request", visa: "Visa application help", forex: "Forex order", insurance: "Travel insurance", flight: "Flight booking", hotel: "Hotel booking" };
 
-export default async function Enquiries({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
-  const { status = "all" } = await searchParams;
-  const where = FILTERS.includes(status) && status !== "all" ? { status } : {};
+export default async function Enquiries({ searchParams }: { searchParams: Promise<{ status?: string; q?: string }> }) {
+  const { status = "all", q } = await searchParams;
+  const where = q ? { ref: q.trim().toUpperCase() } : FILTERS.includes(status) && status !== "all" ? { status } : {};
   const list = await prisma.enquiry.findMany({
     where, orderBy: { createdAt: "desc" }, take: 200,
-    include: { invoices: { orderBy: { issuedAt: "asc" } }, payments: { orderBy: { createdAt: "asc" } }, offers: { orderBy: { createdAt: "asc" } }, messages: { orderBy: { createdAt: "desc" }, take: 10 }, mission: { select: { id: true, documents: { orderBy: { createdAt: "desc" }, select: { id: true, kind: true, fileName: true, status: true, findings: true } } } } },
+    include: { invoices: { orderBy: { issuedAt: "asc" } }, payments: { orderBy: { createdAt: "asc" } }, offers: { orderBy: { createdAt: "asc" } }, messages: { orderBy: { createdAt: "desc" }, take: 10 }, mission: { select: { id: true, documents: { orderBy: { createdAt: "desc" }, select: { id: true, kind: true, fileName: true, status: true, findings: true, applicant: true } } } } },
   });
   const wa = (phone: string) => phone.replace(/[^\d]/g, "");
   const hints = new Map(await Promise.all(list.filter((e) => e.type === "forex").map(async (e) => [e.id, await forexHint(e.details)] as const)));
@@ -84,6 +85,32 @@ export default async function Enquiries({ searchParams }: { searchParams: Promis
                     </ul>
                   )}
                   <small className="muted">Links open for 2 minutes. Documents are deleted automatically 30 days after the trip.</small>
+                  {(() => {
+                    const d = JSON.parse(e.details ?? "{}") as { stage?: string; product?: string };
+                    if (!d.stage) return null;
+                    const names: string[] = e.travellers ? JSON.parse(e.travellers) : [e.name];
+                    return (
+                      <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
+                        <b>Visa application · stage: {STAGES.find((s) => s.key === d.stage)?.label ?? d.stage}</b>
+                        <p className="muted" style={{ margin: 0, fontSize: 13 }}>Documents by traveller: {names.map((n, i) => `${n} (${e.mission!.documents.filter((x) => x.applicant === i).length})`).join(", ")}</p>
+                        <form action={setVisaStageAction} style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          <input type="hidden" name="id" value={e.id} />
+                          <select className="in" name="stage" defaultValue={d.stage === "payment" || d.stage === "documents" ? "review" : d.stage} style={{ width: 170 }}>
+                            <option value="review">Expert check</option><option value="submitted">Filed</option><option value="approved">Visa issued</option><option value="rejected">Refused</option><option value="cancelled">Cancelled</option>
+                          </select>
+                          <input className="in" name="note" placeholder="Note for the traveller (optional)" style={{ flex: 1, minWidth: 200 }} />
+                          <button className="btn sm blue">Update and notify</button>
+                        </form>
+                        <form action={uploadIssuedVisaAction} style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                          <input type="hidden" name="id" value={e.id} />
+                          <select className="in" name="applicant" style={{ width: 170 }}>{names.map((n, i) => <option key={i} value={i}>{n}</option>)}</select>
+                          <input type="file" name="file" accept="application/pdf,image/*" required />
+                          <label className="chk" style={{ fontSize: 13 }}><input type="checkbox" name="approve" defaultChecked /> mark issued and notify</label>
+                          <button className="btn sm">Upload issued visa</button>
+                        </form>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
               {e.quotedTotal ? <p style={{ fontSize: 13, margin: "8px 0 0" }}><b>Customer pay link:</b> <code style={{ userSelect: "all" }}>{(process.env.NEXT_PUBLIC_SITE_URL || "https://www.ribriztravel.com").replace(/\/$/, "") + payUrl(e.ref)}</code></p> : null}

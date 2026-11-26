@@ -279,6 +279,8 @@ model TravelDoc {
   /// passport | photo | bank_statement | itr | employment_proof | cover_letter | insurance | flight_booking | hotel_booking | other
   kind        String
   fileKey     String    @unique
+  /// which traveller on a visa application it belongs to (0 = the first)
+  applicant   Int       @default(0)
   fileName    String
   mime        String
   size        Int
@@ -574,4 +576,44 @@ model MissionMember {
 
   @@unique([missionId, customerId])
   @@index([customerId])
+}
+
+/// A visa we help with: one per destination and visa type, priced and described
+/// by the team in the admin (/admin/visas). Applications are Enquiry rows of
+/// type "visa" with the product in their details.
+model VisaProduct {
+  id               String    @id @default(cuid())
+  slug             String    @unique
+  /// ISO code of the destination, e.g. JP
+  countryCode      String
+  /// page address of the destination, e.g. "japan" → /visa/japan
+  destSlug         String
+  /// e.g. "Tourist e-Visa"
+  name             String
+  /// evisa | sticker | eta | arrival | visa_free
+  kind             String
+  /// single | multiple
+  entries          String    @default("single")
+  validityDays     Int?
+  stayDays         Int?
+  /// working days the government or embassy usually takes
+  processingDays   Int
+  needsAppointment Boolean   @default(false)
+  /// INR per traveller, paid to the government on their behalf (no GST)
+  govtFee          Int
+  /// INR per traveller, Ribriz's fee (18% GST added)
+  serviceFee       Int
+  /// JSON array of { kind, label, note? }: documents each traveller uploads
+  docs             String    @default("[]")
+  /// eligibility and tips shown on the page, one per line
+  notes            String?
+  popular          Boolean   @default(false)
+  published        Boolean   @default(true)
+  order            Int       @default(100)
+  /// when the team last checked the fees and rules against the official source
+  verifiedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([destSlug])
 }

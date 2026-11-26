@@ -58,6 +58,11 @@ export async function runChecks(): Promise<Check[]> {
       const j = (await r.json()) as { display_phone_number?: string; quality_rating?: string };
       return `${j.display_phone_number ?? "Number"} · quality ${j.quality_rating ?? "unknown"}`;
     }),
+    check("Visa fees checked", false, async () => {
+      const n = await prisma.visaProduct.count({ where: { published: true, verifiedAt: null } });
+      if (n) throw new Error(`${n} published visa${n > 1 ? "s" : ""} not checked against the official fee: Admin → Visas`);
+      return "All checked";
+    }),
     check("Push notifications", false, async () => { if (!process.env.VAPID_PRIVATE_KEY || !process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) throw new Error("VAPID keys missing: no push notifications"); return "Configured"; }),
     check("Daily job ran", true, async () => {
       const last = await prisma.agentRun.findFirst({ orderBy: { startedAt: "desc" } });

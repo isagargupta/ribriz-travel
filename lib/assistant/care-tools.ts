@@ -124,7 +124,37 @@ async function teamTool(i: z.infer<typeof TeamInput>, ctx: VisitorContext): Prom
   };
 }
 
+export const VisaServiceInput = z.object({ country: z.string().trim().min(2).max(60), travellers: z.number().int().min(1).max(9).optional() });
+async function visaServiceTool(i: z.infer<typeof VisaServiceInput>): Promise<ToolOutcome> {
+  const { visaDestinations } = await import("../visa-service");
+  const { visaPrice } = await import("../visa-service-rules");
+  const n = i.country.toLowerCase().replace(/[^a-z ]/g, "").trim();
+  const ds = await visaDestinations();
+  const d = ds.find((x) => x.country.toLowerCase().includes(n) || x.destSlug === n.replace(/ /g, "-") || x.countryCode.toLowerCase() === n || (n === "uae" && x.countryCode === "AE") || (n.includes("schengen") && x.destSlug === "france"));
+  if (!d) return { status: "", result: { listed: false, note: `We don't list a ready-made visa service for ${i.country} yet. Offer request_service with service "visa" so the visa team can quote it, or check rules with check_visa.` } };
+  return {
+    status: "",
+    result: {
+      listed: true, country: d.country, page: `/visa/${d.destSlug}`,
+      visas: d.products.map((p) => ({
+        name: p.name, type: p.kindLabel, stay_days: p.stayDays, valid_days: p.validityDays, entries: p.entries, processing_working_days: p.processingDays,
+        needs_visa_centre_appointment: p.needsAppointment, ready_by_if_applied_today: p.readyBy, fee_confirmed: p.verified,
+        price_per_traveller_inr: p.perPerson, breakdown: { government: p.govtFee, service: p.serviceFee, gst_on_service: visaPrice(p).gst },
+        ...(i.travellers ? { total_inr: visaPrice(p, i.travellers).total } : {}),
+        documents: p.docs.map((x) => x.label), notes: p.notes,
+        apply_link: p.canApply ? `/visa/${d.destSlug}/apply?p=${p.slug}${i.travellers ? `&n=${i.travellers}` : ""}` : null,
+      })),
+    },
+  };
+}
+
 export const CARE_TOOLS: Anthropic.Beta.BetaTool[] = [
+  {
+    name: "visa_service",
+    description: "Ribriz's visa service for Indian passport holders: for a destination, each visa we apply for with type, stay, processing time, the date it would be ready if they apply today, price per traveller (government fee + service fee + 18% GST on the service fee), documents needed and an apply link. Use it whenever someone needs a visa. Give the price and ready-by date in words and the apply link as a suggest_actions button. If fee_confirmed is false, say the fee is being confirmed by the team.",
+    eager_input_streaming: true,
+    input_schema: { type: "object", additionalProperties: false, required: ["country"], properties: { country: { type: "string", description: "Destination country or city, e.g. Japan, Dubai, Schengen" }, travellers: { type: "integer" } } },
+  },
   {
     name: "get_my_bookings",
     description: "Everything this traveller has booked or requested: each holiday or service with its reference, status, total, what's paid, the balance and when it's due, the pay link for the next payment, refunds, and booking confirmations (PNR, voucher, policy). Use for \"what have I booked\", \"how much do I owe\", \"did my payment go through\", receipts, or before any change request.",
@@ -154,10 +184,11 @@ export const CARE_TOOLS: Anthropic.Beta.BetaTool[] = [
 ];
 
 export const CARE_REGISTRY = {
+  visa_service: { schema: VisaServiceInput, run: visaServiceTool },
   get_my_bookings: { schema: BookingsInput, run: bookingsTool },
   get_trip_today: { schema: TodayInput, run: todayTool },
   contact_team: { schema: TeamInput, run: teamTool },
 } as const;
 
-export const CARE_STATUS = { get_my_bookings: "Checking your bookings…", get_trip_today: "Checking today's plan…", contact_team: "Sending to our team…" };
-export const CARE_DONE = { get_my_bookings: "Checked your bookings", get_trip_today: "Checked today's plan", contact_team: "Sent to our team" };
+export const CARE_STATUS = { visa_service: "Checking visa options…", get_my_bookings: "Checking your bookings…", get_trip_today: "Checking today's plan…", contact_team: "Sending to our team…" };
+export const CARE_DONE = { visa_service: "Found your visa options", get_my_bookings: "Checked your bookings", get_trip_today: "Checked today's plan", contact_team: "Sent to our team" };

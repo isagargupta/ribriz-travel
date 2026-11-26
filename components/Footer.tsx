@@ -32,7 +32,7 @@ export default function Footer() {
           <Link href="/saved">Saved trips</Link>
           <Link href="/compare">Compare trips</Link>
           <Link href="/destinations">Destination guides</Link>
-          <Link href="/visa">Visa checker</Link>
+          <Link href="/visa">Apply for a visa</Link>
         </div>
         <div>
           <h4>Contact us</h4>

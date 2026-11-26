@@ -11,3 +11,12 @@ test("Riya answers in words and hands an unsold destination to the trip designer
   await expect(page.getByText(/Custom trip from our trip designers/)).toBeVisible({ timeout: 90_000 });
   await expect(page.getByText(/Singapore/).last()).toBeVisible();
 });
+
+test("Riya quotes a visa from the catalogue and links to the application", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Ask Riya, our travel assistant" }).click();
+  await page.getByRole("textbox", { name: "Message" }).fill("E2E test: I need a Japan visa for 2 people. How much and how long?");
+  await page.keyboard.press("Enter");
+  await expect(page.locator("a[href*='/visa/japan']").first()).toBeVisible({ timeout: 90_000 });
+  await expect(page.getByText(/₹\s?[\d,]+/).last()).toBeVisible();
+});

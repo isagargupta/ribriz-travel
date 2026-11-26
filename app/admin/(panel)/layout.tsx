@@ -19,6 +19,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         <Link href="/admin/inbox">Inbox {urgent > 0 && <span className="badge-count">{urgent}</span>}</Link>
         <Link href="/admin">Dashboard</Link>
         <Link href="/admin/enquiries">Enquiries {fresh > 0 && <span className="badge-count">{fresh}</span>}</Link>
+        <Link href="/admin/visas">Visas</Link>
         <Link href="/admin/funnel">Sales funnel</Link>
         <Link href="/admin/invoices">GST invoices</Link>
         <Link href="/admin/reviews">Reviews {toModerate > 0 && <span className="badge-count">{toModerate}</span>}</Link>

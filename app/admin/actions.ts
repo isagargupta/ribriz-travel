@@ -461,3 +461,72 @@ export async function copyTrip(fd: FormData) {
   refreshSite();
   redirect(`/admin/trips/${copy.id}`);
 }
+
+/* ---------- visa service ---------- */
+
+const VISA_KINDS = ["evisa", "sticker", "eta", "arrival", "visa_free"];
+const DOC_KEYS = ["passport", "photo", "bank_statement", "itr", "employment_proof", "cover_letter", "insurance", "flight_booking", "hotel_booking", "other"];
+
+/** "passport | Passport front and back | note" per line → the documents list. Unknown kinds become "other". */
+function parseDocs(raw: string) {
+  return raw.split("\n").map((l) => l.split("|").map((x) => x.trim())).filter((x) => x[0]).map(([k, label, note]) => ({ kind: DOC_KEYS.includes(k) ? k : "other", label: label || k, ...(note ? { note } : {}) }));
+}
+
+/** Create or update a visa in the catalogue. Ticking "verified" records that the team checked the fee and rules today. */
+export async function saveVisaProduct(fd: FormData) {
+  await requireAdmin();
+  const id = String(fd.get("id") ?? "");
+  const num = (k: string) => { const v = String(fd.get(k) ?? "").trim(); return v === "" ? null : Math.max(0, Math.round(Number(v))); };
+  const kind = String(fd.get("kind") ?? "evisa");
+  const countryCode = String(fd.get("countryCode") ?? "").trim().toUpperCase();
+  const name = String(fd.get("name") ?? "").trim();
+  if (!/^[A-Z]{2}$/.test(countryCode) || name.length < 3 || !VISA_KINDS.includes(kind)) return;
+  const { slugify } = await import("@/lib/climate-rules");
+  const destSlug = slugify(String(fd.get("destSlug") ?? "") || (await import("@/lib/visa")).countryName(countryCode));
+  const data = {
+    countryCode, destSlug, name, kind, entries: String(fd.get("entries") ?? "single"),
+    validityDays: num("validityDays"), stayDays: num("stayDays"), processingDays: num("processingDays") ?? 5,
+    needsAppointment: fd.get("needsAppointment") === "on", govtFee: num("govtFee") ?? 0, serviceFee: num("serviceFee") ?? 0,
+    docs: JSON.stringify(parseDocs(String(fd.get("docs") ?? ""))), notes: String(fd.get("notes") ?? "").trim() || null,
+    popular: fd.get("popular") === "on", published: fd.get("published") === "on", order: num("order") ?? 100,
+  };
+  const verified = fd.get("verified") === "on";
+  if (id) {
+    const cur = await prisma.visaProduct.findUnique({ where: { id } });
+    if (!cur) return;
+    // a price change un-verifies until someone ticks the box again
+    const priceChanged = cur.govtFee !== data.govtFee || cur.serviceFee !== data.serviceFee;
+    await prisma.visaProduct.update({ where: { id }, data: { ...data, verifiedAt: verified ? (priceChanged || !cur.verifiedAt ? new Date() : cur.verifiedAt) : null } });
+  } else {
+    let slug = slugify(`${destSlug}-${name}`);
+    for (let i = 2; await prisma.visaProduct.findUnique({ where: { slug } }); i++) slug = slugify(`${destSlug}-${name}-${i}`);
+    await prisma.visaProduct.create({ data: { ...data, slug, verifiedAt: verified ? new Date() : null } });
+  }
+  (await import("@/lib/visa-service")).invalidateVisaProducts();
+  revalidatePath("/admin/visas"); revalidatePath("/visa");
+}
+
+/** Move a visa application on (expert check, filed, issued, refused, cancelled). The traveller is emailed and pushed. */
+export async function setVisaStageAction(fd: FormData) {
+  await requireAdmin();
+  const stage = String(fd.get("stage"));
+  if (!["review", "submitted", "approved", "rejected", "cancelled"].includes(stage)) return;
+  const { setStage } = await import("@/lib/visa-service");
+  await setStage(String(fd.get("id")), stage as "review", String(fd.get("note") ?? "").trim().slice(0, 300) || undefined);
+  revalidatePath("/admin/enquiries");
+}
+
+/** Upload the issued visa for one traveller; it appears on their application page and in their wallet. */
+export async function uploadIssuedVisaAction(fd: FormData) {
+  await requireAdmin();
+  const e = await prisma.enquiry.findUnique({ where: { id: String(fd.get("id")) } });
+  const file = fd.get("file");
+  if (!e?.missionId || !(file instanceof File) || !file.size || file.size > 10 * 1024 * 1024) return;
+  if (!["application/pdf", "image/jpeg", "image/png", "image/webp"].includes(file.type)) return;
+  const { uploadPrivate } = await import("@/lib/supabase");
+  const key = `${e.missionId}/visa-${randomBytes(8).toString("hex")}.${file.type === "application/pdf" ? "pdf" : file.type.split("/")[1]}`;
+  await uploadPrivate(key, Buffer.from(await file.arrayBuffer()), file.type);
+  await prisma.travelDoc.create({ data: { missionId: e.missionId, applicant: Math.max(0, Number(fd.get("applicant")) || 0), kind: "visa_issued", fileKey: key, fileName: file.name.slice(0, 120) || "visa.pdf", mime: file.type, size: file.size, status: "ok", deleteAfter: new Date(Date.now() + 400 * 864e5) } });
+  if (fd.get("approve") === "on") { const { setStage } = await import("@/lib/visa-service"); await setStage(e.id, "approved"); }
+  revalidatePath("/admin/enquiries");
+}

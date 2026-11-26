@@ -5,7 +5,7 @@ import type { VisaCategory } from "./visa.ts";
 
 export type DocKind =
   | "passport" | "photo" | "bank_statement" | "itr" | "employment_proof" | "cover_letter"
-  | "insurance" | "flight_booking" | "hotel_booking" | "other";
+  | "insurance" | "flight_booking" | "hotel_booking" | "visa_issued" | "other";
 
 export const DOC_LABELS: Record<DocKind, string> = {
   passport: "Passport (photo page)",
@@ -17,6 +17,7 @@ export const DOC_LABELS: Record<DocKind, string> = {
   insurance: "Travel insurance certificate",
   flight_booking: "Flight booking",
   hotel_booking: "Hotel booking",
+  visa_issued: "Issued visa",
   other: "Other document",
 };
 

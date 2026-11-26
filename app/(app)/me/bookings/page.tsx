@@ -63,7 +63,7 @@ export default async function Bookings() {
                 <span className="ar-main"><small>{REQ[r.type] ?? r.type} · {r.ref} · {fmtDate(r.createdAt.slice(0, 10), { day: "numeric", month: "short" })}</small><b>{r.title ?? REQ[r.type]}</b></span>
                 {r.total ? <span className="mono">{fmt(r.total)}</span> : null}
                 <span className={`status ${r.status}`}>{STATUS[r.status] ?? r.status}</span>
-                {d.dues.find((x) => x.ref === r.ref) ? <Link className="btn sm hot" href={d.dues.find((x) => x.ref === r.ref)!.payPath}>Pay {fmt(d.dues.find((x) => x.ref === r.ref)!.amount)}</Link> : <Link className="btn sm" href={r.missionId ? `/me/trips/${r.missionId}` : `/booking?ref=${r.ref}`}>Details</Link>}
+                {d.dues.find((x) => x.ref === r.ref) ? <Link className="btn sm hot" href={d.dues.find((x) => x.ref === r.ref)!.payPath}>Pay {fmt(d.dues.find((x) => x.ref === r.ref)!.amount)}</Link> : <Link className="btn sm" href={r.type === "visa" ? `/visa/application/${r.ref}` : r.missionId ? `/me/trips/${r.missionId}` : `/booking?ref=${r.ref}`}>Details</Link>}
               </div>
             ))}
           </div>

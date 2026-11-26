@@ -80,7 +80,7 @@ export function holdConfirmationEmail(h: HoldInfo): Built {
 
 const SERVICE_COPY: Record<string, { subject: string; heading: string; line: string }> = {
   custom: { subject: "Your custom trip request", heading: "We're designing your trip", line: "a trip designer will send a day-by-day plan with the full price, usually within one working day." },
-  visa: { subject: "Your visa request", heading: "We're on your visa", line: "a visa expert will contact you within 4 working hours with the exact documents and fee." },
+  visa: { subject: "Your visa application", heading: "We're on your visa", line: "upload each traveller's documents and pay from your application page (in your account, or the link in this email), and our visa team checks everything within one working day before filing." },
   forex: { subject: "Your forex request", heading: "We're arranging your forex", line: "our forex partner will confirm your rate and delivery within 2 working hours." },
   insurance: { subject: "Your travel insurance request", heading: "We're finding your insurance", line: "we'll send plan options and a quote within 2 working hours." },
   flight: { subject: "Your flight request", heading: "We're finding your flights", line: "we'll send the best fares within 2 working hours." },
@@ -327,5 +327,20 @@ export function invoiceEmail(d: { name: string; number: string; kind: string; to
       cta: { label: "View, print or save as PDF", url: d.url },
     }),
     text: `Your ${what} ${d.number} for booking ${d.ref}: ${amount}.\nView, print or save as PDF: ${d.url}`,
+  };
+}
+
+/** A visa application moved on: filed, issued, refused or cancelled. */
+export function visaStageEmail(d: { name: string; ref: string; title: string; stage: string; line: string; url: string }): Built {
+  const heading = d.stage === "approved" ? "Your visa is ready" : d.stage === "submitted" ? "Your visa application is filed" : d.stage === "rejected" ? "About your visa application" : "Visa application update";
+  return {
+    subject: `${heading}: ${d.title} (${d.ref})`,
+    html: layout({
+      preheader: d.line,
+      heading,
+      body: p(`Hi ${esc(d.name.split(" ")[0])}, ${esc(d.line)}`) + box([["Application", `<span style="font-family:Menlo,Consolas,monospace;color:#0b4fc4">${esc(d.ref)}</span>`], ["Visa", esc(d.title)]]),
+      cta: { label: d.stage === "approved" ? "Download your visa" : "Track your application", url: d.url },
+    }),
+    text: `${heading}\n${d.line}\nApplication ${d.ref}: ${d.url}`,
   };
 }

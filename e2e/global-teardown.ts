@@ -12,6 +12,14 @@ export default async function teardown() {
   const missionIds = [...new Set([...enq.map((e) => e.missionId).filter((x): x is string => !!x), ...(c ? (await prisma.mission.findMany({ where: { customerId: c.id }, select: { id: true } })).map((m) => m.id) : [])])];
   // trip plans Riya's test started as a guest ("E2E test: …")
   missionIds.push(...(await prisma.mission.findMany({ where: { customerId: null, OR: [{ goal: { contains: "E2E test" } }, { title: { contains: "E2E" } }] }, select: { id: true } })).map((m) => m.id));
+  // files the tests uploaded (passport scans, issued visas) are removed from storage too
+  const files = await prisma.travelDoc.findMany({ where: { missionId: { in: missionIds } }, select: { fileKey: true } });
+  if (files.length) {
+    const { createClient } = await import("@supabase/supabase-js");
+    const { env } = await import("./helpers");
+    const e = env();
+    if (e.NEXT_PUBLIC_SUPABASE_URL && e.SUPABASE_SECRET_KEY) await createClient(e.NEXT_PUBLIC_SUPABASE_URL, e.SUPABASE_SECRET_KEY).storage.from("visa-docs").remove(files.map((f) => f.fileKey));
+  }
   await prisma.approval.deleteMany({ where: { missionId: { in: missionIds } } });
   await prisma.mission.deleteMany({ where: { id: { in: missionIds } } });
   const friend = await prisma.customer.findUnique({ where: { email: FRIEND_EMAIL } });

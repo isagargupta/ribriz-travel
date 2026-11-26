@@ -462,3 +462,9 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .pcal-d i { font-style: normal; font-weight: 500; font-size: 9.5px; opacity: .75 }
 .pcal-d.off { color: #c4c8e4; font-weight: 400 } .pcal-d.lo { background: var(--good-bg); color: var(--good) } .pcal-d.mid { background: #eef0ff } .pcal-d.hi { background: var(--warn-bg); color: var(--warn) }
 .pcal-d.closed { background: #f3f3f3; color: #999; text-decoration: line-through }
+
+/* admin: visas */
+.vadm-list { display: grid; gap: 6px } .vadm-item { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px } .vadm-item summary { cursor: pointer; display: flex; gap: 8px; align-items: center; flex-wrap: wrap }
+.vadm-form { display: grid; gap: 10px; margin-top: 12px } .vadm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px }
+.vadm-grid label { display: grid; gap: 4px; font-size: 12.5px; font-weight: 600 } .vadm-grid .wide { grid-column: 1 / -1 } .vadm-grid textarea { font: 13px/1.5 var(--f-mono) }
+.vadm-checks { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; font-size: 13.5px }

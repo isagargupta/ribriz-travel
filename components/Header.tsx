@@ -39,8 +39,8 @@ const MENUS: { id: string; label: string; groups: Group[]; feature?: { title: st
     id: "services", label: "Services",
     groups: [
       { title: "Before you go", items: [
-        { href: "/visa", label: "Visa checker", desc: "What your passport needs, instantly", icon: "🛂" },
-        { ask: "I need help applying for a visa", label: "Visa application help", desc: "Document check and filing", icon: "📄" },
+        { href: "/visa", label: "Apply for a visa", desc: "Dubai, Schengen, UK, Japan and more", icon: "🛂" },
+        { href: "/visa#rules", label: "Visa checker", desc: "What any passport needs, instantly", icon: "📄" },
         { ask: "I need travel insurance for my trip", label: "Travel insurance", desc: "Plans sized to your trip", icon: "🛡️" },
       ] },
       { title: "Bookings", items: [

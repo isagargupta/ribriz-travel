@@ -7,8 +7,10 @@ export async function onRequestError(err: unknown, request: { path: string; meth
   const e = err as Error & { digest?: string };
   const msg = String(e?.message ?? err).slice(0, 500);
   if (/NEXT_(NOT_FOUND|REDIRECT|HTTP_ERROR)/.test(msg) || /aborted|ECONNRESET/i.test(msg)) return; // not real errors
-  const { createHash } = await import("node:crypto");
-  const key = "srv:" + createHash("sha1").update(context.routePath + msg.replace(/\d+/g, "#")).digest("hex").slice(0, 16);
+  // a short fingerprint of the error (FNV-1a), so the same error isn't emailed twice in an hour
+  let h = 0x811c9dc5;
+  for (const ch of context.routePath + msg.replace(/\d+/g, "#")) h = Math.imul(h ^ ch.charCodeAt(0), 0x01000193) >>> 0;
+  const key = "srv:" + h.toString(36);
   const { alertTeam } = await import("./lib/health");
   await alertTeam(key, `Server error on ${context.routePath}`,
     `${request.method} ${request.path}\nRoute: ${context.routePath} (${context.routeType})\nWhen: ${new Date().toISOString()}\nDigest: ${e?.digest ?? "-"}\n\n${msg}\n\n${String(e?.stack ?? "").split("\n").slice(1, 8).join("\n")}\n\nThe same error won't be emailed again for an hour. Full logs: Vercel → ribriz-travel → Logs.`);

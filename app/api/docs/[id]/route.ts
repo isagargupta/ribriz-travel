@@ -17,7 +17,15 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const d = await prisma.travelDoc.findUnique({ where: { id: (await params).id } });
   if (!d) return fail("Not found.", 404);
-  const allowed = (await isAdmin()) || !!(await getOwnedMission(await getOwner(), d.missionId));
+  // visa applications: the link from our email (?t=) opens that application's documents too
+  const t = new URL(req.url).searchParams.get("t");
+  const viaLink = !!t && await (async () => {
+    const e = await prisma.enquiry.findFirst({ where: { missionId: d.missionId, type: "visa" }, select: { ref: true } });
+    const { payToken } = await import("@/lib/payments");
+    const { safeEqual } = await import("@/lib/signing");
+    return !!e && safeEqual(t, payToken(e.ref));
+  })();
+  const allowed = viaLink || (await isAdmin()) || !!(await getOwnedMission(await getOwner(), d.missionId));
   if (!allowed) return fail("Not found.", 404);
   if (new URL(req.url).searchParams.get("raw")) {
     const blob = await downloadPrivate(d.fileKey);

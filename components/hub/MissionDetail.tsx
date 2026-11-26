@@ -41,6 +41,7 @@ export default async function MissionDetail({ id, backHref, backLabel = "← All
   const live = backHref.startsWith("/me") ? (await liveTrips(owner)).find((t) => t.missionId === m.id) : undefined;
   const group = backHref.startsWith("/me") && m.adults + m.childAges.length > 1 ? await groupOf(m.id) : null;
   const isOwner = !!group && group.ownerId === owner.customerId;
+  const visaApp = await prisma.enquiry.findFirst({ where: { missionId: m.id, type: "visa", details: { contains: "\"stage\"" } }, select: { ref: true } });
   const holdRef = group ? (await prisma.enquiry.findFirst({ where: { missionId: m.id, type: { in: ["hold", "custom"] }, status: { not: "closed" } }, orderBy: { createdAt: "desc" }, select: { ref: true } }))?.ref : null;
 
   return (
@@ -67,6 +68,12 @@ export default async function MissionDetail({ id, backHref, backLabel = "← All
             <section className="panel">
               <h2>{pending.some((c) => c.action === "accept_offer") ? "Choose and approve" : "Waiting for your OK"}</h2>
               <HubApprovals cards={pending} />
+            </section>
+          )}
+          {visaApp && (
+            <section className="panel" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <div><h2 style={{ margin: 0 }}>Visa application {visaApp.ref}</h2><p className="muted" style={{ margin: 0 }}>Documents for each traveller, payment and live status.</p></div>
+              <Link className="btn hot" href={`/visa/application/${visaApp.ref}`}>Open application</Link>
             </section>
           )}
           {group && (

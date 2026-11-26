@@ -83,7 +83,7 @@ async function refreshVisaTask(owner: Owner, missionId: string) {
 export class UploadError extends Error {}
 
 /** Stores the file privately, checks it with AI, files it under the right document type. */
-export async function uploadDoc(owner: Owner, missionId: string, file: File, kindHint?: string | null) {
+export async function uploadDoc(owner: Owner, missionId: string, file: File, kindHint?: string | null, applicant = 0) {
   const m = await getOwnedMission(owner, missionId);
   if (!m) throw new UploadError("We couldn't find that trip.");
   if (!ALLOWED_MIME.includes(file.type)) throw new UploadError("Upload a photo (JPG, PNG, WebP) or a PDF.");
@@ -100,7 +100,7 @@ export async function uploadDoc(owner: Owner, missionId: string, file: File, kin
   const hint = DOC_KINDS.includes(kindHint as DocKind) ? (kindHint as DocKind) : undefined;
   const doc = await prisma.travelDoc.create({
     data: {
-      missionId, kind: hint ?? "other", fileKey: key, fileName: (file.name || `document.${ext}`).slice(0, 120), mime: file.type, size: file.size,
+      missionId, applicant: Math.max(0, Math.min(8, Math.round(applicant) || 0)), kind: hint ?? "other", fileKey: key, fileName: (file.name || `document.${ext}`).slice(0, 120), mime: file.type, size: file.size,
       deleteAfter: returnDate ? new Date(addDays(returnDate, 30) + "T00:00:00Z") : new Date(Date.now() + 180 * 864e5),
     },
   });
