@@ -362,3 +362,41 @@ export async function refundAction(_: RefundState, fd: FormData): Promise<Refund
     throw e;
   }
 }
+
+/* ---------- GST invoices ---------- */
+
+/** Issue the tax invoice now for what's been paid (normally automatic once fully paid). */
+export async function issueInvoiceAction(fd: FormData) {
+  await requireAdmin();
+  const { issueInvoice, emailInvoice, InvoiceError } = await import("@/lib/invoices");
+  try {
+    const inv = await issueInvoice(String(fd.get("id")));
+    if (!inv.emailedAt && fd.get("email") === "on") await emailInvoice(inv);
+  } catch (e) { if (!(e instanceof InvoiceError)) throw e; }
+  revalidatePath("/admin/enquiries"); revalidatePath("/admin/invoices");
+}
+
+/** A credit note against an invoice (price reduction, cancellation charge waived…). Refunds make one automatically. */
+export async function creditNoteAction(fd: FormData) {
+  await requireAdmin();
+  const amount = Number(String(fd.get("amount") ?? "").replace(/[^\d.]/g, ""));
+  const reason = String(fd.get("reason") ?? "").trim();
+  if (!amount || !reason) return;
+  const { issueCreditNote, emailInvoice, InvoiceError } = await import("@/lib/invoices");
+  try { const cn = await issueCreditNote(String(fd.get("invoiceId")), amount, reason); if (fd.get("email") === "on") await emailInvoice(cn); }
+  catch (e) { if (!(e instanceof InvoiceError)) throw e; }
+  revalidatePath("/admin/enquiries"); revalidatePath("/admin/invoices");
+}
+
+/** Company GST details for a booking's invoice; only before the invoice is issued. */
+export async function setBillingAction(fd: FormData) {
+  await requireAdmin();
+  const id = String(fd.get("id"));
+  if (await prisma.invoice.count({ where: { enquiryId: id, kind: "invoice" } })) return;
+  const { checkGstin } = await import("@/lib/gst-rules");
+  const raw = String(fd.get("gstin") ?? "").trim();
+  const g = raw ? checkGstin(raw) : null;
+  if (g && !g.ok) return;
+  await prisma.enquiry.update({ where: { id }, data: { billingName: String(fd.get("name") ?? "").trim().slice(0, 120) || null, billingGstin: g?.ok ? g.gstin : null, billingAddress: String(fd.get("address") ?? "").trim().slice(0, 300) || null } });
+  revalidatePath("/admin/enquiries");
+}

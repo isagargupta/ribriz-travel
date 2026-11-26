@@ -12,6 +12,9 @@ export const COMPANY = {
     street: "Unit 101, Oxford Towers, 139, HAL Old Airport Rd, Kodihalli",
     city: "Bengaluru", region: "Karnataka", postalCode: "560008", country: "IN",
   },
+  /** GST registration (Karnataka). Tax invoices are issued under this number. */
+  gstin: "29AANCR5772Q1Z6",
+  gstState: "29",
   /** We don't take phone calls: support is by email and through Riya, 24×7. */
   phone: null,
 } as const;

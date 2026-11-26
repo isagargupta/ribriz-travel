@@ -110,6 +110,11 @@ model Enquiry {
   /// new | contacted | booked | closed
   status      String     @default("new")
   note        String?
+  /// business buyers: name, GSTIN and address for the tax invoice
+  billingName    String?
+  billingGstin   String?
+  billingAddress String?
+  invoices    Invoice[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @default(now()) @updatedAt
 
@@ -480,4 +485,49 @@ model RateHit {
   resetAt DateTime
 
   @@index([resetAt])
+}
+
+/// A GST tax invoice or credit note. Never edited or deleted once issued: a
+/// mistake is corrected with a credit note. Amounts in paise.
+model Invoice {
+  id           String    @id @default(cuid())
+  /// invoice | credit_note
+  kind         String
+  /// e.g. RB/2026-27/0001 or CN/2026-27/0001
+  number       String    @unique
+  fy           String
+  seq          Int
+  enquiryId    String
+  enquiry      Enquiry   @relation(fields: [enquiryId], references: [id], onDelete: Restrict)
+  /// for a credit note: the invoice it reduces
+  againstId    String?
+  issuedAt     DateTime  @default(now())
+  buyerName    String
+  buyerEmail   String
+  buyerGstin   String?
+  buyerAddress String?
+  /// place of supply: GST state code and name
+  posCode      String
+  posName      String
+  sac          String
+  description  String
+  rate         Float
+  taxable      Int
+  cgst         Int
+  sgst         Int
+  igst         Int
+  total        Int
+  /// why a credit note was issued
+  reason       String?
+  emailedAt    DateTime?
+
+  @@unique([kind, fy, seq])
+  @@index([enquiryId])
+  @@index([issuedAt])
+}
+
+/// Next number for each document series (invoice and credit note, per financial year).
+model DocCounter {
+  key  String @id
+  next Int    @default(1)
 }

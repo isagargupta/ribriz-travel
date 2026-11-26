@@ -11,6 +11,7 @@ export interface WalletPayment { id: string; ref: string; kind: string; amount: 
 export interface WalletTrip {
   missionId: string | null; title: string; dest: string | null; image: string | null; date: string | null; returnDate: string | null;
   docs: WalletDoc[]; bookings: BookingView[]; payments: WalletPayment[];
+  invoices: { id: string; number: string; kind: string; total: number; issuedAt: string; url: string }[];
 }
 
 const PAID = ["paid", "partially_refunded", "refunded"];
@@ -34,6 +35,10 @@ export async function walletFor(owner: Owner, email: string): Promise<WalletTrip
     }),
   ]);
 
+  const { invoiceUrl } = await import("./invoices");
+  const invRows = await prisma.invoice.findMany({ where: { enquiry: { email: { equals: email, mode: "insensitive" } } }, include: { enquiry: { select: { missionId: true } } }, orderBy: { issuedAt: "asc" } });
+  const invView = (i: (typeof invRows)[number]) => ({ id: i.id, number: i.number, kind: i.kind, total: i.total, issuedAt: i.issuedAt.toISOString(), url: invoiceUrl(i.id) });
+
   const payView = (p: (typeof payments)[number]): WalletPayment => ({
     id: p.id, ref: p.enquiry.ref, kind: p.kind, amount: p.amount, refunded: p.refundedAmount, method: p.method, paymentId: p.paymentId,
     paidAt: (p.paidAt ?? p.createdAt).toISOString(), status: p.status,
@@ -48,9 +53,10 @@ export async function walletFor(owner: Owner, email: string): Promise<WalletTrip
     if (returnDate && addDays(returnDate, 60) < today) continue;
     const bookings = (await bookingsFor(m.id)).filter((b) => b.status === "booked");
     const pays = payments.filter((p) => p.enquiry.missionId === m.id).map(payView);
-    if (!m.documents.length && !bookings.length && !pays.length && !t) continue;
+    const invs = invRows.filter((i) => i.enquiry.missionId === m.id).map(invView);
+    if (!m.documents.length && !bookings.length && !pays.length && !invs.length && !t) continue;
     out.push({
-      missionId: m.id, title: m.title, dest: t?.dest ?? null, image: t?.image ?? null, date: dep?.date ?? null, returnDate, bookings, payments: pays,
+      missionId: m.id, title: m.title, dest: t?.dest ?? null, image: t?.image ?? null, date: dep?.date ?? null, returnDate, bookings, payments: pays, invoices: invs,
       docs: m.documents.map((d) => ({
         id: d.id, kind: d.kind, label: DOC_LABELS[d.kind as DocKind] ?? d.kind, fileName: d.fileName, mime: d.mime, size: d.size, status: d.status,
         findings: d.findings ? JSON.parse(d.findings) : [], createdAt: d.createdAt.toISOString(), deleteAfter: d.deleteAfter?.toISOString() ?? null,
@@ -59,7 +65,8 @@ export async function walletFor(owner: Owner, email: string): Promise<WalletTrip
   }
   // payments on requests that aren't linked to a trip in the app
   const loose = payments.filter((p) => !p.enquiry.missionId || !missions.some((m) => m.id === p.enquiry.missionId));
-  if (loose.length) out.push({ missionId: null, title: "Other payments", dest: null, image: null, date: null, returnDate: null, docs: [], bookings: [], payments: loose.map(payView) });
+  const looseInv = invRows.filter((i) => !i.enquiry.missionId || !missions.some((m) => m.id === i.enquiry.missionId)).map(invView);
+  if (loose.length || looseInv.length) out.push({ missionId: null, title: "Other payments", dest: null, image: null, date: null, returnDate: null, docs: [], bookings: [], payments: loose.map(payView), invoices: looseInv });
   // soonest trip first, undated after
   return out.sort((a, b) => (a.date ?? "9999").localeCompare(b.date ?? "9999"));
 }

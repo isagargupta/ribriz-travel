@@ -53,6 +53,8 @@ export interface PayView {
   enabled: boolean; missionId: string | null;
   /** hold | custom | flight | hotel | visa | insurance | forex | enquiry */
   type: string;
+  billing: { name: string | null; gstin: string | null; address: string | null };
+  invoices: { number: string; kind: string; url: string }[];
 }
 
 export async function payView(ref: string, token: string | null, owner: Owner): Promise<PayView | null> {
@@ -62,8 +64,24 @@ export async function payView(ref: string, token: string | null, owner: Owner): 
     ref: e.ref, name: e.name, email: e.email, phone: e.phone, tripTitle: e.trip?.title ?? e.tripTitle, tripSlug: e.trip?.slug ?? null, image: e.trip?.image ?? null,
     departure: e.departure, nights: e.trip?.nights ?? null, adults: e.adults, children: e.children, total: e.quotedTotal ?? 0,
     plan: planOf(e), enabled: rzpConfigured(), missionId: e.mission?.id ?? null, type: e.type,
+    billing: { name: e.billingName, gstin: e.billingGstin, address: e.billingAddress },
+    invoices: await prisma.invoice.findMany({ where: { enquiryId: e.id }, orderBy: { issuedAt: "asc" }, select: { id: true, number: true, kind: true } })
+      .then(async (rows) => { const { invoiceUrl } = await import("./invoices"); return rows.map((r) => ({ number: r.number, kind: r.kind, url: invoiceUrl(r.id) })); }),
     payments: e.payments.filter((p) => p.status !== "created").map((p) => ({ kind: p.kind, amount: p.amount, status: p.status, paidAt: p.paidAt?.toISOString() ?? null, method: p.method, refunded: p.refundedAmount })),
   };
+}
+
+/** Business buyers: company name, GSTIN and address for the tax invoice. Locked once the invoice is issued. */
+export async function setBilling(ref: string, token: string | null, owner: Owner, b: { name: string; gstin: string; address: string }) {
+  const e = await load(ref);
+  if (!e || !mayPay(e, token, owner)) throw new PayError("We couldn't find that booking.");
+  if (await prisma.invoice.count({ where: { enquiryId: e.id, kind: "invoice" } })) throw new PayError("Your invoice has already been issued. Ask Riya to have our team reissue it with these details.");
+  const { checkGstin } = await import("./gst-rules");
+  const g = b.gstin.trim() ? checkGstin(b.gstin) : null;
+  if (g && !g.ok) throw new PayError(g.error);
+  if (g?.ok && b.name.trim().length < 2) throw new PayError("Add the company's registered name.");
+  await prisma.enquiry.update({ where: { id: e.id }, data: { billingName: b.name.trim().slice(0, 120) || null, billingGstin: g?.ok ? g.gstin : null, billingAddress: b.address.trim().slice(0, 300) || null } });
+  return { gstin: g?.ok ? g.gstin : null };
 }
 
 /** Creates a Razorpay order for whatever is due next. */
@@ -142,6 +160,8 @@ async function afterPaid(enquiryId: string, kind: string, amount: number) {
   }
   const { notifyPayment } = await import("./notify");
   await notifyPayment(e.id, amount, kind).catch((err) => console.error("payment email failed", err));
+  // fully paid holiday: the GST tax invoice is issued and emailed now
+  if (full) { const { invoiceIfFullyPaid } = await import("./invoices"); await invoiceIfFullyPaid(e.id); }
 }
 
 /** Admin: refund all or part of a payment through Razorpay. */
@@ -153,7 +173,15 @@ export async function refund(paymentRowId: string, rupees: number, reason: strin
   await refundPayment(pay.paymentId, amt, { reason: reason.slice(0, 200) });
   const refunded = pay.refundedAmount + amt;
   await prisma.payment.update({ where: { id: pay.id }, data: { refundedAmount: refunded, status: refunded >= pay.amount ? "refunded" : "partially_refunded" } });
-  return { refunded: amt, left: left - amt };
+  // already invoiced: GST needs a credit note for the refunded amount
+  const { issueCreditNote, emailInvoice } = await import("./invoices");
+  const inv = await prisma.invoice.findFirst({ where: { enquiryId: pay.enquiryId, kind: "invoice" } });
+  let creditNote: string | null = null;
+  if (inv) {
+    try { const cn = await issueCreditNote(inv.id, amt, reason || "Refund"); creditNote = cn.number; await emailInvoice(cn).catch(() => {}); }
+    catch (err) { console.error("credit note failed", err); }
+  }
+  return { refunded: amt, left: left - amt, creditNote };
 }
 
 export { RazorpayError };

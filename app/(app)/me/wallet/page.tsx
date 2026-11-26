@@ -55,6 +55,20 @@ export default async function WalletPage() {
             </div>
           )}
 
+          {t.invoices.length > 0 && (
+            <div className="w-block">
+              <h3>GST invoices</h3>
+              <ul className="w-pays">
+                {t.invoices.map((i) => (
+                  <li key={i.id}>
+                    <span><b>{i.number}</b> <span className="muted">{i.kind === "credit_note" ? "Credit note" : "Tax invoice"} · {(i.total / 100).toLocaleString("en-IN", { style: "currency", currency: "INR" })} · {new Date(i.issuedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" })}</span></span>
+                    <a href={i.url} className="btn sm">View</a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {t.payments.length > 0 && (
             <div className="w-block">
               <h3>Payments & receipts</h3>

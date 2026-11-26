@@ -11,6 +11,7 @@ import { notifyEnquiry } from "../notify";
 import { OFFER_LABEL } from "../offers";
 import { ownedBy, type Owner } from "../owner";
 import { payUrl, planOf } from "../payments";
+import { invoiceUrl } from "../invoices";
 import type { ToolOutcome, VisitorContext } from "./tools";
 
 /*
@@ -31,7 +32,7 @@ async function myRequests(owner: Owner) {
   if (!or.length) return [];
   return prisma.enquiry.findMany({
     where: { OR: or }, orderBy: { createdAt: "desc" }, take: 15,
-    include: { payments: { orderBy: { createdAt: "asc" } }, offers: { where: { status: { in: ["chosen", "booked"] } } }, trip: { select: { title: true, slug: true, image: true, nights: true } }, mission: { select: { id: true, customerId: true, anonId: true } }, dep: { select: { status: true, seatsLeft: true } } },
+    include: { invoices: { select: { id: true, number: true, kind: true }, orderBy: { issuedAt: "asc" } }, payments: { orderBy: { createdAt: "asc" } }, offers: { where: { status: { in: ["chosen", "booked"] } } }, trip: { select: { title: true, slug: true, image: true, nights: true } }, mission: { select: { id: true, customerId: true, anonId: true } }, dep: { select: { status: true, seatsLeft: true } } },
   });
 }
 
@@ -53,6 +54,7 @@ async function bookingsTool(_: unknown, ctx: VisitorContext): Promise<ToolOutcom
           next_payment: plan.next ? { kind: plan.next.kind, amount_inr: plan.next.amount, link: payUrl(e.ref) } : null,
           cannot_pay_because: plan.blocked ?? null,
           payments: e.payments.filter((p) => p.status !== "created" && p.status !== "failed").map((p) => ({ kind: p.kind, amount_inr: p.amount, status: p.status, refunded_inr: p.refundedAmount, paid_at: p.paidAt?.toISOString().slice(0, 10) ?? null })),
+          gst_documents: e.invoices.map((iv) => ({ number: iv.number, kind: iv.kind, link: invoiceUrl(iv.id) })),
           confirmations: e.offers.map((o) => ({ what: OFFER_LABEL[o.service] ?? o.service, title: o.title, status: o.status, confirmation: o.confirmation })),
         };
       }),

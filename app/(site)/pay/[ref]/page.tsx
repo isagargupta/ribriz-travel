@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import BillingForm from "@/components/pay/BillingForm";
 import { notFound } from "next/navigation";
 import PayButton from "@/components/pay/PayButton";
 import Consent from "@/components/legal/Consent";
@@ -60,6 +61,17 @@ export default async function PayPage({ params, searchParams }: { params: Promis
           <div className="pay-done"><span className="pay-tick">✓</span><b>Paid in full</b><p>Thank you! Your trip is fully paid.</p></div>
         ) : (
           <p className="notice warn">{BLOCKED[plan.blocked ?? ""] ?? "Nothing is due right now."}</p>
+        )}
+
+        {(v.type === "hold" || v.type === "custom") && (
+          <div className="pay-gst">
+            {v.invoices.length > 0 && (
+              <ul className="pay-inv">
+                {v.invoices.map((i) => <li key={i.number}><span>{i.kind === "credit_note" ? "Credit note" : "GST tax invoice"}</span><Link href={i.url}>{i.number} →</Link></li>)}
+              </ul>
+            )}
+            <BillingForm refCode={v.ref} token={t ?? null} initial={v.billing} locked={v.invoices.some((i) => i.kind === "invoice")} />
+          </div>
         )}
 
         {v.payments.length > 0 && (

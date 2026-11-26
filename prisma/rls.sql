@@ -26,7 +26,9 @@ ALTER TABLE "TeamMessage" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Review" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "PushSub"      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "RateHit"      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Invoice"      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "DocCounter"   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Payment" ENABLE ROW LEVEL SECURITY;
 
 -- Belt and braces: the public API roles get no table privileges at all.
-REVOKE ALL ON "Trip", "Departure", "Enquiry", "Subscriber", "Customer", "LoginCode", "VisaRule", "VisaSync", "Mission", "MissionTask", "Approval", "MissionEvent", "TravelDoc", "Notification", "PriceWatch", "AgentRun", "EmailOptOut", "ServiceOffer", "TravellerProfile", "TeamMessage", "Review", "Payment", "PushSub", "RateHit" FROM anon, authenticated;
+REVOKE ALL ON "Trip", "Departure", "Enquiry", "Subscriber", "Customer", "LoginCode", "VisaRule", "VisaSync", "Mission", "MissionTask", "Approval", "MissionEvent", "TravelDoc", "Notification", "PriceWatch", "AgentRun", "EmailOptOut", "ServiceOffer", "TravellerProfile", "TeamMessage", "Review", "Payment", "PushSub", "RateHit", "Invoice", "DocCounter" FROM anon, authenticated;

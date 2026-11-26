@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { fmt } from "@/lib/pricing";
-import { deleteEnquiry, updateEnquiry } from "../../actions";
+import { creditNoteAction, deleteEnquiry, issueInvoiceAction, setBillingAction, updateEnquiry } from "../../actions";
+import { inr } from "@/lib/gst-rules";
 import OffersPanel from "@/components/admin/OffersPanel";
 import PaymentsPanel from "@/components/admin/PaymentsPanel";
 import { inrFor } from "@/lib/fx";
@@ -26,7 +27,7 @@ export default async function Enquiries({ searchParams }: { searchParams: Promis
   const where = FILTERS.includes(status) && status !== "all" ? { status } : {};
   const list = await prisma.enquiry.findMany({
     where, orderBy: { createdAt: "desc" }, take: 200,
-    include: { payments: { orderBy: { createdAt: "asc" } }, offers: { orderBy: { createdAt: "asc" } }, messages: { orderBy: { createdAt: "desc" }, take: 10 }, mission: { select: { id: true, documents: { orderBy: { createdAt: "desc" }, select: { id: true, kind: true, fileName: true, status: true, findings: true } } } } },
+    include: { invoices: { orderBy: { issuedAt: "asc" } }, payments: { orderBy: { createdAt: "asc" } }, offers: { orderBy: { createdAt: "asc" } }, messages: { orderBy: { createdAt: "desc" }, take: 10 }, mission: { select: { id: true, documents: { orderBy: { createdAt: "desc" }, select: { id: true, kind: true, fileName: true, status: true, findings: true } } } } },
   });
   const wa = (phone: string) => phone.replace(/[^\d]/g, "");
   const hints = new Map(await Promise.all(list.filter((e) => e.type === "forex").map(async (e) => [e.id, await forexHint(e.details)] as const)));
@@ -86,6 +87,42 @@ export default async function Enquiries({ searchParams }: { searchParams: Promis
                 </div>
               )}
               {e.quotedTotal ? <p style={{ fontSize: 13, margin: "8px 0 0" }}><b>Customer pay link:</b> <code style={{ userSelect: "all" }}>{(process.env.NEXT_PUBLIC_SITE_URL || "https://www.ribriztravel.com").replace(/\/$/, "") + payUrl(e.ref)}</code></p> : null}
+              {(e.type === "hold" || e.type === "custom") && (
+                <div className="admin-docs">
+                  <b>GST invoice</b>
+                  {e.invoices.length > 0 ? (
+                    <ul>
+                      {e.invoices.map((iv) => <li key={iv.id}><a href={`/invoice/${iv.id}`} target="_blank" rel="noopener noreferrer" className="mono">{iv.number}</a> · {iv.kind === "credit_note" ? "credit note" : "invoice"} · {inr(iv.total)}{iv.buyerGstin ? ` · ${iv.buyerGstin}` : ""}{iv.emailedAt ? " · emailed" : ""}</li>)}
+                    </ul>
+                  ) : <p className="muted" style={{ margin: "4px 0" }}>Not issued yet. It's issued automatically when the trip is fully paid.</p>}
+                  {!e.invoices.some((iv) => iv.kind === "invoice") ? (
+                    <>
+                      <form action={setBillingAction} style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+                        <input type="hidden" name="id" value={e.id} />
+                        <input className="in" name="gstin" defaultValue={e.billingGstin ?? ""} placeholder="Buyer GSTIN (business)" style={{ width: 190 }} />
+                        <input className="in" name="name" defaultValue={e.billingName ?? ""} placeholder="Registered name" style={{ width: 200 }} />
+                        <input className="in" name="address" defaultValue={e.billingAddress ?? ""} placeholder="Billing address" style={{ flex: 1, minWidth: 200 }} />
+                        <button className="btn sm" type="submit">Save GST details</button>
+                      </form>
+                      {e.payments.some((p) => p.status === "paid" || p.status === "partially_refunded") && (
+                        <form action={issueInvoiceAction} style={{ marginTop: 6, display: "flex", gap: 8, alignItems: "center" }}>
+                          <input type="hidden" name="id" value={e.id} />
+                          <button className="btn sm blue" type="submit">Issue invoice now for the amount paid</button>
+                          <label className="chk" style={{ fontSize: 13 }}><input type="checkbox" name="email" defaultChecked /> Email it</label>
+                        </form>
+                      )}
+                    </>
+                  ) : (
+                    <form action={creditNoteAction} style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+                      <input type="hidden" name="invoiceId" value={e.invoices.find((iv) => iv.kind === "invoice")!.id} />
+                      <input className="in" name="amount" inputMode="decimal" placeholder="Credit ₹" style={{ width: 110 }} />
+                      <input className="in" name="reason" placeholder="Reason (refunds make one automatically)" style={{ flex: 1, minWidth: 220 }} />
+                      <label className="chk" style={{ fontSize: 13 }}><input type="checkbox" name="email" defaultChecked /> Email it</label>
+                      <button className="btn sm" type="submit">Issue credit note</button>
+                    </form>
+                  )}
+                </div>
+              )}
               <PaymentsPanel total={e.quotedTotal ?? 0} payments={e.payments.map((p) => ({ id: p.id, kind: p.kind, amount: p.amount, status: p.status, method: p.method, paymentId: p.paymentId, paidAt: p.paidAt?.toISOString() ?? null, refunded: p.refundedAmount }))} />
               {e.messages.length > 0 && (
                 <ul className="ib-hist" style={{ marginTop: 10 }}>

@@ -45,7 +45,7 @@ export default function Footer() {
       </div>
       <div className="wrap legal">
         <nav className="legal-links" aria-label="Legal"><Link href="/legal/terms">Terms of booking</Link><Link href="/legal/privacy">Privacy policy</Link><Link href="/legal/cancellation">Cancellations &amp; refunds</Link><Link href="/legal/cookies">Cookies</Link></nav>
-        <p>© {new Date().getFullYear()} {COMPANY.legalName} · CIN {COMPANY.cin} · {COMPANY.brand} is a brand of {COMPANY.legalName}.</p>
+        <p>© {new Date().getFullYear()} {COMPANY.legalName} · CIN {COMPANY.cin} · GSTIN {COMPANY.gstin} · {COMPANY.brand} is a brand of {COMPANY.legalName}.</p>
       </div>
       <CookieNotice />
       <DeletedToast />
