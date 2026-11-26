@@ -92,7 +92,7 @@ export async function updateEnquiry(fd: FormData) {
       const { fmt } = await import("@/lib/pricing");
       if (prev.missionId) await logEvent(prev.missionId, "team", `Your price is ready: ${fmt(total)} (ref ${prev.ref}). Pay securely online whenever you're ready.`);
       const { pushToEmail } = await import("@/lib/push");
-      after(() => pushToEmail(prev.email, { title: "Your price is ready", body: `${fmt(total)} for ${prev.ref}. Tap to pay securely online.`, url: payUrl(prev.ref), tag: `price-${prev.ref}` }).then(() => undefined));
+      after(() => pushToEmail(prev.email, { title: "Your price is ready", body: `${fmt(total)} for ${prev.ref}. Tap to pay securely online.`, url: payUrl(prev.ref), tag: `price-${prev.ref}`, important: true }).then(() => undefined));
     }
   }
   const before = await prisma.enquiry.findUnique({ where: { id }, select: { status: true } });
@@ -399,4 +399,65 @@ export async function setBillingAction(fd: FormData) {
   if (g && !g.ok) return;
   await prisma.enquiry.update({ where: { id }, data: { billingName: String(fd.get("name") ?? "").trim().slice(0, 120) || null, billingGstin: g?.ok ? g.gstin : null, billingAddress: String(fd.get("address") ?? "").trim().slice(0, 300) || null } });
   revalidatePath("/admin/enquiries");
+}
+
+/* ---------- seasons, bulk changes, copying ---------- */
+
+/** Adds a season of departures: a date range, on chosen weekdays or every N days, with one price change and seat count. */
+export async function addSeason(fd: FormData) {
+  await requireAdmin();
+  const { seasonDates } = await import("@/lib/season-rules");
+  const tripId = String(fd.get("tripId"));
+  const from = String(fd.get("from")), to = String(fd.get("to"));
+  if (!DATE_RE.test(from) || !DATE_RE.test(to)) return;
+  const weekdays = fd.getAll("wd").map(Number).filter((n) => n >= 0 && n <= 6);
+  const dates = seasonDates({ from, to, weekdays, every: Number(fd.get("every")) || 7, notBefore: isoDate(new Date(Date.now() + 2 * 864e5)) });
+  const seatsRaw = String(fd.get("seats") ?? "").trim();
+  const data = { priceDelta: Math.round(Number(fd.get("delta")) || 0), seatsLeft: seatsRaw === "" ? null : Math.max(0, Math.round(Number(seatsRaw))), status: "open" };
+  const overwrite = fd.get("overwrite") === "on";
+  const existing = new Map((await prisma.departure.findMany({ where: { tripId, date: { in: dates } }, select: { id: true, date: true } })).map((d) => [d.date, d.id]));
+  const fresh = dates.filter((d) => !existing.has(d)).map((date) => ({ tripId, date, ...data }));
+  if (fresh.length) await prisma.departure.createMany({ data: fresh });
+  if (overwrite && existing.size) await prisma.departure.updateMany({ where: { id: { in: [...existing.values()] } }, data });
+  refreshSite();
+}
+
+/** One change to every departure in a date range: price, surcharge, seats, open/close or delete (dates with bookings are kept). */
+export async function bulkDepartures(fd: FormData) {
+  await requireAdmin();
+  const { applyBulk } = await import("@/lib/season-rules");
+  const tripId = String(fd.get("tripId"));
+  const from = String(fd.get("from")), to = String(fd.get("to"));
+  const action = String(fd.get("action")) as import("@/lib/season-rules").BulkAction;
+  if (!DATE_RE.test(from) || !DATE_RE.test(to) || !["set_delta", "add_delta", "set_seats", "close", "open", "delete"].includes(action)) return;
+  const raw = String(fd.get("value") ?? "").trim();
+  const value = raw === "" ? null : Number(raw);
+  const weekdays = fd.getAll("wd").map(Number);
+  const deps = await prisma.departure.findMany({ where: { tripId, date: { gte: from, lte: to } }, include: { _count: { select: { enquiries: true } } } });
+  for (const d of deps) {
+    if (weekdays.length && !weekdays.includes(new Date(d.date + "T00:00:00Z").getUTCDay())) continue;
+    const r = applyBulk({ priceDelta: d.priceDelta, seatsLeft: d.seatsLeft, status: d.status, booked: d._count.enquiries > 0 }, action, value);
+    if (r === "keep") continue;
+    if (r === null) await prisma.departure.delete({ where: { id: d.id } });
+    else await prisma.departure.update({ where: { id: d.id }, data: { priceDelta: r.priceDelta, seatsLeft: r.seatsLeft, status: r.status } });
+  }
+  refreshSite();
+}
+
+/** Copies a trip (details, photos, itinerary) as an unpublished draft, optionally with its future dates. */
+export async function copyTrip(fd: FormData) {
+  await requireAdmin();
+  const t = await prisma.trip.findUnique({ where: { id: String(fd.get("id")) }, include: { departures: { where: { date: { gte: isoDate(new Date()) } } } } });
+  if (!t) return;
+  let slug = `${t.slug}-copy`;
+  for (let i = 2; await prisma.trip.findUnique({ where: { slug } }); i++) slug = `${t.slug}-copy-${i}`;
+  const { id: _id, createdAt: _c, updatedAt: _u, departures, slug: _s, ...rest } = t;
+  const copy = await prisma.trip.create({
+    data: {
+      ...rest, slug, title: `${t.title} (copy)`, published: false, featured: false, reviews: 0,
+      ...(fd.get("dates") === "on" ? { departures: { create: departures.map((d) => ({ date: d.date, priceDelta: d.priceDelta, seatsLeft: d.seatsLeft, status: d.status })) } } : {}),
+    },
+  });
+  refreshSite();
+  redirect(`/admin/trips/${copy.id}`);
 }

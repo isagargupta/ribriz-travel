@@ -135,6 +135,9 @@ model Customer {
   email       String    @unique
   name        String?
   phone       String?
+  /// WhatsApp updates: the number (country code + digits) and when they opted in; null = off
+  whatsappNumber  String?
+  whatsappOptInAt DateTime?
   createdAt   DateTime  @default(now())
   lastLoginAt DateTime?
 }
@@ -204,6 +207,7 @@ model Mission {
   events        MissionEvent[]
   requests      Enquiry[]
   documents     TravelDoc[]
+  members       MissionMember[]
 
   @@index([customerId, updatedAt])
   @@index([anonId, updatedAt])
@@ -446,8 +450,10 @@ model Payment {
   id             String    @id @default(cuid())
   enquiryId      String
   enquiry        Enquiry   @relation(fields: [enquiryId], references: [id], onDelete: Restrict)
-  /// deposit | balance | full
+  /// deposit | balance | full | share (one traveller's part of a group trip)
   kind           String
+  /// who paid a share, as they typed it (group trips)
+  payerName      String?
   /// INR, whole rupees
   amount         Int
   orderId        String    @unique
@@ -491,7 +497,7 @@ model RateHit {
 /// mistake is corrected with a credit note. Amounts in paise.
 model Invoice {
   id           String    @id @default(cuid())
-  /// invoice | credit_note
+  /// invoice | credit_note | receipt_voucher | refund_voucher
   kind         String
   /// e.g. RB/2026-27/0001 or CN/2026-27/0001
   number       String    @unique
@@ -499,8 +505,10 @@ model Invoice {
   seq          Int
   enquiryId    String
   enquiry      Enquiry   @relation(fields: [enquiryId], references: [id], onDelete: Restrict)
-  /// for a credit note: the invoice it reduces
+  /// for a credit note: the invoice it reduces; for a refund voucher: the receipt voucher
   againstId    String?
+  /// for receipt and refund vouchers: the payment they record
+  paymentRowId String?
   issuedAt     DateTime  @default(now())
   buyerName    String
   buyerEmail   String
@@ -530,4 +538,40 @@ model Invoice {
 model DocCounter {
   key  String @id
   next Int    @default(1)
+}
+
+/// Anonymous usage counts for the sales funnel. No cookies, no IP, no account:
+/// `sid` is a random id kept in the visitor's tab (sessionStorage). Kept 180 days.
+model Event {
+  id     String   @id @default(cuid())
+  at     DateTime @default(now())
+  sid    String?
+  /// page_view | trip_view | hold_start | hold_created | pay_view | paid | chat_open | chat_message | search
+  type   String
+  path   String?
+  tripId String?
+  ref    String?
+  /// where the visit came from: utm_source, or the referring site's domain, or "direct"
+  source String?
+  /// mobile | desktop
+  device String?
+
+  @@index([type, at])
+  @@index([at])
+  @@index([ref])
+}
+
+/// A co-traveller who joined a trip plan from an invite link: they see the trip
+/// in their own app, can upload their documents and pay their share.
+model MissionMember {
+  id         String   @id @default(cuid())
+  missionId  String
+  mission    Mission  @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  customerId String
+  /// name as on their passport, for bookings and visas
+  name       String?
+  createdAt  DateTime @default(now())
+
+  @@unique([missionId, customerId])
+  @@index([customerId])
 }

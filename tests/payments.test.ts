@@ -45,3 +45,11 @@ test("services are paid in full once priced, even far from departure", async () 
   const noDate = paymentPlan({ total: 9000, paid: 0, departure: null, today: "2026-11-26", status: "new", holdExpired: false, fullOnly: true });
   assert.deepEqual(noDate.next, { kind: "full", amount: 9000 });
 });
+
+test("a share is the total split by travellers, capped at what's left", async () => {
+  const { shareAmount } = await import("../lib/payment-rules.ts");
+  assert.equal(shareAmount(100000, 0, 3), 33334);
+  assert.equal(shareAmount(100000, 66668, 3), 33332); // the last share is whatever remains
+  assert.equal(shareAmount(100000, 100000, 3), 0);
+  assert.equal(shareAmount(50000, 0, 0), 50000);
+});

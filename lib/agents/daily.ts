@@ -19,6 +19,7 @@ export async function daily(now = new Date(), origin?: string) {
     optionsExpired: (await prisma.serviceOffer.updateMany({ where: { status: "offered", validUntil: { lt: now } }, data: { status: "expired" } })).count,
     oldCodesDeleted: (await prisma.loginCode.deleteMany({ where: { createdAt: { lt: new Date(now.getTime() - 7 * 864e5) } } })).count,
     lapsedHoldsReset: await resetLapsedHolds(now),
+    oldEventsDeleted: (await prisma.event.deleteMany({ where: { at: { lt: new Date(now.getTime() - 180 * 864e5) } } })).count,
     oldRateRowsDeleted: (await prisma.rateHit.deleteMany({ where: { resetAt: { lt: now } } })).count,
     oldRunsDeleted: (await prisma.agentRun.deleteMany({ where: { startedAt: { lt: new Date(now.getTime() - 90 * 864e5) } } })).count,
   }));
@@ -26,5 +27,7 @@ export async function daily(now = new Date(), origin?: string) {
   const visa = now.getUTCDay() === 1 ? await part("visaSync", () => syncVisaData()) : {};
   // detection, emails and the morning trip push; split into parallel slices as travellers grow
   const agents = await part("agents", () => runAgents({ origin }));
-  return { ...cleanup, ...visa, ...agents };
+  // last: check every system and email the team if anything is failing
+  const health = await part("health", async () => (await import("../health")).dailyHealth());
+  return { ...cleanup, ...visa, ...agents, ...health };
 }

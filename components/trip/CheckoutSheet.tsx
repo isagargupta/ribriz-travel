@@ -2,6 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { track } from "@/lib/client/track";
 import { HOLD_HOURS, addDays, fmtDate } from "@/lib/pricing";
 import { usePrefs } from "../Prefs";
 import PaxPicker from "../PaxPicker";
@@ -37,7 +38,7 @@ export default function CheckoutSheet() {
   useEffect(() => {
     try { sessionStorage.setItem(DRAFT, JSON.stringify({ name: c.name, phone: c.phone, email: c.email })); } catch {}
   }, [c.name, c.phone, c.email]);
-  useEffect(() => { if (checkout) { setStep(done ? 3 : 0); setErr(null); } }, [checkout]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (checkout) { setStep(done ? 3 : 0); setErr(null); if (!done) track("hold_start", { tripId: trip.id }); } }, [checkout]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { setPriceMoved(null); }, [q?.total]);
 
   if (!selected || !q) return null;
@@ -63,6 +64,7 @@ export default function CheckoutSheet() {
       if (r.status === 409 && j.total) { setPriceMoved(j.total); setErr(j.error); return; }
       if (!r.ok) { setErr(j.error || "Something went wrong. Please try again."); return; }
       setDone({ ref: j.ref, total: j.total, payPath: j.payPath });
+      track("hold_created", { tripId: trip.id, ref: j.ref });
       setStep(3);
     } catch {
       setErr("You seem to be offline. Check your connection and try again.");

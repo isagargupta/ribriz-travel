@@ -5,6 +5,7 @@ import type { BrowserContext } from "@playwright/test";
 
 /** Everything the browser tests create uses this email (or a TST reference) so teardown can find it. */
 export const TEST_EMAIL = "e2e-traveller@example.com";
+export const FRIEND_EMAIL = "e2e-friend@example.com";
 export const BASE = "http://localhost:3200";
 export const STATE = "e2e/.state.json";
 
@@ -18,11 +19,11 @@ export function token(payload: string, hours = 6) {
   const exp = String(Date.now() + hours * 3600e3);
   return `${payload}.${exp}.${sign(`${payload}.${exp}`)}`;
 }
-export const state = (): { customerId: string; customer: string; admin: string } => JSON.parse(fs.readFileSync(STATE, "utf8"));
+export const state = (): { customerId: string; customer: string; admin: string; friendId: string; friend: string; startedAt: string } => JSON.parse(fs.readFileSync(STATE, "utf8"));
 
-export async function signIn(ctx: BrowserContext, as: "customer" | "admin") {
+export async function signIn(ctx: BrowserContext, as: "customer" | "admin" | "friend") {
   const s = state();
-  await ctx.addCookies([{ name: as === "admin" ? "ribriz_admin" : "ribriz_user", value: as === "admin" ? s.admin : s.customer, url: BASE }]);
+  await ctx.addCookies([{ name: as === "admin" ? "ribriz_admin" : "ribriz_user", value: as === "admin" ? s.admin : as === "friend" ? s.friend : s.customer, url: BASE }]);
 }
 
 /** A fully paid holiday for the test traveller, as if Razorpay had confirmed it. */

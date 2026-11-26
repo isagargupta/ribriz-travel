@@ -31,6 +31,7 @@ export default function Footer() {
           <Link href="/plan">Plan a custom trip</Link>
           <Link href="/saved">Saved trips</Link>
           <Link href="/compare">Compare trips</Link>
+          <Link href="/destinations">Destination guides</Link>
           <Link href="/visa">Visa checker</Link>
         </div>
         <div>

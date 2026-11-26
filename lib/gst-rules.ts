@@ -35,8 +35,12 @@ export function financialYear(d: Date): string {
 }
 
 /** Document number: at most 16 characters, unique and consecutive within the financial year. */
-export function docNumber(kind: "invoice" | "credit_note", fy: string, seq: number): string {
-  return `${kind === "invoice" ? "RB" : "CN"}/${fy}/${String(seq).padStart(4, "0")}`;
+export type DocKind = "invoice" | "credit_note" | "receipt_voucher" | "refund_voucher";
+export const DOC_PREFIX: Record<DocKind, string> = { invoice: "RB", credit_note: "CN", receipt_voucher: "RV", refund_voucher: "RF" };
+export const DOC_TITLE: Record<DocKind, string> = { invoice: "Tax invoice", credit_note: "Credit note", receipt_voucher: "Receipt voucher", refund_voucher: "Refund voucher" };
+
+export function docNumber(kind: DocKind, fy: string, seq: number): string {
+  return `${DOC_PREFIX[kind]}/${fy}/${String(seq).padStart(4, "0")}`;
 }
 
 export interface TaxSplit { taxable: number; cgst: number; sgst: number; igst: number; total: number; rate: number; intraState: boolean }

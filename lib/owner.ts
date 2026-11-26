@@ -36,7 +36,7 @@ export async function getOwner(create = false): Promise<Owner> {
 /** Filter for records this owner may see. Never matches anything for an empty owner. */
 export function ownedBy(o: Owner): Prisma.MissionWhereInput {
   const or: Prisma.MissionWhereInput[] = [];
-  if (o.customerId) or.push({ customerId: o.customerId });
+  if (o.customerId) or.push({ customerId: o.customerId }, { members: { some: { customerId: o.customerId } } }); // co-travellers who joined
   if (o.anonId) or.push({ anonId: o.anonId });
   return or.length ? { OR: or } : { id: "__none__" };
 }

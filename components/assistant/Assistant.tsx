@@ -1,4 +1,5 @@
 "use client";
+import { track } from "@/lib/client/track";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -101,6 +102,7 @@ export default function Assistant({ docked = false, onClose }: { docked?: boolea
     const history: Msg[] = [...msgs.filter((m) => !m.error), { role: "user", content: q }];
     setMsgs([...history, { role: "assistant", content: "" }]);
     setInput(""); setBusy(true); setStatus("Thinking…");
+    track(history.filter((m) => m.role === "user").length === 1 ? "chat_open" : "chat_message");
     const ctrl = new AbortController(); abort.current = ctrl;
     const patch = (fn: (m: Msg) => Msg) => setMsgs((all) => [...all.slice(0, -1), fn(all[all.length - 1])]);
 

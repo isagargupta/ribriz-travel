@@ -3,6 +3,8 @@ import ProfileForm from "@/components/auth/ProfileForm";
 import MemoryEditor from "@/components/you/MemoryEditor";
 import DataRights from "@/components/me/DataRights";
 import PhoneSetup from "@/components/me/PhoneSetup";
+import WhatsAppOptIn from "@/components/me/WhatsAppOptIn";
+import { whatsappEnabled } from "@/lib/whatsapp";
 import { myDashboard } from "@/lib/dashboard";
 import { getProfile } from "@/lib/profile";
 
@@ -21,6 +23,7 @@ export default async function Profile() {
       </section>
       <MemoryEditor initial={profile} />
       <section className="panel" style={{ maxWidth: 860, marginBottom: 18 }}><PhoneSetup variant="row" /></section>
+      {whatsappEnabled() && <section className="panel" style={{ maxWidth: 860, marginBottom: 18 }}><WhatsAppOptIn initialOn={!!me.whatsappOptInAt} initialNumber={me.whatsappNumber ? "+" + me.whatsappNumber : me.phone ?? ""} /></section>}
       <DataRights />
     </div>
   );

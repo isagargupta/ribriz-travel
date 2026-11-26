@@ -290,7 +290,7 @@ export function paymentReceiptEmail(d: { name: string; ref: string; tripTitle: s
           ...(d.paymentId ? [["Payment ID", `<span style="font-family:Menlo,Consolas,monospace">${esc(d.paymentId)}</span>`] as [string, string]] : []),
         ]) +
         p(balance > 0 ? "We'll remind you before the balance is due, and you can pay it any time from the button below." : "Your vouchers and final travel documents will follow before you leave.") +
-        p(balance > 0 ? "Your GST tax invoice is issued automatically once the trip is fully paid. Booking for a company? Add its GSTIN on your payment page before then." : "Your GST tax invoice is on its way in a separate email, and in your wallet in the app."),
+        p(balance > 0 ? "Your GST receipt voucher for this advance follows by email; the tax invoice comes once the trip is fully paid. Booking for a company? Add its GSTIN on your payment page." : "Your GST tax invoice is on its way in a separate email, and in your wallet in the app."),
       cta: balance > 0 ? { label: "Pay the balance", url: d.payLink } : d.hubUrl ? { label: "Open my trip", url: d.hubUrl } : undefined,
     }),
     text: `${heading}\nReference ${d.ref} · ${d.tripTitle}\n${what}: ${fmt(d.amount)}\nPaid so far: ${fmt(d.paidTotal)} of ${fmt(d.total)}\n${balance > 0 ? `Balance ${fmt(balance)}${d.balanceDue ? ` due by ${d.balanceDue}` : ""}: ${d.payLink}` : "Fully paid."}\nPayment ID: ${d.paymentId ?? "-"}`,
@@ -313,18 +313,18 @@ export function paymentTeamEmail(d: { ref: string; name: string; tripTitle: stri
 
 /** The GST tax invoice (or credit note) is ready, with a link to view, print or save it as PDF. */
 export function invoiceEmail(d: { name: string; number: string; kind: string; total: number; ref: string; url: string }): Built {
-  const cn = d.kind === "credit_note";
-  const what = cn ? "credit note" : "GST tax invoice";
+  const cn = d.kind === "credit_note" || d.kind === "refund_voucher";
+  const what = ({ invoice: "GST tax invoice", credit_note: "credit note", receipt_voucher: "GST receipt voucher for your advance", refund_voucher: "refund voucher" } as Record<string, string>)[d.kind] ?? "GST document";
   const amount = "₹" + (d.total / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return {
     subject: `Your ${what} ${d.number} (${d.ref})`,
     html: layout({
-      preheader: `${cn ? "Credit note" : "Tax invoice"} ${d.number} for ${amount}.`,
-      heading: cn ? "Your credit note" : "Your GST tax invoice",
+      preheader: `${what[0].toUpperCase() + what.slice(1)} ${d.number} for ${amount}.`,
+      heading: `Your ${what}`,
       body: p(`Hi ${esc(d.name.split(" ")[0])}, here's your ${what} for booking ${esc(d.ref)}.`) +
-        box([["Number", `<span style="font-family:Menlo,Consolas,monospace">${esc(d.number)}</span>`], [cn ? "Amount credited" : "Invoice value", amount], ["Supplier GSTIN", COMPANY.gstin]]) +
+        box([["Number", `<span style="font-family:Menlo,Consolas,monospace">${esc(d.number)}</span>`], [cn ? "Amount credited" : d.kind === "receipt_voucher" ? "Advance received" : "Invoice value", amount], ["Supplier GSTIN", COMPANY.gstin]]) +
         p("Open it to view, print or save it as a PDF. It's also in your wallet in the app."),
-      cta: { label: cn ? "View credit note" : "View invoice", url: d.url },
+      cta: { label: "View, print or save as PDF", url: d.url },
     }),
     text: `Your ${what} ${d.number} for booking ${d.ref}: ${amount}.\nView, print or save as PDF: ${d.url}`,
   };

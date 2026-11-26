@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import BillingForm from "@/components/pay/BillingForm";
+import SplitPay from "@/components/pay/SplitPay";
+import { DOC_TITLE, type DocKind } from "@/lib/gst-rules";
+import { TrackView } from "@/components/Track";
 import { notFound } from "next/navigation";
 import PayButton from "@/components/pay/PayButton";
 import Consent from "@/components/legal/Consent";
@@ -29,6 +32,7 @@ export default async function PayPage({ params, searchParams }: { params: Promis
 
   return (
     <div className="wrap pay-page">
+      <TrackView type="pay_view" refCode={v.ref} />
       <div className="pay-card">
         <div className="pay-trip">
           {v.image && <span className="pay-img"><Image src={v.image} alt="" fill sizes="200px" /></span>}
@@ -54,6 +58,9 @@ export default async function PayPage({ params, searchParams }: { params: Promis
                 <b>{fmt(plan.next.amount)}</b>
               </div>
               <PayButton refCode={v.ref} token={t ?? null} label={`Pay ${fmt(plan.next.amount)} securely`} />
+              {v.split && v.split.share > 0 && v.split.share < plan.balance && (
+                <SplitPay refCode={v.ref} token={t ?? null} share={v.split.share} travellers={v.split.travellers} shareLabel={fmt(v.split.share)} pagePath={`/pay/${v.ref}${t ? `?t=${t}` : ""}`} />
+              )}
               <Consent action="paying" extra="See also our cancellation & refunds policy." />
             </>
           )
@@ -67,7 +74,7 @@ export default async function PayPage({ params, searchParams }: { params: Promis
           <div className="pay-gst">
             {v.invoices.length > 0 && (
               <ul className="pay-inv">
-                {v.invoices.map((i) => <li key={i.number}><span>{i.kind === "credit_note" ? "Credit note" : "GST tax invoice"}</span><Link href={i.url}>{i.number} →</Link></li>)}
+                {v.invoices.map((i) => <li key={i.number}><span>{DOC_TITLE[i.kind as DocKind] ?? i.kind}</span><Link href={i.url}>{i.number} →</Link></li>)}
               </ul>
             )}
             <BillingForm refCode={v.ref} token={t ?? null} initial={v.billing} locked={v.invoices.some((i) => i.kind === "invoice")} />
@@ -80,7 +87,7 @@ export default async function PayPage({ params, searchParams }: { params: Promis
             <ul>
               {v.payments.map((p, i) => (
                 <li key={i} className={`ph-${p.status}`}>
-                  <span>{KIND[p.kind] ?? p.kind}{p.method ? ` · ${p.method.toUpperCase()}` : ""}{p.paidAt ? ` · ${new Date(p.paidAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}` : ""}</span>
+                  <span>{p.kind === "share" ? `${p.payerName ? p.payerName + "'s" : "One"} share` : KIND[p.kind] ?? p.kind}{p.method ? ` · ${p.method.toUpperCase()}` : ""}{p.paidAt ? ` · ${new Date(p.paidAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}` : ""}</span>
                   <b>{fmt(p.amount)}</b>
                   <small>{p.status === "paid" ? "Paid" : p.status === "failed" ? "Failed, not charged" : p.status === "refunded" ? "Refunded" : p.status === "partially_refunded" ? `${fmt(p.refunded)} refunded` : p.status}</small>
                 </li>

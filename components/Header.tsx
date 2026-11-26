@@ -29,6 +29,7 @@ const MENUS: { id: string; label: string; groups: Group[]; feature?: { title: st
         { href: `/trips?region=${encodeURIComponent("Middle East")}`, label: "Middle East", icon: "🕌" },
         { href: "/trips?region=Europe", label: "Europe", icon: "🏰" },
         { href: "/trips?region=Mediterranean", label: "Mediterranean", icon: "⛵" },
+        { href: "/destinations", label: "Destination guides", icon: "🗺️" },
         { href: "/trips", label: "All holidays", icon: "🧭" },
       ] },
     ],

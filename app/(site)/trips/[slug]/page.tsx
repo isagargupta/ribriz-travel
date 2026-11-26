@@ -66,7 +66,9 @@ export default async function TripPage({ params }: Props) {
   const jsonLd = {
     "@context": "https://schema.org", "@type": "TouristTrip", name: t.title, description: t.highlights.join(". "),
     touristType: t.themes, image: t.image,
-    offers: { "@type": "Offer", priceCurrency: "INR", price: t.price + t.minDelta, availability: departures.length ? "https://schema.org/InStock" : "https://schema.org/SoldOut" },
+    provider: { "@type": "TravelAgency", name: "Ribriz Travel", url: "https://www.ribriztravel.com" },
+    itinerary: { "@type": "ItemList", numberOfItems: t.days.length, itemListElement: t.days.map((d, i) => ({ "@type": "ListItem", position: i + 1, name: `Day ${i + 1}: ${d}` })) },
+    offers: { "@type": "Offer", priceCurrency: "INR", price: t.price + t.minDelta, url: `https://www.ribriztravel.com/trips/${t.slug}`, availability: departures.length ? "https://schema.org/InStock" : "https://schema.org/SoldOut", ...(departures.length ? { validFrom: departures[0].date, priceValidUntil: departures[departures.length - 1].date } : {}) },
     // only real, published reviews; never shown before the first one exists
     ...(t.rating && t.reviews ? { aggregateRating: { "@type": "AggregateRating", ratingValue: t.rating, bestRating: 5, worstRating: 1, reviewCount: t.reviews } } : {}),
   };

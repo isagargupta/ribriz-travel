@@ -19,11 +19,13 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         <Link href="/admin/inbox">Inbox {urgent > 0 && <span className="badge-count">{urgent}</span>}</Link>
         <Link href="/admin">Dashboard</Link>
         <Link href="/admin/enquiries">Enquiries {fresh > 0 && <span className="badge-count">{fresh}</span>}</Link>
+        <Link href="/admin/funnel">Sales funnel</Link>
         <Link href="/admin/invoices">GST invoices</Link>
         <Link href="/admin/reviews">Reviews {toModerate > 0 && <span className="badge-count">{toModerate}</span>}</Link>
         <Link href="/admin/trips">Trips</Link>
         <Link href="/admin/trips/new">+ Add trip</Link>
         <Link href="/admin/subscribers">Subscribers</Link>
+        <Link href="/admin/health">System health</Link>
         <a href="/" target="_blank" rel="noopener noreferrer">View site ↗</a>
         <form action={logout} style={{ marginTop: "auto", display: "grid", gap: 4 }}>{who && who !== "password" && <small style={{ color: "#a3a9d6", padding: "0 12px", overflow: "hidden", textOverflow: "ellipsis" }}>{who}</small>}<button type="submit">Sign out</button></form>
       </aside>

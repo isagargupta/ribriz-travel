@@ -17,7 +17,7 @@ function loadCheckout(): Promise<void> {
 }
 
 /** Opens Razorpay Checkout for the amount the server says is due, then confirms with the server. */
-export default function PayButton({ refCode, token, label }: { refCode: string; token: string | null; label: string }) {
+export default function PayButton({ refCode, token, label, share = false, payerName, secondary = false }: { refCode: string; token: string | null; label: string; share?: boolean; payerName?: string; secondary?: boolean }) {
   const router = useRouter();
   const [state, setState] = useState<"idle" | "busy" | "verifying" | "done">("idle");
   const [err, setErr] = useState<string | null>(null);
@@ -26,7 +26,7 @@ export default function PayButton({ refCode, token, label }: { refCode: string; 
     setState("busy"); setErr(null);
     try {
       const [o] = await Promise.all([
-        fetch("/api/payments/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ref: refCode, t: token }) }).then((r) => r.json()),
+        fetch("/api/payments/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ref: refCode, t: token, ...(share ? { share: true, payerName } : {}) }) }).then((r) => r.json()),
         loadCheckout(),
       ]);
       if (!o.ok) throw new Error(o.error || "Couldn't start the payment.");
@@ -56,7 +56,7 @@ export default function PayButton({ refCode, token, label }: { refCode: string; 
   if (state === "done") return <div className="pay-done" role="status"><span className="pay-tick">✓</span><b>Payment received</b><p>We&apos;ve emailed your receipt. Updating your booking…</p></div>;
   return (
     <div className="pay-btn-wrap">
-      <button className="btn hot lg block pay-btn" onClick={pay} disabled={state !== "idle"}>
+      <button className={`btn ${secondary ? "" : "hot"} lg block pay-btn`} onClick={pay} disabled={state !== "idle"}>
         {state === "verifying" ? <><span className="spinner" /> Confirming your payment…</> : state === "busy" ? <><span className="spinner" /> Opening secure payment…</> : <>🔒 {label}</>}
       </button>
       {err && <p className="appr-err" role="alert">{err}</p>}

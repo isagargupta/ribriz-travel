@@ -22,7 +22,7 @@ async function save(a: Alert) {
       data: { dedupeKey: a.dedupeKey, kind: a.kind, title: a.title, body: a.body, url: a.url, missionId: a.missionId, customerId: a.customerId, anonId: a.anonId, email: a.email?.toLowerCase() ?? null },
     });
     if (a.missionId) await logEvent(a.missionId, "agent", `${a.title}. ${a.body}`);
-    const msg = { title: a.title, body: a.body, url: a.url, tag: a.dedupeKey };
+    const msg = { title: a.title, body: a.body, url: a.url, tag: a.dedupeKey, important: ["hold_expiring", "hold_expired", "visa_deadline", "sold_out"].includes(a.kind) };
     await (a.customerId ? pushToCustomer(a.customerId, msg) : a.email ? pushToEmail(a.email, msg) : 0);
     return true;
   } catch (e) {

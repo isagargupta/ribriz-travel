@@ -6,7 +6,7 @@ test.describe("signed-in traveller and team", () => {
     await paidHoliday("RB-E2EPAID1");
     await signIn(context, "customer");
     await page.goto("/me/bookings");
-    await expect(page.getByText("Booked · fully paid")).toBeVisible();
+    await expect(page.locator(".app-row", { hasText: "RB-E2EPAID1" }).getByText("Booked · fully paid")).toBeVisible();
     await page.goto("/me/wallet");
     await expect(page.getByRole("link", { name: "Receipt" }).first()).toBeVisible();
 

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { fmt } from "@/lib/pricing";
 import { creditNoteAction, deleteEnquiry, issueInvoiceAction, setBillingAction, updateEnquiry } from "../../actions";
-import { inr } from "@/lib/gst-rules";
+import { DOC_TITLE, inr, type DocKind } from "@/lib/gst-rules";
 import OffersPanel from "@/components/admin/OffersPanel";
 import PaymentsPanel from "@/components/admin/PaymentsPanel";
 import { inrFor } from "@/lib/fx";
@@ -92,7 +92,7 @@ export default async function Enquiries({ searchParams }: { searchParams: Promis
                   <b>GST invoice</b>
                   {e.invoices.length > 0 ? (
                     <ul>
-                      {e.invoices.map((iv) => <li key={iv.id}><a href={`/invoice/${iv.id}`} target="_blank" rel="noopener noreferrer" className="mono">{iv.number}</a> · {iv.kind === "credit_note" ? "credit note" : "invoice"} · {inr(iv.total)}{iv.buyerGstin ? ` · ${iv.buyerGstin}` : ""}{iv.emailedAt ? " · emailed" : ""}</li>)}
+                      {e.invoices.map((iv) => <li key={iv.id}><a href={`/invoice/${iv.id}`} target="_blank" rel="noopener noreferrer" className="mono">{iv.number}</a> · {(DOC_TITLE[iv.kind as DocKind] ?? iv.kind).toLowerCase()} · {inr(iv.total)}{iv.buyerGstin ? ` · ${iv.buyerGstin}` : ""}{iv.emailedAt ? " · emailed" : ""}</li>)}
                     </ul>
                   ) : <p className="muted" style={{ margin: "4px 0" }}>Not issued yet. It's issued automatically when the trip is fully paid.</p>}
                   {!e.invoices.some((iv) => iv.kind === "invoice") ? (

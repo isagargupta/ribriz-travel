@@ -27,7 +27,7 @@ export async function sendTeamEmail(i: { enquiryId: string; subject: string; bod
   await markContacted(e.id);
   if (e.missionId) await logEvent(e.missionId, "team", `Emailed you: “${subject}”`);
   const { pushToEmail } = await import("./push");
-  await pushToEmail(e.email, { title: "New message from the Ribriz team", body: subject, url: e.missionId ? `/me/trips/${e.missionId}` : "/me", tag: `team-${e.ref}` });
+  await pushToEmail(e.email, { title: "New message from the Ribriz team", body: subject, url: e.missionId ? `/me/trips/${e.missionId}` : "/me", tag: `team-${e.ref}`, important: true });
 }
 
 /** Records a WhatsApp message the team opened from the inbox (sent from their own WhatsApp). */

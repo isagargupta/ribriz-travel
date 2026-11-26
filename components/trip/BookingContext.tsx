@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { DepartureDTO, TripDTO } from "@/lib/types";
 import { quote, type Quote } from "@/lib/pricing";
 import { usePrefs } from "../Prefs";
+import { track } from "@/lib/client/track";
 
 interface Booking {
   trip: TripDTO;
@@ -28,6 +29,7 @@ export function BookingProvider({ trip, departures, initialDate, children }: {
   const [question, setQuestion] = useState(false);
 
   useEffect(() => { addRecent(trip.id); }, [trip.id, addRecent]);
+  useEffect(() => { track("trip_view", { tripId: trip.id }); }, [trip.id]);
   // a date in the link (?date=2027-03-10) picks that departure; read here so the page can be cached
   useEffect(() => {
     if (initialDate) return;

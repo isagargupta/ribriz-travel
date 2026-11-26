@@ -856,3 +856,35 @@ kbd { font-family: var(--f-mono); font-size: 11px; background: var(--surface); b
 .bill label { display: grid; gap: 4px; font-size: 13px; font-weight: 600 }
 .bill input, .bill textarea { font: inherit; font-size: 14px; padding: 9px 11px; border-radius: 10px; border: 1px solid var(--line); background: #fff }
 .bill-acts { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 13px }
+
+/* destination guides */
+.dest-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-top: 18px }
+.dest-card { position: relative; display: grid; border-radius: 18px; overflow: hidden; background: var(--surface); border: 1px solid var(--line); text-decoration: none; color: inherit; box-shadow: var(--shadow-sm); transition: transform .2s }
+.dest-card:hover { transform: translateY(-3px) }
+.dest-img { position: relative; aspect-ratio: 16 / 10 } .dest-img img { object-fit: cover }
+.dest-txt { display: grid; gap: 2px; padding: 12px 14px } .dest-txt b { font-size: 18px } .dest-txt small { color: var(--muted) }
+.dest-hero { position: relative; min-height: 300px; display: flex; align-items: flex-end; color: #fff; padding: 40px 0 28px }
+.dest-hero img { object-fit: cover } .dest-hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(11, 18, 64, .1), rgba(11, 18, 64, .78)) }
+.dest-hero .wrap { position: relative; z-index: 1 } .dest-hero h1 { color: #fff; margin: 6px 0; font-size: clamp(30px, 5vw, 48px) } .dest-hero .crumbs, .dest-hero .crumbs a { color: #e3e6ff }
+.dest-body { display: grid; gap: 22px; padding: 26px 16px 50px }
+.dest-body h2 { margin-top: 0 }
+.clim { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 6px; align-items: end; margin: 14px 0 }
+.clim-m { display: grid; justify-items: center; gap: 4px; padding: 6px 2px; border-radius: 10px }
+.clim-m.v-best { background: var(--good-bg) } .clim-m.v-avoid { background: var(--warn-bg) }
+.clim-t { font-weight: 800; font-size: 14px } .clim-n { font-size: 12px; font-weight: 700 } .clim-m small { font-size: 10.5px; color: var(--muted) }
+.clim-bar { display: flex; align-items: flex-end; height: 70px; width: 60% } .clim-bar i { width: 100%; background: #6fa8ff; border-radius: 4px 4px 0 0 }
+.dest-visa { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px } .dest-visa p { margin: 2px 0 0; font-size: 14px }
+.dest-faq { margin: 0; display: grid; gap: 14px } .dest-faq dt { font-weight: 700 } .dest-faq dd { margin: 2px 0 0; color: var(--muted) }
+@media (max-width: 600px) { .clim { grid-template-columns: repeat(6, minmax(0, 1fr)) } }
+
+/* group trips */
+.join-card { display: grid; gap: 10px; max-width: 480px }
+.join-img { position: relative; aspect-ratio: 16 / 8; border-radius: 14px; overflow: hidden; margin-bottom: 4px } .join-img img { object-fit: cover }
+.join-perks { margin: 4px 0 8px; padding-left: 18px; display: grid; gap: 4px; font-size: 14.5px }
+.join-card label { display: grid; gap: 4px; font-size: 13.5px; font-weight: 600 } .join-card input { font: inherit; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line) }
+.split { display: grid; gap: 10px; margin-top: 14px; padding: 14px; border-radius: 14px; background: var(--surface-2) }
+.split-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center }
+.split input { font: inherit; padding: 9px 11px; border-radius: 10px; border: 1px solid var(--line); flex: 1; min-width: 160px }
+.group-people { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 12px }
+.group-people span { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px 5px 5px; border-radius: 999px; background: var(--surface-2); font-size: 14px; font-weight: 600 }
+.group-people i { font-style: normal; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, var(--coral), #ff9a5a); color: #fff; font-size: 12px }

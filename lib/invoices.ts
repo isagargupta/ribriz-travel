@@ -2,7 +2,7 @@ import "server-only";
 import type { Invoice, Prisma } from "@prisma/client";
 import { COMPANY } from "./company";
 import { prisma } from "./db";
-import { checkGstin, docNumber, financialYear, placeOfSupply, splitTax } from "./gst-rules";
+import { checkGstin, docNumber, financialYear, placeOfSupply, splitTax, type DocKind } from "./gst-rules";
 import { fmtDate } from "./pricing";
 import { sign } from "./signing";
 
@@ -26,7 +26,10 @@ type Tx = Prisma.TransactionClient;
 /** Browser tests (E2E=1) number their documents in a separate TS/ series so real numbering never has gaps. */
 const testSeries = () => process.env.E2E === "1";
 
-async function takeNumber(tx: Tx, kind: "invoice" | "credit_note", fy: string) {
+const TEST_PREFIX: Record<DocKind, string> = { invoice: "TS", credit_note: "TC", receipt_voucher: "TV", refund_voucher: "TF" };
+const numberFor = (kind: DocKind, fy: string, seq: number) => (testSeries() ? docNumber(kind, fy, seq).replace(/^[A-Z]{2}/, TEST_PREFIX[kind]) : docNumber(kind, fy, seq));
+
+async function takeNumber(tx: Tx, kind: DocKind, fy: string) {
   const key = `${testSeries() ? "test:" : ""}${kind}:${fy}`;
   const rows = await tx.$queryRaw<{ seq: number }[]>`
     INSERT INTO "DocCounter" ("key", "next") VALUES (${key}, 2)
@@ -65,7 +68,7 @@ export async function issueInvoice(enquiryId: string, opts: { requireFullyPaid?:
     const seq = await takeNumber(tx, "invoice", fy);
     return tx.invoice.create({
       data: {
-        kind: "invoice", number: testSeries() ? docNumber("invoice", fy, seq).replace(/^RB/, "TS") : docNumber("invoice", fy, seq), fy, seq, enquiryId, issuedAt: now,
+        kind: "invoice", number: numberFor("invoice", fy, seq), fy, seq, enquiryId, issuedAt: now,
         buyerName: (e.billingName || e.name).slice(0, 120), buyerEmail: e.email, buyerGstin: gstin, buyerAddress: e.billingAddress?.slice(0, 300) ?? null,
         posCode: pos.code, posName: pos.name, sac: HOLIDAY_SAC, description: description.slice(0, 400), rate: HOLIDAY_GST_RATE,
         taxable: tax.taxable, cgst: tax.cgst, sgst: tax.sgst, igst: tax.igst, total: tax.total,
@@ -89,13 +92,76 @@ export async function issueCreditNote(invoiceId: string, rupees: number, reason:
     const seq = await takeNumber(tx, "credit_note", fy);
     return tx.invoice.create({
       data: {
-        kind: "credit_note", number: testSeries() ? docNumber("credit_note", fy, seq).replace(/^CN/, "TC") : docNumber("credit_note", fy, seq), fy, seq, enquiryId: inv.enquiryId, againstId: inv.id, issuedAt: now,
+        kind: "credit_note", number: numberFor("credit_note", fy, seq), fy, seq, enquiryId: inv.enquiryId, againstId: inv.id, issuedAt: now,
         buyerName: inv.buyerName, buyerEmail: inv.buyerEmail, buyerGstin: inv.buyerGstin, buyerAddress: inv.buyerAddress,
         posCode: inv.posCode, posName: inv.posName, sac: inv.sac, description: `Credit against invoice ${inv.number}: ${reason}`.slice(0, 400), rate: inv.rate,
         taxable: tax.taxable, cgst: tax.cgst, sgst: tax.sgst, igst: tax.igst, total: tax.total, reason: reason.slice(0, 200),
       },
     });
   });
+}
+
+/**
+ * GST on advances: a receipt voucher for each payment taken before the tour is
+ * invoiced (deposit, part payments). Once per payment. The final invoice covers
+ * the full value and lists the vouchers it adjusts.
+ */
+export async function issueReceiptVoucher(paymentRowId: string): Promise<Invoice | null> {
+  const pay = await prisma.payment.findUnique({ where: { id: paymentRowId }, include: { enquiry: { include: { trip: { select: { title: true } } } } } });
+  if (!pay || pay.status !== "paid" || !INVOICED_TYPES.includes(pay.enquiry.type)) return null;
+  const existing = await prisma.invoice.findFirst({ where: { paymentRowId, kind: "receipt_voucher" } });
+  if (existing) return existing;
+  if (await prisma.invoice.count({ where: { enquiryId: pay.enquiryId, kind: "invoice" } })) return null; // already invoiced
+  const e = pay.enquiry;
+  const gstin = e.billingGstin && checkGstin(e.billingGstin).ok ? e.billingGstin : null;
+  const pos = placeOfSupply(COMPANY.gstState, gstin);
+  const tax = splitTax(pay.amount * 100, HOLIDAY_GST_RATE, pos.code === COMPANY.gstState);
+  const now = new Date(), fy = financialYear(now);
+  return prisma.$transaction(async (tx) => {
+    const seq = await takeNumber(tx, "receipt_voucher", fy);
+    return tx.invoice.create({
+      data: {
+        kind: "receipt_voucher", number: numberFor("receipt_voucher", fy, seq), fy, seq, enquiryId: e.id, paymentRowId, issuedAt: now,
+        buyerName: (e.billingName || e.name).slice(0, 120), buyerEmail: e.email, buyerGstin: gstin, buyerAddress: e.billingAddress?.slice(0, 300) ?? null,
+        posCode: pos.code, posName: pos.name, sac: HOLIDAY_SAC, rate: HOLIDAY_GST_RATE,
+        description: `Advance (${pay.kind}) received for tour package: ${e.trip?.title ?? e.tripTitle ?? "holiday"}. Booking ${e.ref}.`.slice(0, 400),
+        taxable: tax.taxable, cgst: tax.cgst, sgst: tax.sgst, igst: tax.igst, total: tax.total,
+      },
+    });
+  });
+}
+
+/** An advance refunded before the tour was invoiced gets a refund voucher against its receipt voucher. */
+export async function issueRefundVoucher(paymentRowId: string, rupees: number, reason: string): Promise<Invoice | null> {
+  const rv = await prisma.invoice.findFirst({ where: { paymentRowId, kind: "receipt_voucher" } });
+  if (!rv) return null;
+  const now = new Date(), fy = financialYear(now);
+  return prisma.$transaction(async (tx) => {
+    const prior = await tx.invoice.aggregate({ where: { againstId: rv.id, kind: "refund_voucher" }, _sum: { total: true } });
+    const amount = Math.min(Math.round(rupees * 100), rv.total - (prior._sum.total ?? 0));
+    if (amount <= 0) return null;
+    const tax = splitTax(amount, rv.rate, rv.cgst + rv.sgst > 0);
+    const seq = await takeNumber(tx, "refund_voucher", fy);
+    return tx.invoice.create({
+      data: {
+        kind: "refund_voucher", number: numberFor("refund_voucher", fy, seq), fy, seq, enquiryId: rv.enquiryId, againstId: rv.id, paymentRowId, issuedAt: now,
+        buyerName: rv.buyerName, buyerEmail: rv.buyerEmail, buyerGstin: rv.buyerGstin, buyerAddress: rv.buyerAddress, posCode: rv.posCode, posName: rv.posName,
+        sac: rv.sac, rate: rv.rate, description: `Refund of advance received under ${rv.number}: ${reason}`.slice(0, 400), reason: reason.slice(0, 200),
+        taxable: tax.taxable, cgst: tax.cgst, sgst: tax.sgst, igst: tax.igst, total: tax.total,
+      },
+    });
+  });
+}
+
+/** After a payment on a holiday: the tax invoice if it's now fully paid, else a receipt voucher for the advance. Never throws. */
+export async function gstDocsAfterPayment(enquiryId: string, paymentRowId: string | null, fullyPaid: boolean) {
+  try {
+    if (fullyPaid) return await invoiceIfFullyPaid(enquiryId);
+    if (!paymentRowId) return null;
+    const rv = await issueReceiptVoucher(paymentRowId);
+    if (rv && !rv.emailedAt) await emailInvoice(rv);
+    return rv;
+  } catch (e) { console.error("GST document failed", e); return null; }
 }
 
 /** Link token so a guest can open their invoice from the email without signing in. */
@@ -138,8 +204,8 @@ export function toCsv(rows: Awaited<ReturnType<typeof invoicesForMonth>>) {
   const rs = (p: number, neg: boolean) => ((neg ? -p : p) / 100).toFixed(2);
   const head = ["Type", "Number", "Date", "Booking", "Buyer", "Buyer GSTIN", "Place of supply", "SAC", "Rate %", "Taxable value", "CGST", "SGST", "IGST", "Total", "Against invoice", "Reason"];
   const lines = rows.map((r) => {
-    const cn = r.kind === "credit_note";
-    return [cn ? "Credit note" : "Invoice", r.number, r.issuedAt.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }), r.enquiry.ref, r.buyerName, r.buyerGstin, `${r.posCode}-${r.posName}`, r.sac, r.rate,
+    const cn = r.kind === "credit_note" || r.kind === "refund_voucher";
+    return [({ invoice: "Invoice", credit_note: "Credit note", receipt_voucher: "Receipt voucher (advance)", refund_voucher: "Refund voucher" } as Record<string, string>)[r.kind] ?? r.kind, r.number, r.issuedAt.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }), r.enquiry.ref, r.buyerName, r.buyerGstin, `${r.posCode}-${r.posName}`, r.sac, r.rate,
       rs(r.taxable, cn), rs(r.cgst, cn), rs(r.sgst, cn), rs(r.igst, cn), rs(r.total, cn), r.againstNumber ?? "", r.reason].map(q).join(",");
   });
   return [head.join(","), ...lines].join("\n") + "\n";

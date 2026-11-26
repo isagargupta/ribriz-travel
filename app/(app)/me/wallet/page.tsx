@@ -5,6 +5,7 @@ import WalletDocs from "@/components/me/WalletDocs";
 import { myDashboard } from "@/lib/dashboard";
 import { fmt, fmtDate } from "@/lib/pricing";
 import { walletFor } from "@/lib/wallet";
+import { DOC_TITLE, type DocKind } from "@/lib/gst-rules";
 
 export const metadata: Metadata = { title: "Wallet", robots: { index: false } };
 
@@ -57,11 +58,11 @@ export default async function WalletPage() {
 
           {t.invoices.length > 0 && (
             <div className="w-block">
-              <h3>GST invoices</h3>
+              <h3>GST invoices &amp; vouchers</h3>
               <ul className="w-pays">
                 {t.invoices.map((i) => (
                   <li key={i.id}>
-                    <span><b>{i.number}</b> <span className="muted">{i.kind === "credit_note" ? "Credit note" : "Tax invoice"} · {(i.total / 100).toLocaleString("en-IN", { style: "currency", currency: "INR" })} · {new Date(i.issuedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" })}</span></span>
+                    <span><b>{i.number}</b> <span className="muted">{DOC_TITLE[i.kind as DocKind] ?? i.kind} · {(i.total / 100).toLocaleString("en-IN", { style: "currency", currency: "INR" })} · {new Date(i.issuedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" })}</span></span>
                     <a href={i.url} className="btn sm">View</a>
                   </li>
                 ))}

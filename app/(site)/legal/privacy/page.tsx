@@ -18,6 +18,8 @@ export default function Privacy() {
           <li><b>Conversations with Riya</b> are processed to answer you. The chat itself stays in your browser tab; we keep the results of actions (trip plans, requests, approvals) on your account.</li>
           <li><b>Reviews</b> you write, with the name you choose to show.</li>
           <li><b>Technical data:</b> essential cookies and basic request data (such as IP address) for security and to stop abuse. We don&apos;t use advertising or tracking cookies.</li>
+          <li><b>WhatsApp:</b> only if you turn on WhatsApp updates in your profile, we send your number and short trip updates (payments, bookings, options to choose, urgent alerts) through Meta&apos;s WhatsApp Business service. Turn it off any time.</li>
+          <li><b>Anonymous usage counts:</b> which pages and trips are viewed, and how far people get in booking, so we can improve the site. These use a random number kept only in your open browser tab (no cookie), never your name, email or IP address, and are deleted after 180 days.</li>
         </ul>
       </section>
       <section>

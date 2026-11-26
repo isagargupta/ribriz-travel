@@ -61,3 +61,13 @@ export function webhookSignatureOk(rawBody: string, signature: string, secret: s
   const want = createHmac("sha256", secret).update(rawBody).digest("hex");
   return eqHex(want, signature);
 }
+
+/**
+ * Splitting a holiday between the travellers: one person's share is the total
+ * divided by the number of travellers (rounded up to the rupee), never more
+ * than what's left to pay.
+ */
+export function shareAmount(total: number, paid: number, travellers: number): number {
+  const balance = Math.max(0, total - paid);
+  return Math.min(balance, Math.ceil(total / Math.max(1, travellers)));
+}

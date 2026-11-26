@@ -16,6 +16,10 @@ import { bookingsFor } from "@/lib/offers";
 import { markSeen, noticesFor } from "@/lib/notifications";
 import LiveTrip from "@/components/me/LiveTrip";
 import { liveTrips } from "@/lib/live";
+import { groupOf, inviteUrl } from "@/lib/group";
+import CopyLink from "@/components/CopyLink";
+import { prisma } from "@/lib/db";
+import { payUrl } from "@/lib/payments";
 
 
 const STATUS: Record<string, { label: string; icon: string }> = {
@@ -35,6 +39,9 @@ export default async function MissionDetail({ id, backHref, backLabel = "← All
   const [notices, bookings] = await Promise.all([noticesFor(owner, { missionId: m.id, take: 6 }), bookingsFor(m.id)]);
   await markSeen(owner, notices.filter((n) => n.unread).map((n) => n.id)); // shown as new this once
   const live = backHref.startsWith("/me") ? (await liveTrips(owner)).find((t) => t.missionId === m.id) : undefined;
+  const group = backHref.startsWith("/me") && m.adults + m.childAges.length > 1 ? await groupOf(m.id) : null;
+  const isOwner = !!group && group.ownerId === owner.customerId;
+  const holdRef = group ? (await prisma.enquiry.findFirst({ where: { missionId: m.id, type: { in: ["hold", "custom"] }, status: { not: "closed" } }, orderBy: { createdAt: "desc" }, select: { ref: true } }))?.ref : null;
 
   return (
     <div className="wrap hub">
@@ -60,6 +67,13 @@ export default async function MissionDetail({ id, backHref, backLabel = "← All
             <section className="panel">
               <h2>{pending.some((c) => c.action === "accept_offer") ? "Choose and approve" : "Waiting for your OK"}</h2>
               <HubApprovals cards={pending} />
+            </section>
+          )}
+          {group && (
+            <section className="panel">
+              <div className="hub-sec-head"><h2>Travelling together</h2><span style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{holdRef && <Link className="btn sm" href={payUrl(holdRef)}>Pay a share</Link>}{isOwner && <CopyLink path={inviteUrl(m.id)} label="Invite travel companions" title={`Join our trip: ${m.title}`} />}</span></div>
+              <div className="group-people">{group.people.map((p) => <span key={p.id}><i>{p.name[0]?.toUpperCase()}</i>{p.name}{p.owner ? " (planner)" : ""}</span>)}</div>
+              <p className="muted" style={{ margin: 0, fontSize: 14 }}>{isOwner ? `Send the invite link to the others on this trip (${m.adults + m.childAges.length} travellers). They'll see the trip in their own app, can upload their documents and pay their share from the payment page.` : "You can see this trip, upload your documents and pay your share. The planner approves holds and bookings."}</p>
             </section>
           )}
           <Notices items={notices} />

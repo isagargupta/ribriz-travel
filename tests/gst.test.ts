@@ -20,6 +20,8 @@ test("document numbers fit GST's 16-character limit", () => {
   assert.equal(docNumber("invoice", "2026-27", 7), "RB/2026-27/0007");
   assert.equal(docNumber("credit_note", "2026-27", 12345), "CN/2026-27/12345");
   assert.ok(docNumber("credit_note", "2026-27", 99999).length <= 16);
+  assert.equal(docNumber("receipt_voucher", "2026-27", 3), "RV/2026-27/0003");
+  assert.equal(docNumber("refund_voucher", "2026-27", 1), "RF/2026-27/0001");
 });
 
 test("tax split: 5% inclusive, CGST+SGST within Karnataka, IGST across states, always adds up", () => {

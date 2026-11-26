@@ -20,7 +20,7 @@ export interface LiveTrip {
 }
 
 /** Where to look up the weather for each destination we sell. Other trips fall back to geocoding. */
-const COORDS: Record<string, [number, number]> = {
+export const COORDS: Record<string, [number, number]> = {
   Bali: [-8.65, 115.22], Kerala: [9.93, 76.27], Europe: [46.69, 7.86], Japan: [35.68, 139.69], Dubai: [25.2, 55.27],
   Kashmir: [34.08, 74.8], Maldives: [4.17, 73.51], Thailand: [7.88, 98.39], Crete: [35.34, 25.13], Rajasthan: [26.91, 75.79],
   Egypt: [27.26, 33.81], Goa: [15.5, 73.83], Mediterranean: [41.39, 2.17], Vietnam: [21.03, 105.85], Andaman: [11.62, 92.73], Antalya: [36.9, 30.7],

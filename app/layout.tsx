@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Unbounded, Plus_Jakarta_Sans, DM_Mono } from "next/font/google";
 import { PrefsProvider } from "@/components/Prefs";
+import Track from "@/components/Track";
+import { Suspense } from "react";
 import { COMPANY } from "@/lib/company";
 import "./globals.css";
 import "./experience.css";
@@ -38,6 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <PrefsProvider>{children}</PrefsProvider>
+        <Suspense fallback={null}><Track /></Suspense>
       </body>
     </html>
   );

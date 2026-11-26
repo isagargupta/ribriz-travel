@@ -173,7 +173,7 @@ export async function decide(owner: Owner, id: string, body: unknown): Promise<D
       }
       await prisma.approval.update({ where: { id }, data: { status: "done", result: JSON.stringify({ ref: r.ref, total: r.total }) } });
       // links the request and saves the held date as the trip's date (it may differ from the one first chosen)
-      if (a.missionId) await markHeld(a.missionId, { ref: r.ref, total: r.total, departureId: String(payload.departureId), actor: "traveller" });
+      if (a.missionId) await markHeld(a.missionId, { ref: r.ref, total: r.total, departureId: String(payload.departureId), actor: "traveller", via: "riya" });
       return { ok: true, status: "done", ref: r.ref, message: `Done! ${fmt(r.total)} is held for 48 hours (ref ${r.ref}). Pay the deposit to book any time at /pay/${r.ref}, or wait for our expert to confirm flights and rooms by email within 2 working hours.` };
     }
 

@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/db";
 import { fmt, fmtDate, isoDate } from "@/lib/pricing";
-import { addDeparture, deleteDeparture, generateDepartures, updateDeparture } from "@/app/admin/actions";
+import { addDeparture, addSeason, bulkDepartures, deleteDeparture, updateDeparture } from "@/app/admin/actions";
+import PriceCalendar from "./PriceCalendar";
+
+const WD = [["1", "Mon"], ["2", "Tue"], ["3", "Wed"], ["4", "Thu"], ["5", "Fri"], ["6", "Sat"], ["0", "Sun"]] as const;
 
 /** Departure dates for one trip: edit price change, seats and status, or generate a schedule. */
 export default async function Departures({ tripId, base, kind }: { tripId: string; base: number; kind: string }) {
@@ -22,13 +25,40 @@ export default async function Departures({ tripId, base, kind }: { tripId: strin
       </p>
 
       <div className="dep-tools">
-        <form action={generateDepartures} className="inline-form">
+        <form action={addSeason} className="dep-season">
           <input type="hidden" name="tripId" value={tripId} />
-          <b>Fill calendar:</b>
-          <label>every <input className="in xs" name="every" type="number" min={1} max={60} defaultValue={kind === "escorted" ? 10 : kind === "cruise" ? 7 : 3} /> days</label>
-          <label>for <input className="in xs" name="months" type="number" min={1} max={18} defaultValue={6} /> months</label>
-          <label>seats <input className="in xs" name="seats" type="number" min={1} placeholder="∞" defaultValue={kind === "escorted" ? 30 : ""} /></label>
-          <button className="btn blue sm">Generate</button>
+          <b>Add a season</b>
+          <div className="inline-form">
+            <label>from <input className="in" name="from" type="date" min={today} required /></label>
+            <label>to <input className="in" name="to" type="date" min={today} required /></label>
+            <span className="dep-wd" role="group" aria-label="Departure days">{WD.map(([v, l]) => <label key={v}><input type="checkbox" name="wd" value={v} />{l}</label>)}</span>
+            <label>or every <input className="in xs" name="every" type="number" min={1} max={60} defaultValue={kind === "escorted" ? 10 : 7} /> days</label>
+          </div>
+          <div className="inline-form">
+            <label>price change ±₹ <input className="in sm" name="delta" type="number" step={100} defaultValue={0} /></label>
+            <label>seats <input className="in xs" name="seats" type="number" min={0} placeholder="∞" defaultValue={kind === "escorted" ? 30 : ""} /></label>
+            <label className="chk"><input type="checkbox" name="overwrite" /> also update dates that already exist</label>
+            <button className="btn blue sm">Add season</button>
+          </div>
+          <small className="muted">Tick weekdays (e.g. Fri and Sun) or leave them empty to depart every N days. Dates within 2 days are skipped.</small>
+        </form>
+        <form action={bulkDepartures} className="dep-season">
+          <input type="hidden" name="tripId" value={tripId} />
+          <b>Change a range</b>
+          <div className="inline-form">
+            <label>from <input className="in" name="from" type="date" required /></label>
+            <label>to <input className="in" name="to" type="date" required /></label>
+            <span className="dep-wd" role="group" aria-label="Only these days (optional)">{WD.map(([v, l]) => <label key={v}><input type="checkbox" name="wd" value={v} />{l}</label>)}</span>
+          </div>
+          <div className="inline-form">
+            <select className="in" name="action" aria-label="Change">
+              <option value="add_delta">Add a surcharge (±₹)</option><option value="set_delta">Set price change to (₹)</option><option value="set_seats">Set seats to</option>
+              <option value="close">Close for sale</option><option value="open">Reopen</option><option value="delete">Delete (keeps dates with bookings)</option>
+            </select>
+            <input className="in sm" name="value" type="number" step={100} placeholder="value" aria-label="Value" />
+            <button className="btn sm">Apply</button>
+          </div>
+          <small className="muted">e.g. Diwali 1–10 Nov: add a surcharge of 8000. Empty seats = unlimited.</small>
         </form>
         <form action={addDeparture} className="inline-form">
           <input type="hidden" name="tripId" value={tripId} />
@@ -40,7 +70,9 @@ export default async function Departures({ tripId, base, kind }: { tripId: strin
         </form>
       </div>
 
-      {deps.length === 0 ? <div className="empty">No upcoming dates. Generate a schedule above so customers can reserve.</div> : (
+      {deps.length > 0 && <PriceCalendar base={base} deps={deps.map((d) => ({ date: d.date, priceDelta: d.priceDelta, seatsLeft: d.seatsLeft, status: d.status, booked: d._count.enquiries }))} />}
+
+      {deps.length === 0 ? <div className="empty">No upcoming dates. Add a season above so customers can reserve.</div> : (
         <div className="table-wrap" style={{ maxHeight: 520, overflow: "auto" }}>
           <table className="admin-table dep-table">
             <thead><tr><th>Date</th><th>Price change (₹)</th><th>Adult price</th><th>Seats left</th><th>Status</th><th>Enquiries</th><th /></tr></thead>

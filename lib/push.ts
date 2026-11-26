@@ -2,7 +2,8 @@ import "server-only";
 import webpush from "web-push";
 import { prisma } from "./db";
 
-export interface PushMessage { title: string; body: string; url?: string | null; tag?: string }
+/** `important` updates also go to WhatsApp for travellers who turned it on. */
+export interface PushMessage { title: string; body: string; url?: string | null; tag?: string; important?: boolean }
 
 let ready: boolean | null = null;
 function configured() {
@@ -35,6 +36,7 @@ export async function removeSubscription(customerId: string, endpoint: string) {
 
 /** Sends to every device the traveller turned notifications on for. Never throws. Returns how many got it. */
 export async function pushToCustomer(customerId: string, msg: PushMessage): Promise<number> {
+  if (msg.important) { const { whatsappToCustomer } = await import("./whatsapp"); await whatsappToCustomer(customerId, msg); }
   if (!configured()) return 0;
   const subs = await prisma.pushSub.findMany({ where: { customerId } }).catch(() => []);
   let sent = 0;
@@ -55,7 +57,7 @@ export async function pushToCustomer(customerId: string, msg: PushMessage): Prom
 
 /** Same, for a traveller known only by email (holds, payments, team messages). */
 export async function pushToEmail(email: string, msg: PushMessage) {
-  if (!configured()) return 0;
+  if (!configured() && !msg.important) return 0;
   const c = await prisma.customer.findFirst({ where: { email: { equals: email, mode: "insensitive" } }, select: { id: true } }).catch(() => null);
   return c ? pushToCustomer(c.id, msg) : 0;
 }

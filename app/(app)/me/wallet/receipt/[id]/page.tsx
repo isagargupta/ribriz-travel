@@ -40,7 +40,7 @@ export default async function Receipt({ params }: { params: Promise<{ id: string
         </div>
         <div className="rc-amt"><span>Amount received</span><b>{fmt(p.amount)}</b></div>
         {p.refundedAmount > 0 && <div className="rc-amt"><span>Refunded</span><b>− {fmt(p.refundedAmount)}</b></div>}
-        <p className="rc-foot">Paid online through Razorpay{p.paymentId ? ` (payment ID ${p.paymentId})` : ""}. This is a payment receipt, not a tax invoice. Your GST tax invoice (GSTIN {COMPANY.gstin}) is issued automatically once the trip is fully paid and appears in your wallet. Booking for a company? Add its GSTIN on your payment page before then.</p>
+        <p className="rc-foot">Paid online through Razorpay{p.paymentId ? ` (payment ID ${p.paymentId})` : ""}. This is a payment receipt, not a tax invoice. GST documents (GSTIN {COMPANY.gstin}) are issued automatically and appear in your wallet: a receipt voucher for each advance, and the tax invoice once the trip is fully paid. Booking for a company? Add its GSTIN on your payment page before then.</p>
       </article>
     </div>
   );

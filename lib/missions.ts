@@ -188,12 +188,17 @@ export const istTime = (d: Date) => d.toLocaleString("en-IN", { dateStyle: "medi
  * date as the trip's date, and marks the hold step done. Used for holds
  * approved in chat and holds made on the trip page.
  */
-export async function markHeld(missionId: string, h: { ref: string; total: number; departureId: string; actor: "traveller" | "agent" }) {
+export async function markHeld(missionId: string, h: { ref: string; total: number; departureId: string; actor: "traveller" | "agent"; via: "site" | "riya" }) {
   await prisma.enquiry.update({ where: { ref: h.ref }, data: { missionId } });
   await prisma.mission.update({ where: { id: missionId }, data: { departureId: h.departureId, status: "active" } });
   const until = new Date(Date.now() + 48 * 3600e3);
   await setTask(missionId, "price_hold", { status: "done", note: `Held ${fmt(h.total)} until ${istTime(until)}. Ref ${h.ref}.`, data: { ref: h.ref, until: until.toISOString() } });
   await logEvent(missionId, h.actor, `Price hold placed. Reference ${h.ref}.`);
+  // funnel: holds made on the trip page are counted by the page itself (with the visit's source); Riya's here
+  if (h.via === "riya") {
+    const e = await prisma.enquiry.findUnique({ where: { ref: h.ref }, select: { tripId: true } });
+    await prisma.event.create({ data: { type: "hold_created", ref: h.ref, tripId: e?.tripId ?? null, source: "riya" } }).catch(() => {});
+  }
 }
 
 /**
@@ -214,7 +219,7 @@ export async function linkHoldToMission(owner: Owner, ref: string) {
     });
   }
   try { await chooseTrip(m.id, e.trip.slug, e.dep.date); } catch { /* date just closed: the hold still stands */ }
-  await markHeld(m.id, { ref, total: e.quotedTotal ?? 0, departureId: e.dep.id, actor: "traveller" });
+  await markHeld(m.id, { ref, total: e.quotedTotal ?? 0, departureId: e.dep.id, actor: "traveller", via: "site" });
   return m.id;
 }
 

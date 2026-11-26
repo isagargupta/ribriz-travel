@@ -1,4 +1,5 @@
-import { TEST_EMAIL, prisma } from "./helpers";
+import fs from "node:fs";
+import { FRIEND_EMAIL, STATE, TEST_EMAIL, prisma } from "./helpers";
 
 /** Removes everything the tests created: the test traveller, their bookings, trip plans and test-series invoices. */
 export default async function teardown() {
@@ -13,6 +14,17 @@ export default async function teardown() {
   missionIds.push(...(await prisma.mission.findMany({ where: { customerId: null, OR: [{ goal: { contains: "E2E test" } }, { title: { contains: "E2E" } }] }, select: { id: true } })).map((m) => m.id));
   await prisma.approval.deleteMany({ where: { missionId: { in: missionIds } } });
   await prisma.mission.deleteMany({ where: { id: { in: missionIds } } });
+  const friend = await prisma.customer.findUnique({ where: { email: FRIEND_EMAIL } });
+  if (friend) { await prisma.missionMember.deleteMany({ where: { customerId: friend.id } }); await prisma.customer.delete({ where: { id: friend.id } }); }
+  // funnel events from test tabs, and trips the tests copied
+  await prisma.event.deleteMany({ where: { OR: [{ sid: { startsWith: "e2e-" } }, { ref: { startsWith: "RB-E2E" } }] } });
+  const raw = fs.existsSync(STATE) ? JSON.parse(fs.readFileSync(STATE, "utf8")).startedAt : null;
+  const started = raw ? new Date(raw) : null;
+  if (started && !isNaN(started.getTime())) {
+    const copies = await prisma.trip.findMany({ where: { createdAt: { gte: started }, title: { endsWith: "(copy)" }, published: false }, select: { id: true } });
+    await prisma.departure.deleteMany({ where: { tripId: { in: copies.map((t) => t.id) } } });
+    await prisma.trip.deleteMany({ where: { id: { in: copies.map((t) => t.id) } } });
+  }
   if (c) {
     await prisma.notification.deleteMany({ where: { OR: [{ customerId: c.id }, { email: TEST_EMAIL }] } });
     await prisma.pushSub.deleteMany({ where: { customerId: c.id } });

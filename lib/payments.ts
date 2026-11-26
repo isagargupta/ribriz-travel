@@ -49,7 +49,9 @@ export function planOf(e: Loaded): Plan {
 export interface PayView {
   ref: string; name: string; email: string; phone: string; tripTitle: string | null; tripSlug: string | null; image: string | null;
   departure: string | null; nights: number | null; adults: number; children: number; total: number;
-  plan: Plan; payments: { kind: string; amount: number; status: string; paidAt: string | null; method: string | null; refunded: number }[];
+  plan: Plan; payments: { kind: string; amount: number; status: string; paidAt: string | null; method: string | null; refunded: number; payerName: string | null }[];
+  /** group trips: travellers, and one person's share now */
+  split: { travellers: number; share: number } | null;
   enabled: boolean; missionId: string | null;
   /** hold | custom | flight | hotel | visa | insurance | forex | enquiry */
   type: string;
@@ -67,7 +69,8 @@ export async function payView(ref: string, token: string | null, owner: Owner): 
     billing: { name: e.billingName, gstin: e.billingGstin, address: e.billingAddress },
     invoices: await prisma.invoice.findMany({ where: { enquiryId: e.id }, orderBy: { issuedAt: "asc" }, select: { id: true, number: true, kind: true } })
       .then(async (rows) => { const { invoiceUrl } = await import("./invoices"); return rows.map((r) => ({ number: r.number, kind: r.kind, url: invoiceUrl(r.id) })); }),
-    payments: e.payments.filter((p) => p.status !== "created").map((p) => ({ kind: p.kind, amount: p.amount, status: p.status, paidAt: p.paidAt?.toISOString() ?? null, method: p.method, refunded: p.refundedAmount })),
+    payments: e.payments.filter((p) => p.status !== "created").map((p) => ({ kind: p.kind, amount: p.amount, status: p.status, paidAt: p.paidAt?.toISOString() ?? null, method: p.method, refunded: p.refundedAmount, payerName: p.payerName })),
+    split: HOLIDAY_TYPES.includes(e.type) && e.adults + e.children > 1 && planOf(e).next ? { travellers: e.adults + e.children, share: (await import("./payment-rules")).shareAmount(e.quotedTotal ?? 0, planOf(e).paid, e.adults + e.children) } : null,
   };
 }
 
@@ -85,7 +88,7 @@ export async function setBilling(ref: string, token: string | null, owner: Owner
 }
 
 /** Creates a Razorpay order for whatever is due next. */
-export async function startPayment(ref: string, token: string | null, owner: Owner) {
+export async function startPayment(ref: string, token: string | null, owner: Owner, opts: { share?: boolean; payerName?: string } = {}) {
   const e = await load(ref);
   if (!e || !mayPay(e, token, owner)) throw new PayError("We couldn't find that booking.");
   if (!rzpConfigured()) throw new PayError("Online payment isn't switched on yet. Reply to your confirmation email and we'll help.");
@@ -97,12 +100,20 @@ export async function startPayment(ref: string, token: string | null, owner: Own
   if (plan.paid === 0 && e.dep && (e.dep.status !== "open" || (e.dep.seatsLeft !== null && e.dep.seatsLeft < e.adults + e.children))) {
     throw new PayError("Sorry, this date is no longer available. Ask Riya for the nearest dates.");
   }
-  const order = await createOrder(plan.next.amount, `${e.ref}-${plan.next.kind}`, { ref: e.ref, kind: plan.next.kind });
-  await prisma.payment.create({ data: { enquiryId: e.id, kind: plan.next.kind, amount: plan.next.amount, orderId: order.id } });
+  // group trips: one traveller's share instead of the whole amount due
+  const { shareAmount } = await import("./payment-rules");
+  const travellers = e.adults + e.children;
+  const share = opts.share && HOLIDAY_TYPES.includes(e.type) && travellers > 1 ? shareAmount(e.quotedTotal ?? 0, plan.paid, travellers) : 0;
+  const kind = share > 0 ? "share" : plan.next.kind;
+  const amount = share > 0 ? share : plan.next.amount;
+  const payerName = opts.payerName?.trim().slice(0, 80) || null;
+  const order = await createOrder(amount, `${e.ref}-${kind}`, { ref: e.ref, kind, ...(payerName ? { payer: payerName } : {}) });
+  await prisma.payment.create({ data: { enquiryId: e.id, kind, amount, orderId: order.id, payerName } });
   return {
-    keyId: rzpKeyId(), orderId: order.id, amountPaise: order.amount, kind: plan.next.kind, amount: plan.next.amount,
-    description: `${e.trip?.title ?? e.tripTitle ?? "Your trip"} · ${plan.next.kind === "deposit" ? "deposit" : plan.next.kind === "balance" ? "balance" : "full payment"} · ${e.ref}`,
-    prefill: { name: e.name, email: e.email, contact: e.phone },
+    keyId: rzpKeyId(), orderId: order.id, amountPaise: order.amount, kind, amount,
+    description: `${e.trip?.title ?? e.tripTitle ?? "Your trip"} · ${kind === "share" ? `${payerName ? payerName + "'s" : "one"} share` : kind === "deposit" ? "deposit" : kind === "balance" ? "balance" : "full payment"} · ${e.ref}`,
+    // a co-traveller paying a share enters their own details in the payment window
+    prefill: kind === "share" ? { name: payerName ?? "" } : { name: e.name, email: e.email, contact: e.phone },
   };
 }
 
@@ -121,7 +132,7 @@ async function settle(orderId: string, paymentId: string) {
   if (p.status !== "captured") throw new PayError(p.status === "failed" ? "The payment failed. Nothing was charged; please try again." : "The payment isn't complete yet.");
   const claimed = await prisma.payment.updateMany({ where: { id: pay.id, status: { in: ["created", "failed"] } }, data: { status: "paid", paymentId: p.id, method: p.method ?? null, paidAt: new Date() } });
   if (claimed.count !== 1) return { already: true, pay };
-  await afterPaid(pay.enquiry.id, pay.kind, pay.amount);
+  await afterPaid(pay.enquiry.id, pay.kind, pay.amount, pay.id);
   return { already: false, pay };
 }
 
@@ -136,8 +147,9 @@ export async function markFailed(orderId: string) {
   await prisma.payment.updateMany({ where: { orderId, status: "created" }, data: { status: "failed" } });
 }
 
-async function afterPaid(enquiryId: string, kind: string, amount: number) {
+async function afterPaid(enquiryId: string, kind: string, amount: number, paymentRowId: string | null = null) {
   const e = await prisma.enquiry.findUniqueOrThrow({ where: { id: enquiryId }, include: { payments: true } });
+  await prisma.event.create({ data: { type: "paid", ref: e.ref, tripId: e.tripId, path: kind } }).catch(() => {}); // funnel
   const paid = e.payments.reduce((n, p) => n + (p.status === "paid" || p.status === "partially_refunded" ? p.amount - p.refundedAmount : 0), 0);
   const full = paid >= (e.quotedTotal ?? 0);
   if (!HOLIDAY_TYPES.includes(e.type)) {
@@ -160,8 +172,9 @@ async function afterPaid(enquiryId: string, kind: string, amount: number) {
   }
   const { notifyPayment } = await import("./notify");
   await notifyPayment(e.id, amount, kind).catch((err) => console.error("payment email failed", err));
-  // fully paid holiday: the GST tax invoice is issued and emailed now
-  if (full) { const { invoiceIfFullyPaid } = await import("./invoices"); await invoiceIfFullyPaid(e.id); }
+  // GST: the tax invoice once fully paid; until then a receipt voucher for each advance
+  const { gstDocsAfterPayment } = await import("./invoices");
+  await gstDocsAfterPayment(e.id, paymentRowId, full);
 }
 
 /** Admin: refund all or part of a payment through Razorpay. */
@@ -180,8 +193,25 @@ export async function refund(paymentRowId: string, rupees: number, reason: strin
   if (inv) {
     try { const cn = await issueCreditNote(inv.id, amt, reason || "Refund"); creditNote = cn.number; await emailInvoice(cn).catch(() => {}); }
     catch (err) { console.error("credit note failed", err); }
+  } else {
+    // refunded before the tour was invoiced: a refund voucher against the advance's receipt voucher
+    try { const { issueRefundVoucher } = await import("./invoices"); const rf = await issueRefundVoucher(pay.id, amt, reason || "Refund"); if (rf) { creditNote = rf.number; await emailInvoice(rf).catch(() => {}); } }
+    catch (err) { console.error("refund voucher failed", err); }
   }
   return { refunded: amt, left: left - amt, creditNote };
 }
 
 export { RazorpayError };
+
+/**
+ * Browser tests only (the server must run with E2E=1, which production never does):
+ * marks a created payment as paid and runs exactly what follows a real Razorpay
+ * confirmation (booking status, receipts, GST documents), without charging anyone.
+ */
+export async function settleForTests(paymentRowId: string) {
+  if (process.env.E2E !== "1") throw new Error("Only available in browser tests.");
+  const pay = await prisma.payment.findUnique({ where: { id: paymentRowId } });
+  if (!pay || pay.status === "paid") return;
+  await prisma.payment.update({ where: { id: pay.id }, data: { status: "paid", paymentId: `pay_E2E_${pay.id}`, method: "upi", paidAt: new Date() } });
+  await afterPaid(pay.enquiryId, pay.kind, pay.amount, pay.id);
+}
