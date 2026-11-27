@@ -23,13 +23,14 @@ export type InboxRow = Awaited<ReturnType<typeof loadOpen>>[number] & { work: Wo
 /** Every open request, ranked: most urgent first. */
 export async function inbox(now = new Date()): Promise<InboxRow[]> {
   const rows = await loadOpen();
+  // visa document checks run side by side, not one request at a time
+  const ready = new Map(await Promise.all(rows.filter((e) => e.type === "visa" && e.mission).map(async (e) => {
+    const c = await visaChecklist({ customerId: e.mission!.customerId, anonId: e.mission!.anonId, email: null, name: null, phone: null }, e.mission!.id).catch(() => null);
+    return [e.id, !!c?.allReady] as const;
+  })));
   const out: InboxRow[] = [];
   for (const e of rows) {
-    let docsReady = false;
-    if (e.type === "visa" && e.mission) {
-      const c = await visaChecklist({ customerId: e.mission.customerId, anonId: e.mission.anonId, email: null, name: null, phone: null }, e.mission.id).catch(() => null);
-      docsReady = !!c?.allReady;
-    }
+    const docsReady = ready.get(e.id) ?? false;
     const lastTeam = e.messages.find((m) => m.channel !== "note")?.createdAt ?? null;
     const work = rankWork({
       type: e.type, status: e.status, createdAt: e.createdAt, quotedTotal: e.quotedTotal, departure: e.departure,

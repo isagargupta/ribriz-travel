@@ -15,24 +15,33 @@ export interface DeskFollowUp { id: string; title: string; email: string; client
 export async function desk(me: Staff, scope: "mine" | "team") {
   const now = new Date();
   const mine = (r: { assigneeId: string | null }) => scope === "team" || r.assigneeId === me.id;
-  const rows = await inboxNow();
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  // independent reads go out together
+  const [rows, staffList, fus, owned, revenue] = await Promise.all([
+    inboxNow(),
+    prisma.staff.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true, email: true, role: true } }),
+    prisma.followUp.findMany({ where: { doneAt: null, ...(scope === "mine" ? { staffId: me.id } : {}) }, orderBy: { dueAt: "asc" }, take: 60 }),
+    // money to collect and trips leaving soon, for this person's clients (or everyone's)
+    prisma.enquiry.findMany({
+      where: { ...(scope === "mine" ? { assigneeId: me.id } : {}), status: { in: ["new", "contacted", "booked"] }, quotedTotal: { gt: 0 } },
+      include: { payments: true, trip: { select: { title: true, slug: true, image: true, nights: true } }, mission: { select: { id: true, customerId: true, anonId: true } }, dep: { select: { status: true, seatsLeft: true } } },
+      take: 300,
+    }),
+    prisma.payment.aggregate({ where: { paidAt: { gte: monthStart }, status: { in: ["paid", "partially_refunded"] }, ...(scope === "mine" ? { enquiry: { assigneeId: me.id } } : {}) }, _sum: { amount: true, refundedAmount: true } }),
+  ]);
   const work = rows.filter((r) => r.assigneeId && mine(r));
   const queue = rows.filter((r) => !r.assigneeId);
 
-  const staffList = await prisma.staff.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true, email: true, role: true } });
   const nameOf = new Map(staffList.map((s) => [s.id, s.name]));
 
-  const fus = await prisma.followUp.findMany({ where: { doneAt: null, ...(scope === "mine" ? { staffId: me.id } : {}) }, orderBy: { dueAt: "asc" }, take: 60 });
-  const clientNames = new Map((await prisma.enquiry.findMany({ where: { email: { in: fus.map((f) => f.email) } }, select: { email: true, name: true }, orderBy: { createdAt: "desc" } })).map((e) => [e.email.toLowerCase(), e.name]));
-  const refs = new Map((await prisma.enquiry.findMany({ where: { id: { in: fus.map((f) => f.enquiryId).filter((x): x is string => !!x) } }, select: { id: true, ref: true } })).map((e) => [e.id, e.ref]));
+  const [nameRows, refRows] = await Promise.all([
+    prisma.enquiry.findMany({ where: { email: { in: fus.map((f) => f.email) } }, select: { email: true, name: true }, orderBy: { createdAt: "desc" } }),
+    prisma.enquiry.findMany({ where: { id: { in: fus.map((f) => f.enquiryId).filter((x): x is string => !!x) } }, select: { id: true, ref: true } }),
+  ]);
+  const clientNames = new Map(nameRows.map((e) => [e.email.toLowerCase(), e.name]));
+  const refs = new Map(refRows.map((e) => [e.id, e.ref]));
   const followUps: DeskFollowUp[] = fus.map((f) => ({ id: f.id, title: f.title, email: f.email, client: clientNames.get(f.email) ?? f.email, dueAt: f.dueAt.toISOString(), bucket: followUpBucket(f.dueAt, now), enquiryRef: f.enquiryId ? refs.get(f.enquiryId) ?? null : null, staff: nameOf.get(f.staffId) ?? "" }));
 
-  // money to collect and trips leaving soon, for this person's clients (or everyone's)
-  const owned = await prisma.enquiry.findMany({
-    where: { ...(scope === "mine" ? { assigneeId: me.id } : {}), status: { in: ["new", "contacted", "booked"] }, quotedTotal: { gt: 0 } },
-    include: { payments: true, trip: { select: { title: true, slug: true, image: true, nights: true } }, mission: { select: { id: true, customerId: true, anonId: true } }, dep: { select: { status: true, seatsLeft: true } } },
-    take: 300,
-  });
   const dues = owned.map((e) => ({ e, plan: planOf(e) })).filter((x) => x.plan.next && !x.plan.blocked).map(({ e, plan }) => ({ id: e.id, ref: e.ref, name: e.name, email: e.email, title: e.trip?.title ?? e.tripTitle ?? e.type, amount: plan.next!.amount, kind: plan.next!.kind, due: plan.balanceDue }));
   const today = new Date(now.getTime() + 5.5 * 3600e3).toISOString().slice(0, 10);
   const in30 = new Date(now.getTime() + 30 * 864e5).toISOString().slice(0, 10);
@@ -51,8 +60,6 @@ export async function desk(me: Staff, scope: "mine" | "team") {
     ...events.map((ev) => ({ at: ev.createdAt.toISOString(), who: ev.mission.requests[0]?.name ?? "A client", email: ev.mission.requests[0]?.email ?? "", text: ev.message.replace(/^./, (c) => c.toLowerCase()), kind: "event" as const })),
   ].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 12);
 
-  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  const revenue = await prisma.payment.aggregate({ where: { paidAt: { gte: monthStart }, status: { in: ["paid", "partially_refunded"] }, ...(scope === "mine" ? { enquiry: { assigneeId: me.id } } : {}) }, _sum: { amount: true, refundedAmount: true } });
 
   return {
     work: work as InboxRow[], queue: queue as InboxRow[], followUps, dues, departures, activity, staff: staffList, nameOf: Object.fromEntries(nameOf),
