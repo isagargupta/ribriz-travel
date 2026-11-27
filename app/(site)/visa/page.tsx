@@ -1,85 +1,93 @@
 import type { Metadata } from "next";
-import VisaChecker from "@/components/visa/VisaChecker";
-import VisaFinder from "@/components/visa-service/VisaFinder";
 import AskRiyaLink from "@/components/AskRiyaLink";
+import VisaChecker from "@/components/visa/VisaChecker";
+import VisaCatalog from "@/components/visa-service/VisaCatalog";
+import VisaSearch from "@/components/visa-service/VisaSearch";
+import { Icon } from "@/components/visa-service/ui";
 import { getPublishedTrips } from "@/lib/trips";
-import { DEFAULT_PASSPORT, VISA_META, countryName } from "@/lib/visa";
+import { DEFAULT_PASSPORT } from "@/lib/visa";
 import { getPassports, getVisaRules, getVisaSync } from "@/lib/visa-data";
-import { visaDestinations } from "@/lib/visa-service";
+import { toCard, visaDestinations } from "@/lib/visa-service";
 
 export const metadata: Metadata = {
-  title: "Apply for your visa online: e-Visa, Schengen, UK, Dubai and more",
-  description: "Visas for Indian passport holders, handled by experts: clear fees, the date your visa should be ready, instant AI document checks and live tracking. Dubai, Singapore, Japan, Schengen, UK, Vietnam and more.",
+  title: "Visas for Indian passport holders: apply online for 190+ countries",
+  description: "Apply for your visa online with Ribriz: the exact fee and the date your visa should be ready, an instant AI document check and a visa expert who files it. Dubai, Schengen, UK, USA, Singapore, Japan and 190+ countries.",
 };
 export const revalidate = 3600;
 
-const STEPS = [
-  { n: "1", t: "Pick your visa", d: "Search your destination and see the exact visa, the full fee and the date it should be ready, before you pay." },
-  { n: "2", t: "Upload once", d: "Snap each traveller's passport and photo. Our AI checks them in seconds and tells you if anything needs fixing." },
-  { n: "3", t: "We file, you track", d: "A visa expert checks everything and files it. Follow every step in the app and get your visa by email." },
+const TRUST = [
+  { i: "calendar" as const, t: "Date before you pay", d: "See when your visa should be ready, for your exact dates." },
+  { i: "scan" as const, t: "AI document check", d: "Passport and photo checked in seconds as you upload." },
+  { i: "shield" as const, t: "Expert-filed", d: "A visa specialist reviews every file before it's submitted." },
+  { i: "track" as const, t: "Live tracking", d: "Every step on your phone, with updates as they happen." },
 ];
-const WHY = [
-  { i: "⚡", t: "Instant document check", d: "Blurry passport, wrong photo background, expiring passport: caught the moment you upload, not days later." },
-  { i: "🧾", t: "One clear price", d: "Government fee plus our service fee and GST, shown upfront per traveller. No surprises at checkout." },
-  { i: "📍", t: "Live tracking", d: "Documents, payment, expert check, filed, issued: see where it is any time, with updates on your phone." },
-  { i: "🧳", t: "Part of your trip", d: "Your visa sits next to your flights, hotels and insurance in one app, with Riya on hand 24×7." },
+const STEPS = [
+  { t: "Choose your visa", d: "Search your destination. We show the exact visa you need, the full price and when it should be ready." },
+  { t: "Upload once", d: "Add each traveller's passport and photo from your phone. Our AI checks them instantly and tells you if anything needs fixing." },
+  { t: "We file. You track.", d: "A visa expert reviews and submits your application. Follow it live and get your visa by email and in the app." },
 ];
 const FAQ = [
-  { q: "How long does it take?", a: "Each visa shows the date it should be ready if you apply today: one working day for our check and filing, plus the destination's usual processing time. Embassy visas also need a visa-centre appointment." },
-  { q: "What do I pay?", a: "The government (or embassy) fee, which we pay on your behalf, plus our service fee with 18% GST. The total per traveller is shown before you apply." },
-  { q: "Can I apply for my whole family?", a: "Yes. Add everyone in one application and upload each person's documents; the price is per traveller." },
-  { q: "What if something's wrong with a document?", a: "Our AI check flags common problems straight away, and a visa expert reviews every file before it's filed. If anything is missing we tell you exactly what to upload." },
-  { q: "Is my passport data safe?", a: "Documents are stored privately, opened only through short-lived links by you and our visa team, and deleted after your trip." },
+  { q: "How long will my visa take?", a: "Every visa shows the date it should be ready if you apply today: one working day for our expert check and filing, plus the destination's usual processing time. Embassy visas may also need a visa-centre appointment, which we book." },
+  { q: "What exactly do I pay?", a: "The government or embassy fee (which we pay on your behalf), our service fee and 18% GST on our service fee. Where a government fee isn't fixed, our visa team confirms it before you pay, and you pay nothing until then." },
+  { q: "Can I apply for my whole family together?", a: "Yes. Add everyone to one application, upload each person's documents and pay once. Prices are per traveller." },
+  { q: "What if a document isn't right?", a: "Our AI flags common problems the moment you upload (blurry scans, wrong photo background, passports expiring too soon), and a visa expert checks the whole file before it's filed. If anything is missing we tell you exactly what to send." },
+  { q: "Is my passport data safe?", a: "Your documents are stored privately and opened only through short-lived links by you and our visa team. They're deleted automatically after your trip." },
+  { q: "I don't have an Indian passport.", a: "Our online service is for Indian passport holders today. Use the visa checker below to see what your passport needs, and ask Riya: our team can often still help." },
 ];
 
-/** The visa service: search, popular visas with prices and ready-by dates, how it works, and the rules checker for any passport. */
+/** The visa service home: search, trust, every destination by region, how it works, rules checker and FAQ. */
 export default async function VisaPage({ searchParams }: { searchParams: Promise<{ to?: string }> }) {
   const [{ to }, dests, rules, passports, sync, trips] = await Promise.all([searchParams, visaDestinations(), getVisaRules(DEFAULT_PASSPORT), getPassports(), getVisaSync(), getPublishedTrips()]);
-  const covered = new Set(dests.map((d) => d.countryCode));
-  const others = rules.filter((r) => !covered.has(r.d)).map((r) => ({ code: r.d, name: countryName(r.d), rule: VISA_META[r.c].label }));
+  const cards = dests.map(toCard);
+  const quick = ["dubai", "singapore", "thailand", "france", "united-kingdom", "japan"].map((s) => cards.find((c) => c.slug === s)).filter((c): c is NonNullable<typeof c> => !!c);
   const byCountry: Record<string, { slug: string; title: string }[]> = {};
   for (const t of trips) for (const c of t.countryCodes) (byCountry[c] ??= []).push({ slug: t.slug, title: t.title });
   const initialDest = to && /^[A-Za-z]{2}$/.test(to) ? to.toUpperCase() : undefined;
+  const ld = { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: FAQ.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) };
 
   return (
     <>
-      <section className="vz-hero">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
+      <section className="vx-hero">
+        <div className="vx-grid-bg" aria-hidden="true" />
         <div className="wrap">
-          <span className="kicker" style={{ color: "#ffc531" }}>Visas for Indian passport holders</span>
-          <h1>Your visa, handled.<br /><span>Know the date before you pay.</span></h1>
-          <p>Clear fees, an instant AI document check and a visa expert who files it for you. Track every step in the app.</p>
-          <VisaFinder dests={dests} others={others} />
-          <ul className="vz-trust"><li>✓ Price and ready-by date upfront</li><li>✓ AI document check in seconds</li><li>✓ Expert review before filing</li><li>✓ Live tracking</li></ul>
+          <span className="vx-eyebrow vx-reveal"><Icon name="sparkle" size={16} /> Visas for Indian passport holders · {cards.length} destinations</span>
+          <h1 className="vx-reveal d1">Your visa, sorted.<br /><em>Know the date before you pay.</em></h1>
+          <p className="vx-lead vx-reveal d1">The exact visa, the full price and the day it should be ready. Upload once, an expert files it, and you track every step.</p>
+          <VisaSearch dests={cards} quick={quick} />
         </div>
       </section>
 
-      <section className="band">
+      <div className="wrap vx-trust">
+        <div className="vx-trust-in">{TRUST.map((x) => <div key={x.t}><span className="vx-ico"><Icon name={x.i} /></span><span><b>{x.t}</b><small>{x.d}</small></span></div>)}</div>
+      </div>
+
+      <section className="vx-sec">
         <div className="wrap">
-          <h2 className="center">Your visa in three steps</h2>
-          <ol className="vz-steps">{STEPS.map((s) => <li key={s.n}><span>{s.n}</span><b>{s.t}</b><p>{s.d}</p></li>)}</ol>
+          <div className="vx-sec-head"><div><h2>Where are you going?</h2><p>Live fees and ready-by dates. Prices are per traveller.</p></div><a href="#all-countries" className="vx-btn ghost">Browse A–Z</a></div>
+          <VisaCatalog dests={cards} />
         </div>
       </section>
 
-      <section className="band alt">
+      <section className="vx-sec tint">
         <div className="wrap">
-          <h2 className="center">Why apply with Ribriz</h2>
-          <div className="vz-why">{WHY.map((w) => <div key={w.t}><span aria-hidden="true">{w.i}</span><b>{w.t}</b><p>{w.d}</p></div>)}</div>
+          <div className="vx-sec-head"><div><h2>Three steps. No embassy queues.</h2><p>Most applications take under five minutes.</p></div></div>
+          <div className="vx-steps">{STEPS.map((s, i) => <div key={s.t} className="vx-step"><span className="vx-step-n">{i + 1}</span><b>{s.t}</b><p>{s.d}</p></div>)}</div>
         </div>
       </section>
 
-      <section className="band" id="rules">
+      <section className="vx-sec" id="rules">
         <div className="wrap">
-          <h2>Visa rules for any passport</h2>
-          <p className="muted" style={{ marginTop: -6 }}>Not travelling on an Indian passport, or just checking? See what any passport needs for any country.</p>
+          <div className="vx-sec-head"><div><h2>Visa rules for any passport</h2><p>Not on an Indian passport, or just checking? See what any passport needs, anywhere.</p></div></div>
           <VisaChecker passports={passports} initial={{ passport: DEFAULT_PASSPORT, rules }} trips={byCountry} sourceDate={sync?.sourceDate ?? null} initialDest={initialDest} />
         </div>
       </section>
 
-      <section className="band alt">
-        <div className="wrap" style={{ maxWidth: 820 }}>
-          <h2 className="center">Questions</h2>
-          <div className="vz-faq">{FAQ.map((f) => <details key={f.q}><summary>{f.q}</summary><p>{f.a}</p></details>)}</div>
-          <p className="center muted" style={{ marginTop: 16 }}>Something else? <AskRiyaLink q="I have a question about getting a visa">Ask Riya</AskRiyaLink>; she&apos;ll bring in a visa expert.</p>
+      <section className="vx-sec tint">
+        <div className="wrap">
+          <div className="vx-sec-head" style={{ justifyContent: "center", textAlign: "center" }}><div><h2>Questions, answered</h2></div></div>
+          <div className="vx-faq">{FAQ.map((f) => <details key={f.q}><summary>{f.q}</summary><p>{f.a}</p></details>)}</div>
+          <p style={{ textAlign: "center", color: "var(--mute)", marginTop: 20 }}>Still unsure? <AskRiyaLink q="I have a question about getting a visa">Ask Riya</AskRiyaLink>, any time.</p>
         </div>
       </section>
     </>

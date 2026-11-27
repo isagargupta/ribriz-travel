@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import AskRiyaLink from "@/components/AskRiyaLink";
-import PayButton from "@/components/pay/PayButton";
-import TravellerDocs from "@/components/visa-service/TravellerDocs";
+import ApplicationFlow from "@/components/visa-service/ApplicationFlow";
+import { WizardFrame } from "@/components/visa-service/Wizard";
+import { Icon, fmtDay } from "@/components/visa-service/ui";
 import { getOwner } from "@/lib/owner";
 import { fmt } from "@/lib/pricing";
 import { applicationView } from "@/lib/visa-service";
@@ -12,65 +12,67 @@ import { stageIndex } from "@/lib/visa-service-rules";
 export const metadata: Metadata = { title: "Your visa application", robots: { index: false } };
 export const dynamic = "force-dynamic";
 
-const fmtDay = (iso: string) => new Date(iso + "T00:00:00Z").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
-
-/** One visa application: where it is, each traveller's documents, payment, and the issued visa. */
+/** One visa application: the rest of the wizard (documents, review & pay) until it's paid, then live tracking. */
 export default async function ApplicationPage({ params, searchParams }: { params: Promise<{ ref: string }>; searchParams: Promise<{ t?: string; new?: string }> }) {
   const [{ ref }, { t, new: fresh }] = await Promise.all([params, searchParams]);
   const a = await applicationView(ref, t ?? null, await getOwner());
   if (!a) notFound();
-  const at = stageIndex(a.stage);
+  const code = a.product?.countryCode ?? "un";
+  const tracking = a.paid > 0 && a.balance === 0 || ["review", "submitted", "approved", "rejected", "cancelled"].includes(a.stage);
   const docsDone = a.travellers.every((x) => x.complete);
 
+  const summary = (
+    <>
+      <h3>Application {a.ref}</h3>
+      <div className="vx-sum-row"><span>Visa</span><b>{a.product?.name}</b></div>
+      <div className="vx-sum-row"><span>Travellers</span><b>{a.travellers.map((x) => x.name.split(" ")[0]).join(", ")}</b></div>
+      {a.arrive && <div className="vx-sum-row"><span>You travel</span><b>{fmtDay(a.arrive)}</b></div>}
+      {a.readyBy && <div className="vx-sum-row"><span>Expected by</span><b>{fmtDay(a.readyBy)}</b></div>}
+      {a.awaitingPrice ? <div className="vx-sum-row"><span>Our fee</span><b>{fmt(a.serviceTotal)} + govt fee</b></div> : <><div className="vx-sum-row"><span>Paid</span><b>{fmt(a.paid)}</b></div><div className="vx-sum-total"><span>{a.balance ? "To pay" : "Total"}</span><b>{fmt(a.balance || a.total)}</b></div></>}
+      <p style={{ margin: "14px 0 0", fontSize: 13.5, color: "var(--mute)" }}>We&apos;ve emailed you a link to this page. Questions? <AskRiyaLink q={`I have a question about my visa application ${a.ref}`}>Ask Riya</AskRiyaLink></p>
+    </>
+  );
+
+  if (!tracking) {
+    return (
+      <ApplicationFlow app={a} startOn={docsDone ? "review" : "docs"} summary={summary}
+        banner={fresh ? <div className="vx-note ok" style={{ marginBottom: 14 }}><Icon name="check" /><span><b>Application {a.ref} started.</b> Upload each traveller&apos;s documents, then pay. You can leave and come back any time.</span></div> : null} />
+    );
+  }
+
+  const at = a.stage === "rejected" || a.stage === "cancelled" ? -1 : stageIndex(a.stage);
   return (
-    <div className="wrap vz-app">
-      <nav className="crumbs" aria-label="Breadcrumb"><Link href="/visa">Visas</Link> / Application {a.ref}</nav>
-      <header className="vz-app-head">
-        <span className="vz-flag lg">{a.flag}</span>
-        <div><h1>{a.country} visa</h1><p className="muted">{a.product?.name} · {a.travellers.length} traveller{a.travellers.length > 1 ? "s" : ""} · ref <b className="mono">{a.ref}</b></p></div>
-      </header>
-      {fresh && <div className="notice ok">Application started. Next: upload each traveller&apos;s documents, then pay. We&apos;ve emailed you a link to this page.</div>}
-
-      {a.stage === "rejected" || a.stage === "cancelled" ? (
-        <div className="notice err">{a.stage === "rejected" ? "This visa was refused. Our team has emailed you the reason and your options." : "This application was cancelled."}</div>
-      ) : (
-        <ol className="vz-track">
-          {a.stages.map((s, i) => <li key={s.key} className={i < at ? "done" : i === at ? "now" : ""}><span>{i < at ? "✓" : i + 1}</span><b>{s.label}</b><small>{s.hint}</small></li>)}
-        </ol>
-      )}
-
-      <div className="vz-layout">
-        <div className="vz-main">
-          {a.issued.length > 0 && (
-            <section className="panel vz-issued">
-              <h2>🎉 Your visa is ready</h2>
-              <ul>{a.issued.map((x) => <li key={x.id}><span>{a.travellers[x.applicant]?.name ?? "Traveller"}</span><a className="btn hot sm" href={`/api/docs/${x.id}?raw=1&t=${a.token}`} target="_blank" rel="noopener">Download {x.fileName}</a></li>)}</ul>
-              <p className="muted" style={{ marginBottom: 0, fontSize: 14 }}>Print a copy and keep it on your phone. It&apos;s also in your wallet in the app.</p>
-            </section>
-          )}
-          <section className="panel">
-            <div className="hub-sec-head"><h2>Documents</h2><span className="muted">{a.travellers.filter((x) => x.complete).length} of {a.travellers.length} traveller{a.travellers.length > 1 ? "s" : ""} complete</span></div>
-            <TravellerDocs app={a} canUpload={a.canUpload} />
-          </section>
-        </div>
-        <aside className="vz-side">
-          <div className="vz-apply">
-            <div className={`vz-ready ${a.deadline ?? ""}`}><span>Expected by</span><b>{a.readyBy ? fmtDay(a.readyBy) : "–"}</b>{a.arrive && <small>You travel {fmtDay(a.arrive)}</small>}</div>
-            <table className="vz-price"><tbody>
-              <tr><td>Total</td><td>{fmt(a.total)}</td></tr>
-              <tr><td>Paid</td><td>{fmt(a.paid)}</td></tr>
-              <tr className="tot"><td>To pay</td><td>{fmt(a.balance)}</td></tr>
-            </tbody></table>
-            {a.payPath ? (
-              <>
-                {!docsDone && <p className="fine">You can pay now and finish uploads after; we file once everything is in.</p>}
-                <PayButton refCode={a.ref} token={a.token} label={`Pay ${fmt(a.balance)} securely`} />
-              </>
-            ) : a.paid > 0 ? <p className="ok-txt" style={{ margin: 0 }}>✓ Paid. Our visa team takes it from here.</p> : null}
-            <p className="fine center">Questions? <AskRiyaLink q={`I have a question about my visa application ${a.ref}`}>Ask Riya</AskRiyaLink></p>
+    <WizardFrame code={code} country={a.country} visa={a.product?.name ?? "Visa"} step={a.stage === "approved" ? 5 : 4} summary={summary}>
+      <div className="vx-stage enter">
+        {a.issued.length > 0 && (
+          <div className="vx-done" style={{ marginBottom: 22 }}>
+            <span className="vx-done-ico"><Icon name="check" /></span>
+            <h2 style={{ margin: 0 }}>Your visa is ready</h2>
+            <p style={{ margin: 0, color: "var(--ink-2)" }}>Download it, print a copy and keep it on your phone. It&apos;s in your Ribriz wallet too.</p>
+            {a.issued.map((x) => <div key={x.id} className="vx-dl"><span><b>{a.travellers[x.applicant]?.name ?? "Traveller"}</b><br /><small style={{ color: "var(--mute)" }}>{x.fileName}</small></span><a className="vx-btn primary" href={`/api/docs/${x.id}?raw=1&t=${a.token}`} target="_blank" rel="noopener">Download</a></div>)}
           </div>
-        </aside>
+        )}
+        {at < 0 ? (
+          <div className="vx-note err">{a.stage === "rejected" ? "This visa was refused. Our team has emailed you the reason and what you can do next." : "This application was cancelled."}</div>
+        ) : (
+          <>
+            <h2>Where your visa is</h2>
+            <p className="sub">{a.stage === "approved" ? "Issued. Have a wonderful trip!" : a.readyBy ? `Expected by ${fmtDay(a.readyBy, true)}. We'll update you at every step.` : "We'll update you at every step."}</p>
+            <ol className="vx-track">
+              {a.stages.map((s, i) => <li key={s.key} className={i < at || a.stage === "approved" ? "done" : i === at ? "now" : ""}><span>{i < at || a.stage === "approved" ? "✓" : i + 1}</span><div><b>{s.label}</b><small>{s.hint}</small></div></li>)}
+            </ol>
+          </>
+        )}
+        {a.events.length > 0 && (
+          <div style={{ marginTop: 10 }}>
+            <p className="vx-sublabel">Latest activity</p>
+            <ul style={{ listStyle: "none", padding: 0, margin: "14px 0 0", display: "grid", gap: 10 }}>
+              {a.events.map((e, i) => <li key={i} style={{ display: "grid", gap: 2, paddingLeft: 12, borderLeft: "2px solid var(--hair)" }}><small style={{ color: "var(--mute)" }}>{new Date(e.at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" })} · {e.actor === "team" ? "Visa team" : e.actor === "traveller" ? "You" : "Ribriz"}</small><span>{e.text}</span></li>)}
+            </ul>
+          </div>
+        )}
+        {!a.travellers.every((x) => x.complete) && a.stage !== "approved" && <div style={{ marginTop: 18 }}><ApplicationFlow app={a} startOn="docs" embedded /></div>}
       </div>
-    </div>
+    </WizardFrame>
   );
 }

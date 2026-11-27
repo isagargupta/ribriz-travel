@@ -601,6 +601,8 @@ model VisaProduct {
   needsAppointment Boolean   @default(false)
   /// INR per traveller, paid to the government on their behalf (no GST)
   govtFee          Int
+  /// true when the government fee isn't fixed here: the team confirms it before the traveller pays
+  feeOnRequest     Boolean   @default(false)
   /// INR per traveller, Ribriz's fee (18% GST added)
   serviceFee       Int
   /// JSON array of { kind, label, note? }: documents each traveller uploads

@@ -2,7 +2,7 @@
 // Pure (no server imports), so it's unit-tested.
 
 export type VisaKind = "evisa" | "sticker" | "eta" | "arrival" | "visa_free";
-export const VISA_KIND_LABEL: Record<VisaKind, string> = { evisa: "e-Visa", sticker: "Sticker visa", eta: "ETA", arrival: "Visa on arrival", visa_free: "Visa-free" };
+export const VISA_KIND_LABEL: Record<VisaKind, string> = { evisa: "e-Visa", sticker: "Embassy visa", eta: "ETA", arrival: "Visa on arrival", visa_free: "Visa-free" };
 
 /** GST on our service fee (visa facilitation). The government fee is collected and paid on the traveller's behalf, without GST. */
 export const SERVICE_GST = 0.18;

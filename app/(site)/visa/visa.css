@@ -1,0 +1,315 @@
+/* ================================================================
+   Ribriz visa service. Prefix vx-. Calm, trustworthy, precise:
+   white surfaces, one blue, ink text, motion that explains.
+   ================================================================ */
+.vx { --ink: #0b1240; --ink-2: #3a4170; --mute: #6b7199; --hair: #e6e9f7; --soft: #f5f7ff; --blue: #2457e6; --blue-2: #e9efff; --ok: #0a8f6a; --ok-2: #e3f8f0; --amber: #c2610f; --amber-2: #fff3e3; --red: #c8341b; --red-2: #ffece7; --r: 18px; --ease: cubic-bezier(.2, .8, .2, 1); color: var(--ink) }
+.vx *:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px }
+.vx-flag { display: inline-block; flex: none; border-radius: 6px; object-fit: cover; box-shadow: 0 0 0 1px rgba(11, 18, 64, .08), 0 2px 6px -2px rgba(11, 18, 64, .25); background: var(--soft) }
+@media (prefers-reduced-motion: reduce) { .vx *, .vx *::before, .vx *::after { animation: none !important; transition: none !important } }
+
+/* ---------- hero ---------- */
+.vx-hero { position: relative; isolation: isolate; overflow: hidden; padding: 64px 0 120px; background: #070c2e; color: #fff }
+.vx-hero::before, .vx-hero::after { content: ""; position: absolute; z-index: -1; width: 720px; height: 720px; border-radius: 50%; filter: blur(80px); opacity: .55; animation: vx-drift 18s ease-in-out infinite alternate }
+.vx-hero::before { background: #2f5bff; top: -360px; right: -160px }
+.vx-hero::after { background: #7b4dff; bottom: -460px; left: -220px; animation-delay: -9s }
+@keyframes vx-drift { to { transform: translate3d(-80px, 60px, 0) scale(1.12) } }
+.vx-grid-bg { position: absolute; inset: 0; z-index: -1; background-image: linear-gradient(rgba(255, 255, 255, .05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, .05) 1px, transparent 1px); background-size: 44px 44px; mask-image: radial-gradient(ellipse at 50% 30%, #000 30%, transparent 75%) }
+.vx-eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 8px; border-radius: 999px; background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .14); font-size: 13px; font-weight: 600; color: #dfe4ff }
+.vx-hero h1 { margin: 18px 0 14px; font-family: var(--f-display); font-size: clamp(36px, 6vw, 64px); line-height: 1.02; letter-spacing: -.03em; color: #fff; max-width: 820px }
+.vx-hero h1 em { font-style: normal; background: linear-gradient(90deg, #8fb2ff, #c9b6ff); -webkit-background-clip: text; background-clip: text; color: transparent }
+.vx-lead { max-width: 580px; margin: 0 0 30px; font-size: 18px; line-height: 1.55; color: #c3c9ef }
+.vx-reveal { animation: vx-up .7s var(--ease) both } .vx-reveal.d1 { animation-delay: .08s } .vx-reveal.d2 { animation-delay: .16s } .vx-reveal.d3 { animation-delay: .24s }
+@keyframes vx-up { from { opacity: 0; transform: translateY(14px) } }
+
+/* ---------- search ---------- */
+.vx-search { position: relative; z-index: 10; display: grid; grid-template-columns: 200px minmax(0, 1fr) auto; align-items: stretch; max-width: 860px; padding: 8px; border-radius: 22px; background: #fff; color: var(--ink); box-shadow: 0 30px 80px -30px rgba(0, 0, 0, .7), 0 0 0 1px rgba(255, 255, 255, .1) }
+.vx-sfield { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 16px; min-width: 0 }
+.vx-sfield + .vx-sfield { border-left: 1px solid var(--hair) }
+.vx-sfield:focus-within { background: var(--soft) }
+.vx-sfield label, .vx-sfield .vx-slabel { display: block; font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--mute) }
+.vx-sfield input { width: 100%; border: 0; outline: 0; background: none; font: inherit; font-size: 17px; font-weight: 600; color: var(--ink); padding: 2px 0 }
+.vx-sfield input::placeholder { color: #a3a8c7; font-weight: 500 }
+.vx-sfield b { font-size: 17px }
+.vx-sbtn { display: inline-flex; align-items: center; gap: 8px; padding: 0 26px; border: 0; border-radius: 16px; background: var(--blue); color: #fff; font: inherit; font-weight: 700; font-size: 16px; cursor: pointer; transition: transform .15s, background .15s }
+.vx-sbtn:hover { background: #1b47c9 } .vx-sbtn:active { transform: scale(.98) }
+.vx-pop { position: absolute; left: 208px; right: 8px; top: calc(100% + 8px); padding: 6px; border-radius: 18px; background: #fff; box-shadow: 0 24px 60px -20px rgba(11, 18, 64, .45), 0 0 0 1px var(--hair); max-height: 420px; overflow: auto; animation: vx-pop .18s var(--ease) }
+@keyframes vx-pop { from { opacity: 0; transform: translateY(-6px) scale(.98) } }
+.vx-opt { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; padding: 10px 12px; border: 0; border-radius: 12px; background: none; font: inherit; color: inherit; text-align: left; text-decoration: none; cursor: pointer }
+.vx-opt[aria-selected="true"], .vx-opt:hover { background: var(--soft) }
+.vx-opt b { display: block; font-size: 15px } .vx-opt b mark { background: none; color: var(--blue) }
+.vx-opt small { color: var(--mute); font-size: 13px }
+.vx-opt-meta { text-align: right; font-size: 13px; color: var(--mute) } .vx-opt-meta strong { display: block; color: var(--ink); font-size: 14px }
+.vx-pop-foot { padding: 8px 12px 4px; font-size: 12.5px; color: var(--mute); border-top: 1px solid var(--hair); margin-top: 4px }
+.vx-quick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 18px; font-size: 13.5px; color: #aab1e0 }
+.vx-quick a { padding: 6px 12px 6px 7px; display: inline-flex; align-items: center; gap: 7px; border-radius: 999px; background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .12); color: #fff; text-decoration: none; font-weight: 600; transition: background .15s }
+.vx-quick a:hover { background: rgba(255, 255, 255, .16) }
+
+/* ---------- trust strip ---------- */
+.vx-trust { position: relative; z-index: 2; margin-top: -64px }
+.vx-trust-in { display: grid; grid-template-columns: repeat(4, 1fr); border-radius: 22px; background: #fff; box-shadow: 0 20px 50px -30px rgba(11, 18, 64, .5); border: 1px solid var(--hair) }
+.vx-trust-in div { display: flex; gap: 12px; align-items: flex-start; padding: 22px }
+.vx-trust-in div + div { border-left: 1px solid var(--hair) }
+.vx-ico { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 12px; background: var(--blue-2); color: var(--blue) }
+.vx-ico svg { width: 20px; height: 20px }
+.vx-trust-in b { display: block; font-size: 15px } .vx-trust-in small { color: var(--mute); font-size: 13.5px; line-height: 1.45 }
+
+/* ---------- sections ---------- */
+.vx-sec { padding: 64px 0 }
+.vx-sec.tint { background: var(--soft) }
+.vx-sec-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin-bottom: 22px }
+.vx-sec-head h2 { margin: 0; font-family: var(--f-display); font-size: clamp(26px, 3.4vw, 36px); letter-spacing: -.02em }
+.vx-sec-head p { margin: 6px 0 0; color: var(--mute) }
+.vx-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 18px }
+.vx-tabs { display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: #fff; border: 1px solid var(--hair); overflow-x: auto; scrollbar-width: none; max-width: 100% }
+.vx-tabs button { flex: none; padding: 8px 14px; border: 0; border-radius: 10px; background: none; font: inherit; font-size: 14px; font-weight: 600; color: var(--ink-2); cursor: pointer; transition: background .15s, color .15s }
+.vx-tabs button[aria-selected="true"] { background: var(--ink); color: #fff }
+.vx-tabs button span { font-weight: 500; opacity: .6; margin-left: 4px }
+.vx-select { appearance: none; padding: 10px 36px 10px 14px; border-radius: 12px; border: 1px solid var(--hair); background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7199' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center; font: inherit; font-size: 14px; font-weight: 600; color: var(--ink) }
+
+/* ---------- destination cards ---------- */
+.vx-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px }
+.vx-card { position: relative; display: grid; gap: 14px; padding: 18px; border-radius: var(--r); background: #fff; border: 1px solid var(--hair); text-decoration: none; color: inherit; transition: transform .25s var(--ease), box-shadow .25s var(--ease), border-color .25s; animation: vx-up .5s var(--ease) both; animation-delay: calc(min(var(--i, 0), 12) * 35ms) }
+.vx-card:hover { transform: translateY(-4px); border-color: #cdd6fb; box-shadow: 0 22px 40px -24px rgba(36, 87, 230, .45) }
+.vx-card-top { display: flex; align-items: center; gap: 12px }
+.vx-card-top b { display: block; font-size: 17px; line-height: 1.2 } .vx-card-top small { color: var(--mute); font-size: 13px }
+.vx-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap }
+.vx-badge.evisa, .vx-badge.eta { background: var(--blue-2); color: var(--blue) }
+.vx-badge.sticker { background: #f1ecff; color: #6a3ff0 }
+.vx-badge.visa_free, .vx-badge.arrival { background: var(--ok-2); color: var(--ok) }
+.vx-badge.pop { background: #fff4d6; color: #8a5a00 }
+.vx-card .vx-badges { display: flex; flex-wrap: wrap; gap: 6px }
+.vx-card-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px 0 0; border-top: 1px dashed var(--hair) }
+.vx-card-facts small { display: block; font-size: 11.5px; color: var(--mute); text-transform: uppercase; letter-spacing: .06em; font-weight: 700 }
+.vx-card-facts strong { font-size: 15px }
+.vx-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13.5px; color: var(--ok); font-weight: 600 }
+.vx-card-foot.muted { color: var(--mute) }
+.vx-arrow { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--soft); color: var(--ink); transition: transform .25s var(--ease), background .25s }
+.vx-card:hover .vx-arrow { transform: translateX(3px); background: var(--blue); color: #fff }
+.vx-more { display: flex; justify-content: center; margin-top: 22px }
+.vx-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; border-radius: 14px; border: 1px solid var(--hair); background: #fff; font: inherit; font-weight: 700; font-size: 15px; color: var(--ink); text-decoration: none; cursor: pointer; transition: transform .15s, box-shadow .2s, background .15s }
+.vx-btn:hover { box-shadow: 0 10px 22px -14px rgba(11, 18, 64, .5) } .vx-btn:active { transform: scale(.98) }
+.vx-btn.primary { position: relative; overflow: hidden; border: 0; background: var(--blue); color: #fff; box-shadow: 0 12px 26px -12px rgba(36, 87, 230, .7) }
+.vx-btn.primary:hover { background: #1b47c9 }
+.vx-btn.primary::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, .28) 50%, transparent 65%); transform: translateX(-100%); animation: vx-shine 3.2s ease-in-out infinite 1s }
+@keyframes vx-shine { 60%, 100% { transform: translateX(100%) } }
+.vx-btn.block { width: 100% } .vx-btn.lg { padding: 15px 22px; font-size: 16px; border-radius: 16px }
+.vx-btn[disabled] { opacity: .5; cursor: not-allowed; box-shadow: none } .vx-btn.primary[disabled]::after { display: none }
+.vx-btn.ghost { border-color: transparent; background: none }
+
+/* ---------- steps / why / faq ---------- */
+.vx-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; counter-reset: s }
+.vx-step { position: relative; padding: 26px; border-radius: 22px; background: #fff; border: 1px solid var(--hair) }
+.vx-step-n { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: var(--ink); color: #fff; font-weight: 800; margin-bottom: 16px }
+.vx-step b { font-size: 18px } .vx-step p { margin: 8px 0 0; color: var(--mute); line-height: 1.55 }
+.vx-why { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px }
+.vx-why > div { padding: 22px; border-radius: 20px; background: #fff; border: 1px solid var(--hair) }
+.vx-why b { display: block; margin: 14px 0 6px; font-size: 16px } .vx-why p { margin: 0; color: var(--mute); font-size: 14.5px; line-height: 1.55 }
+.vx-faq { display: grid; gap: 10px; max-width: 820px; margin: 0 auto }
+.vx-faq details { border-radius: 16px; background: #fff; border: 1px solid var(--hair); transition: box-shadow .2s }
+.vx-faq details[open] { box-shadow: 0 14px 30px -24px rgba(11, 18, 64, .5) }
+.vx-faq summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 20px; font-weight: 700; font-size: 16px; cursor: pointer; list-style: none }
+.vx-faq summary::-webkit-details-marker { display: none }
+.vx-faq summary::after { content: "+"; display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--soft); font-size: 18px; transition: transform .25s var(--ease) }
+.vx-faq details[open] summary::after { transform: rotate(45deg) }
+.vx-faq details p { margin: 0; padding: 0 20px 18px; color: var(--ink-2); line-height: 1.6 }
+
+/* ---------- A–Z ---------- */
+.vx-az { columns: 4 220px; column-gap: 28px }
+.vx-az-group { break-inside: avoid; margin-bottom: 18px }
+.vx-az-group h3 { margin: 0 0 6px; font-size: 13px; color: var(--mute); letter-spacing: .1em }
+.vx-az a { display: flex; align-items: center; gap: 8px; padding: 5px 0; color: var(--ink); text-decoration: none; font-size: 14.5px }
+.vx-az a:hover span { color: var(--blue); text-decoration: underline }
+.vx-az a i { margin-left: auto; font-style: normal; font-size: 11.5px; color: var(--mute) }
+
+/* ---------- country page ---------- */
+.vx-dhero { position: relative; isolation: isolate; overflow: hidden; padding: 34px 0 40px; background: linear-gradient(180deg, #f3f6ff, #fff) }
+.vx-dhero-img { position: absolute; inset: 0; z-index: -1; background-size: cover; background-position: center; opacity: .16; mask-image: linear-gradient(90deg, transparent 30%, #000 80%) }
+.vx-crumbs { display: flex; gap: 8px; font-size: 13.5px; color: var(--mute); margin-bottom: 18px } .vx-crumbs a { color: var(--mute); text-decoration: none } .vx-crumbs a:hover { color: var(--blue) }
+.vx-dtitle { display: flex; align-items: center; gap: 18px }
+.vx-dtitle h1 { margin: 0; font-family: var(--f-display); font-size: clamp(28px, 4.6vw, 46px); letter-spacing: -.025em; line-height: 1.05 }
+.vx-dtitle p { margin: 6px 0 0; color: var(--ink-2); font-size: 16px }
+.vx-dchips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px }
+.vx-dchip { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 12px; background: #fff; border: 1px solid var(--hair); font-size: 14px; color: var(--ink-2) }
+.vx-dchip svg { width: 16px; height: 16px; color: var(--blue) } .vx-dchip b { color: var(--ink) }
+.vx-dlayout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 28px; align-items: start; padding: 28px 0 70px }
+.vx-dmain { display: grid; gap: 20px; min-width: 0 }
+.vx-panel { padding: 24px; border-radius: 22px; background: #fff; border: 1px solid var(--hair) }
+.vx-panel h2 { margin: 0 0 16px; font-size: 21px; letter-spacing: -.01em }
+.vx-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px }
+.vx-fact { padding: 14px; border-radius: 14px; background: var(--soft) }
+.vx-fact small { display: block; font-size: 12px; color: var(--mute); font-weight: 600 } .vx-fact strong { display: block; margin-top: 2px; font-size: 16px }
+.vx-prod + .vx-prod { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--hair) }
+.vx-prod-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px } .vx-prod-head h3 { margin: 0; font-size: 18px }
+.vx-notes { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 8px }
+.vx-notes li { display: flex; gap: 10px; color: var(--ink-2); line-height: 1.5; font-size: 14.5px }
+.vx-notes li::before { content: ""; flex: none; width: 6px; height: 6px; margin-top: 8px; border-radius: 50%; background: var(--blue) }
+.vx-reqs { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px }
+.vx-reqs li { display: flex; gap: 12px; padding: 14px; border-radius: 14px; border: 1px solid var(--hair) }
+.vx-reqs b { display: block; font-size: 14.5px } .vx-reqs small { color: var(--mute); font-size: 13px }
+.vx-flow-line { list-style: none; padding: 0; margin: 0; display: grid; gap: 0 }
+.vx-flow-line li { position: relative; display: grid; grid-template-columns: 36px 1fr; gap: 14px; padding-bottom: 20px }
+.vx-flow-line li:not(:last-child)::before { content: ""; position: absolute; left: 17px; top: 36px; bottom: 0; width: 2px; background: linear-gradient(var(--blue-2), var(--hair)) }
+.vx-flow-line span { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--blue-2); color: var(--blue); font-weight: 800; font-size: 14px }
+.vx-flow-line b { display: block; margin-top: 6px } .vx-flow-line small { color: var(--mute); font-size: 14px }
+
+/* ---------- apply card ---------- */
+.vx-side { position: sticky; top: 88px }
+.vx-card-apply { display: grid; gap: 16px; padding: 22px; border-radius: 24px; background: #fff; border: 1px solid var(--hair); box-shadow: 0 30px 60px -36px rgba(11, 18, 64, .55) }
+.vx-card-apply h3 { margin: 0; font-size: 18px }
+.vx-choice { display: grid; gap: 8px }
+.vx-choice label { position: relative; display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 12px 14px; border-radius: 14px; border: 1.5px solid var(--hair); cursor: pointer; transition: border-color .15s, background .15s }
+.vx-choice label:hover { border-color: #c5cff7 }
+.vx-choice label.on { border-color: var(--blue); background: #f6f8ff }
+.vx-choice input { position: absolute; opacity: 0; pointer-events: none }
+.vx-choice b { font-size: 14.5px } .vx-choice small { grid-column: 1; color: var(--mute); font-size: 12.5px } .vx-choice strong { grid-row: 1 / 3; grid-column: 2; align-self: center; font-size: 15px }
+.vx-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px }
+.vx-mini label { display: block; font-size: 12.5px; font-weight: 700; color: var(--ink-2); margin-bottom: 6px }
+.vx-counter { display: flex; align-items: center; justify-content: space-between; height: 48px; padding: 0 6px; border-radius: 14px; border: 1.5px solid var(--hair) }
+.vx-counter button { display: grid; place-items: center; width: 34px; height: 34px; border: 0; border-radius: 10px; background: var(--soft); font: inherit; font-size: 18px; font-weight: 700; color: var(--ink); cursor: pointer }
+.vx-counter button:disabled { opacity: .35; cursor: default }
+.vx-counter b { font-size: 16px; min-width: 20px; text-align: center }
+.vx-date { width: 100%; height: 48px; padding: 0 12px; border-radius: 14px; border: 1.5px solid var(--hair); font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); background: #fff }
+.vx-date:focus { border-color: var(--blue); outline: 0; box-shadow: 0 0 0 4px rgba(36, 87, 230, .12) }
+.vx-eta { display: flex; gap: 12px; align-items: center; padding: 14px; border-radius: 16px; background: var(--ok-2); transition: background .3s }
+.vx-eta .vx-ico { background: #fff; color: var(--ok) }
+.vx-eta small { display: block; font-size: 12px; font-weight: 700; color: var(--ok); text-transform: uppercase; letter-spacing: .06em }
+.vx-eta b { font-size: 17px } .vx-eta p { margin: 2px 0 0; font-size: 13px; color: var(--ink-2) }
+.vx-eta.tight { background: var(--amber-2) } .vx-eta.tight .vx-ico, .vx-eta.tight small { color: var(--amber) }
+.vx-eta.late { background: var(--red-2) } .vx-eta.late .vx-ico, .vx-eta.late small { color: var(--red) }
+.vx-break { display: grid; gap: 8px; font-size: 14px }
+.vx-break div { display: flex; justify-content: space-between; color: var(--ink-2) } .vx-break div span:last-child { font-weight: 600; color: var(--ink) }
+.vx-break .tot { margin-top: 4px; padding-top: 12px; border-top: 1px solid var(--hair); font-size: 15px; color: var(--ink) }
+.vx-break .tot span:last-child { font-family: var(--f-display); font-size: 24px }
+.vx-break .tbc { font-size: 12.5px; color: var(--amber); font-weight: 600 }
+.vx-assure { display: grid; gap: 6px; font-size: 13px; color: var(--mute) }
+.vx-assure span { display: flex; gap: 8px; align-items: center } .vx-assure svg { width: 15px; height: 15px; color: var(--ok); flex: none }
+.vx-mbar { display: none }
+
+/* ---------- wizard ---------- */
+.vx-wiz { padding: 24px 0 70px; background: linear-gradient(180deg, #f3f6ff 0, #fff 360px) }
+.vx-wiz-head { display: flex; align-items: center; gap: 14px; margin-bottom: 22px }
+.vx-wiz-head b { display: block; font-size: 20px } .vx-wiz-head small { color: var(--mute); font-size: 14px }
+.vx-progress { position: relative; display: grid; grid-template-columns: repeat(5, 1fr); margin: 0 0 26px; padding: 0; list-style: none }
+.vx-progress::before { content: ""; position: absolute; left: 10%; right: 10%; top: 17px; height: 2px; background: var(--hair) }
+.vx-progress::after { content: ""; position: absolute; left: 10%; top: 17px; height: 2px; width: calc(80% * var(--p, 0)); background: var(--blue); transition: width .6s var(--ease) }
+.vx-progress li { position: relative; z-index: 1; display: grid; justify-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--mute); text-align: center }
+.vx-progress span { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: #fff; border: 2px solid var(--hair); font-weight: 800; transition: all .3s var(--ease) }
+.vx-progress li.done span { background: var(--blue); border-color: var(--blue); color: #fff }
+.vx-progress li.now { color: var(--ink) }
+.vx-progress li.now span { border-color: var(--blue); color: var(--blue); box-shadow: 0 0 0 6px rgba(36, 87, 230, .14) }
+.vx-wiz-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; align-items: start }
+.vx-stage { padding: 30px; border-radius: 26px; background: #fff; border: 1px solid var(--hair); box-shadow: 0 30px 70px -50px rgba(11, 18, 64, .6) }
+.vx-stage.enter { animation: vx-slide .45s var(--ease) both }
+.vx-stage.back { animation: vx-slide-back .45s var(--ease) both }
+@keyframes vx-slide { from { opacity: 0; transform: translateX(24px) } }
+@keyframes vx-slide-back { from { opacity: 0; transform: translateX(-24px) } }
+.vx-stage h2 { margin: 0; font-family: var(--f-display); font-size: 26px; letter-spacing: -.02em }
+.vx-stage > p.sub { margin: 6px 0 24px; color: var(--mute) }
+.vx-fields { display: grid; gap: 16px }
+.vx-fields .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px }
+.vx-field { position: relative }
+.vx-field input, .vx-field select { width: 100%; height: 58px; padding: 22px 16px 6px; border-radius: 14px; border: 1.5px solid var(--hair); background: #fff; font: inherit; font-size: 16px; font-weight: 600; color: var(--ink); transition: border-color .15s, box-shadow .15s; appearance: none }
+.vx-field select { background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7199' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 16px center }
+.vx-field label { position: absolute; left: 17px; top: 19px; font-size: 15px; color: var(--mute); pointer-events: none; transform-origin: left; transition: transform .15s var(--ease), color .15s }
+.vx-field input:focus, .vx-field select:focus { outline: 0; border-color: var(--blue); box-shadow: 0 0 0 4px rgba(36, 87, 230, .12) }
+.vx-field input:focus + label, .vx-field input:not(:placeholder-shown) + label, .vx-field.has label, .vx-field select + label { transform: translateY(-11px) scale(.78); color: var(--ink-2); font-weight: 700 }
+.vx-field.bad input { border-color: var(--red) } .vx-field .err { display: block; margin: 6px 2px 0; font-size: 13px; color: var(--red); font-weight: 600 }
+.vx-field .hint { display: block; margin: 6px 2px 0; font-size: 12.5px; color: var(--mute) }
+.vx-trav { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px; border-radius: 18px; background: var(--soft); animation: vx-up .35s var(--ease) both }
+.vx-avatar { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #2457e6, #7b4dff); color: #fff; font-weight: 800 }
+.vx-trav .vx-field input { height: 52px; padding-top: 20px }
+.vx-trav .vx-field label { top: 16px }
+.vx-x { display: grid; place-items: center; width: 34px; height: 34px; border: 0; border-radius: 10px; background: #fff; color: var(--mute); cursor: pointer; font-size: 16px }
+.vx-x:hover { color: var(--red) }
+.vx-add { display: inline-flex; align-items: center; gap: 8px; justify-self: start; padding: 10px 14px; border: 1.5px dashed #c9d2f5; border-radius: 14px; background: none; font: inherit; font-weight: 700; color: var(--blue); cursor: pointer }
+.vx-add:hover { background: var(--blue-2) }
+.vx-purpose { display: flex; flex-wrap: wrap; gap: 8px }
+.vx-purpose button { padding: 10px 16px; border-radius: 12px; border: 1.5px solid var(--hair); background: #fff; font: inherit; font-weight: 600; color: var(--ink-2); cursor: pointer }
+.vx-purpose button[aria-pressed="true"] { border-color: var(--blue); background: var(--blue-2); color: var(--blue) }
+.vx-sublabel { font-size: 13px; font-weight: 700; color: var(--ink-2); margin: 4px 0 -6px }
+.vx-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 28px; padding-top: 22px; border-top: 1px solid var(--hair) }
+.vx-note { display: flex; gap: 10px; padding: 12px 14px; border-radius: 14px; background: var(--soft); font-size: 13.5px; color: var(--ink-2); line-height: 1.5 }
+.vx-note.ok { background: var(--ok-2) } .vx-note.warn { background: var(--amber-2) } .vx-note.err { background: var(--red-2); color: var(--red) }
+.vx-summary { position: sticky; top: 88px; padding: 22px; border-radius: 24px; background: #fff; border: 1px solid var(--hair) }
+.vx-summary h3 { margin: 0 0 14px; font-size: 15px; color: var(--mute); text-transform: uppercase; letter-spacing: .08em }
+.vx-sum-row { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; font-size: 14px; color: var(--ink-2) }
+.vx-sum-row b { color: var(--ink); text-align: right }
+.vx-sum-total { display: flex; justify-content: space-between; align-items: baseline; margin-top: 8px; padding-top: 14px; border-top: 1px solid var(--hair) }
+.vx-sum-total b { font-family: var(--f-display); font-size: 26px }
+
+/* ---------- documents ---------- */
+.vx-people { display: grid; gap: 14px }
+.vx-person { border-radius: 20px; border: 1px solid var(--hair); overflow: hidden }
+.vx-person-head { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; padding: 14px 16px; border: 0; background: var(--soft); font: inherit; color: inherit; text-align: left; cursor: pointer }
+.vx-person-head b { display: block } .vx-person-head small { color: var(--mute); font-size: 13px }
+.vx-ring { --v: 0; width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; font-size: 11.5px; font-weight: 800; background: conic-gradient(var(--ok) calc(var(--v) * 1%), #e3e7f7 0); transition: --v .6s }
+.vx-ring::before { content: attr(data-l); display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: #fff }
+.vx-person-body { display: grid; gap: 10px; padding: 14px }
+.vx-drop { position: relative; display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 12px; border-radius: 16px; border: 1.5px dashed #cfd6f3; background: #fff; transition: border-color .2s, background .2s, transform .2s }
+.vx-drop.drag { border-color: var(--blue); background: #f2f6ff; transform: scale(1.01) }
+.vx-drop.ok { border-style: solid; border-color: #b9e9d6; background: #f6fffb }
+.vx-drop.issue { border-style: solid; border-color: #ffd2b8; background: #fffaf5 }
+.vx-thumb { position: relative; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 12px; overflow: hidden; background: var(--soft); color: var(--blue) }
+.vx-thumb img { width: 100%; height: 100%; object-fit: cover }
+.vx-thumb svg { width: 24px; height: 24px }
+.vx-scan::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: #4d7dff; box-shadow: 0 0 12px 3px rgba(77, 125, 255, .7); animation: vx-scan 1.2s ease-in-out infinite alternate }
+.vx-scan::before { content: ""; position: absolute; inset: 0; background: rgba(36, 87, 230, .12) }
+@keyframes vx-scan { to { top: calc(100% - 3px) } }
+.vx-tick { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(10, 143, 106, .82); color: #fff; animation: vx-pop .3s var(--ease) }
+.vx-tick svg { width: 26px; height: 26px }
+.vx-drop-txt { min-width: 0 } .vx-drop-txt b { display: block; font-size: 14.5px }
+.vx-drop-txt small { display: block; font-size: 13px; color: var(--mute); line-height: 1.4; overflow-wrap: anywhere }
+.vx-drop.ok .vx-drop-txt small { color: var(--ok) } .vx-drop.issue .vx-drop-txt small { color: var(--amber) }
+.vx-drop-acts { display: flex; gap: 6px }
+.vx-up { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; border-radius: 12px; background: var(--ink); color: #fff; font-size: 13.5px; font-weight: 700; cursor: pointer; white-space: nowrap }
+.vx-up.alt { background: #fff; color: var(--ink); border: 1px solid var(--hair) }
+.vx-up input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100% }
+.vx-up svg { width: 15px; height: 15px }
+
+/* ---------- tracking ---------- */
+.vx-track { display: grid; gap: 0; list-style: none; padding: 0; margin: 0 }
+.vx-track li { position: relative; display: grid; grid-template-columns: 40px 1fr; gap: 14px; padding-bottom: 22px }
+.vx-track li:not(:last-child)::before { content: ""; position: absolute; left: 19px; top: 40px; bottom: 0; width: 2px; background: var(--hair) }
+.vx-track li.done:not(:last-child)::before { background: var(--blue) }
+.vx-track span { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: #fff; border: 2px solid var(--hair); font-weight: 800; color: var(--mute) }
+.vx-track li.done span { background: var(--blue); border-color: var(--blue); color: #fff }
+.vx-track li.now span { border-color: var(--blue); color: var(--blue); animation: vx-pulse 2s infinite }
+@keyframes vx-pulse { 0% { box-shadow: 0 0 0 0 rgba(36, 87, 230, .35) } 70% { box-shadow: 0 0 0 12px rgba(36, 87, 230, 0) } 100% { box-shadow: 0 0 0 0 rgba(36, 87, 230, 0) } }
+.vx-track b { display: block; margin-top: 8px } .vx-track small { color: var(--mute) }
+.vx-done { display: grid; justify-items: center; gap: 10px; padding: 26px; text-align: center; border-radius: 22px; background: linear-gradient(135deg, #e9fbf4, #eef3ff) }
+.vx-done-ico { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: var(--ok); color: #fff; animation: vx-pop .5s var(--ease) }
+.vx-done-ico svg { width: 30px; height: 30px }
+.vx-dl { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; padding: 12px 14px; border-radius: 14px; background: #fff; border: 1px solid var(--hair) }
+
+/* ---------- responsive ---------- */
+@media (max-width: 1000px) {
+  .vx-dlayout, .vx-wiz-grid { grid-template-columns: 1fr } .vx-side, .vx-summary { position: static }
+  .vx-why { grid-template-columns: 1fr 1fr } .vx-trust-in { grid-template-columns: 1fr 1fr } .vx-trust-in div:nth-child(3) { border-left: 0 } .vx-trust-in div:nth-child(n+3) { border-top: 1px solid var(--hair) }
+}
+@media (max-width: 720px) {
+  .vx-hero { padding: 36px 0 96px }
+  .vx-search { grid-template-columns: 1fr; padding: 6px }
+  .vx-sfield + .vx-sfield { border-left: 0; border-top: 1px solid var(--hair) }
+  .vx-sbtn { height: 52px; justify-content: center }
+  .vx-pop { left: 6px; right: 6px }
+  .vx-steps, .vx-why, .vx-reqs, .vx-two, .vx-fields .row { grid-template-columns: 1fr }
+  .vx-trust-in { grid-template-columns: 1fr } .vx-trust-in div + div { border-left: 0; border-top: 1px solid var(--hair) }
+  .vx-stage { padding: 20px; border-radius: 22px }
+  .vx-progress li { font-size: 0; gap: 0 } .vx-progress span { font-size: 13px }
+  .vx-drop { grid-template-columns: 48px minmax(0, 1fr) } .vx-thumb { width: 48px; height: 48px } .vx-drop-acts { grid-column: 1 / -1 }
+  .vx-mbar { position: sticky; bottom: 12px; z-index: 30; display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 0 12px 12px; padding: 14px 16px; border-radius: 18px; background: var(--ink); color: #fff; text-decoration: none; font-size: 14px; box-shadow: 0 18px 40px -16px rgba(11, 18, 64, .7) }
+  .vx-mbar b { padding: 8px 14px; border-radius: 12px; background: var(--blue) }
+  .vx-actions { position: sticky; bottom: 0; margin: 20px -20px -20px; padding: 14px 20px; background: rgba(255, 255, 255, .95); backdrop-filter: blur(8px); border-radius: 0 0 22px 22px }
+}
+
+/* the shared Razorpay pay button, in the visa section's style */
+.vx .pay-btn { min-height: 56px; border-radius: 16px; background: var(--blue); color: #fff; font-size: 16px; box-shadow: 0 12px 26px -12px rgba(36, 87, 230, .7) }
+.vx .pay-btn:hover { background: #1b47c9 }
+.vx .pay-btn-wrap { display: grid; gap: 8px }
+@media (max-width: 720px) {
+  .vx-dchip { padding: 7px 10px; font-size: 13px; gap: 6px } .vx-dchip svg { width: 14px; height: 14px }
+  .vx-dtitle { gap: 12px } .vx-dtitle .vx-flag { width: 52px; height: auto }
+  .vx-mbar { margin-right: 84px } /* clear of the floating Riya button */
+  .vx-hero h1 { font-size: 34px }
+  .vx-card { padding: 16px }
+}
