@@ -1,7 +1,9 @@
+import { requireStaff } from "@/lib/staff";
 import { prisma } from "@/lib/db";
 import { deleteSubscriber } from "../../actions";
 
 export default async function Subscribers() {
+  await requireStaff("reports");
   const list = await prisma.subscriber.findMany({ orderBy: { createdAt: "desc" } });
   return (
     <>

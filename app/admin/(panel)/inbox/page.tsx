@@ -1,14 +1,23 @@
+import { requireStaff, staffCan } from "@/lib/staff";
+import { clientKey } from "@/lib/staff-rules";
 import Link from "next/link";
 import Copilot from "@/components/admin/Copilot";
 import { prisma } from "@/lib/db";
-import { TYPE_LABELS, inbox } from "@/lib/inbox";
+import { TYPE_LABELS, inboxNow } from "@/lib/inbox";
 import { fmt } from "@/lib/pricing";
 
 const LEVEL: Record<string, string> = { urgent: "Urgent", today: "Today", soon: "Soon", fyi: "Waiting" };
 const t = (d: Date) => d.toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" });
 
-export default async function Inbox() {
-  const rows = await inbox();
+export default async function Inbox({ searchParams }: { searchParams: Promise<{ who?: string }> }) {
+  const me = await requireStaff("work");
+  const { who: whoRaw } = await searchParams;
+  const canAll = staffCan(me, "seeAll");
+  const who = whoRaw === "queue" ? "queue" : whoRaw === "all" && canAll ? "all" : "mine";
+  const all = await inboxNow();
+  const rows = all.filter((r) => (who === "all" ? true : who === "queue" ? !r.assigneeId : r.assigneeId === me.id));
+  const staff = await prisma.staff.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true } });
+  const nameOf = new Map(staff.map((s) => [s.id, s.name]));
   const history = await prisma.teamMessage.findMany({ where: { enquiryId: { in: rows.map((r) => r.id) } }, orderBy: { createdAt: "desc" } });
   const counts = rows.reduce<Record<string, number>>((m, r) => ((m[r.work.level] = (m[r.work.level] ?? 0) + 1), m), {});
 
@@ -17,7 +26,12 @@ export default async function Inbox() {
       <div className="admin-head">
         <div>
           <h1>Inbox</h1>
-          <p className="muted" style={{ margin: "4px 0 0" }}>Every open request, most urgent first. Riya drafts each reply; you check it and send.</p>
+          <p className="muted" style={{ margin: "4px 0 0" }}>Open requests, most urgent first. Riya drafts each reply; you check it and send.</p>
+        </div>
+        <div className="dk-seg" style={{ alignSelf: "center" }}>
+          <Link href="/admin/inbox" className={who === "mine" ? "on" : ""}>Mine ({all.filter((r) => r.assigneeId === me.id).length})</Link>
+          <Link href="/admin/inbox?who=queue" className={who === "queue" ? "on" : ""}>Shared queue ({all.filter((r) => !r.assigneeId).length})</Link>
+          {canAll && <Link href="/admin/inbox?who=all" className={who === "all" ? "on" : ""}>Everyone ({all.length})</Link>}
         </div>
         <div className="inbox-counts">{(["urgent", "today", "soon", "fyi"] as const).map((l) => <span key={l} className={`lvl lvl-${l}`}>{counts[l] ?? 0} {LEVEL[l].toLowerCase()}</span>)}</div>
       </div>
@@ -26,12 +40,14 @@ export default async function Inbox() {
           {rows.map((r) => {
             const msgs = history.filter((m) => m.enquiryId === r.id).slice(0, 3);
             return (
-              <li key={r.id} className={`inbox-item lvl-b-${r.work.level}`}>
+              <li key={r.id} id={r.id} className={`inbox-item lvl-b-${r.work.level}`} style={{ scrollMarginTop: 80 }}>
                 <div className="ib-top">
                   <span className={`lvl lvl-${r.work.level}`}>{LEVEL[r.work.level]}</span>
                   <b>{r.name}</b>
                   <span className="muted">{TYPE_LABELS[r.type] ?? r.type}{r.tripTitle ? ` · ${r.tripTitle}` : ""}{r.quotedTotal ? ` · ${fmt(r.quotedTotal)}` : ""}</span>
-                  <Link className="mono muted ib-ref" href={`/admin/enquiries#${r.id}`}>{r.ref}</Link>
+                  <span className="dk-chip blue" title="Who handles this">{r.assigneeId ? nameOf.get(r.assigneeId) ?? "Someone" : "Unassigned"}</span>
+                  <Link className="muted" href={`/admin/clients/${clientKey(r.email)}`}>Client →</Link>
+                  <Link className="mono muted ib-ref" href={`/admin/enquiries?q=${r.ref}`}>{r.ref}</Link>
                 </div>
                 <div className="ib-reasons">{r.work.reasons.map((x) => <span key={x}>{x}</span>)}</div>
                 <p className="ib-next"><b>Next:</b> {r.work.next}{r.work.due && r.status === "new" ? <span className="muted"> · reply due {t(r.work.due)}</span> : null}</p>

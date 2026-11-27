@@ -263,8 +263,8 @@ export function teamMessageEmail(d: { subject: string; body: string; ref: string
   const paras = d.body.trim().split(/\n{2,}/).map((para) => p(esc(para).replace(/\n/g, "<br>"))).join("");
   return {
     subject: d.subject,
-    html: layout({ preheader: d.body.slice(0, 120), heading: d.subject.replace(/^\s*RB-[A-Z0-9]+\s*[:\-–|]\s*/, "").replace(/\s*[(\[]?RB-[A-Z0-9]+[)\]]?\s*$/, "") || d.subject, body: paras + `<p style="margin:16px 0 0;font-size:12px;color:#5b628a">Reference ${esc(d.ref)} · just reply to this email to reach us.</p>`, cta: d.hubUrl ? { label: "Open my trip hub", url: d.hubUrl } : undefined }),
-    text: `${d.body.trim()}\n\nReference ${d.ref}${d.hubUrl ? `\n${d.hubUrl}` : ""}`,
+    html: layout({ preheader: d.body.slice(0, 120), heading: d.subject.replace(/^\s*RB-[A-Z0-9]+\s*[:\-–|]\s*/, "").replace(/\s*[(\[]?RB-[A-Z0-9]+[)\]]?\s*$/, "") || d.subject, body: paras + `<p style="margin:16px 0 0;font-size:12px;color:#5b628a">${d.ref ? `Reference ${esc(d.ref)} · ` : ""}just reply to this email to reach us.</p>`, cta: d.hubUrl ? { label: "Open my trip hub", url: d.hubUrl } : undefined }),
+    text: `${d.body.trim()}${d.ref ? `\n\nReference ${d.ref}` : ""}${d.hubUrl ? `\n${d.hubUrl}` : ""}`,
   };
 }
 

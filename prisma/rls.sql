@@ -31,7 +31,11 @@ ALTER TABLE "DocCounter"   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Event"        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "MissionMember" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "VisaProduct"  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Staff"        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "ClientCard"   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "ClientNote"   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "FollowUp"     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Payment" ENABLE ROW LEVEL SECURITY;
 
 -- Belt and braces: the public API roles get no table privileges at all.
-REVOKE ALL ON "Trip", "Departure", "Enquiry", "Subscriber", "Customer", "LoginCode", "VisaRule", "VisaSync", "Mission", "MissionTask", "Approval", "MissionEvent", "TravelDoc", "Notification", "PriceWatch", "AgentRun", "EmailOptOut", "ServiceOffer", "TravellerProfile", "TeamMessage", "Review", "Payment", "PushSub", "RateHit", "Invoice", "DocCounter", "Event", "MissionMember", "VisaProduct" FROM anon, authenticated;
+REVOKE ALL ON "Trip", "Departure", "Enquiry", "Subscriber", "Customer", "LoginCode", "VisaRule", "VisaSync", "Mission", "MissionTask", "Approval", "MissionEvent", "TravelDoc", "Notification", "PriceWatch", "AgentRun", "EmailOptOut", "ServiceOffer", "TravellerProfile", "TeamMessage", "Review", "Payment", "PushSub", "RateHit", "Invoice", "DocCounter", "Event", "MissionMember", "VisaProduct", "Staff", "ClientCard", "ClientNote", "FollowUp" FROM anon, authenticated;

@@ -110,6 +110,10 @@ model Enquiry {
   /// new | contacted | booked | closed
   status      String     @default("new")
   note        String?
+  /// the employee handling this request
+  assigneeId     String?
+  assignee       Staff?    @relation("assigned", fields: [assigneeId], references: [id], onDelete: SetNull)
+  assignedAt     DateTime?
   /// business buyers: name, GSTIN and address for the tax invoice
   billingName    String?
   billingGstin   String?
@@ -120,6 +124,7 @@ model Enquiry {
 
   @@index([status, createdAt])
   @@index([email])
+  @@index([assigneeId, status])
 }
 
 model Subscriber {
@@ -618,4 +623,63 @@ model VisaProduct {
   updatedAt        DateTime  @updatedAt
 
   @@index([destSlug])
+}
+
+/// An employee who works in the admin. Owners manage the team; managers see
+/// everyone's work and handle money; agents handle their own clients.
+model Staff {
+  id         String     @id @default(cuid())
+  email      String     @unique
+  name       String
+  /// owner | manager | agent
+  role       String     @default("agent")
+  active     Boolean    @default(true)
+  /// takes new clients automatically (round robin by workload)
+  takesNew   Boolean    @default(true)
+  createdAt  DateTime   @default(now())
+  lastSeenAt DateTime?
+  assigned   Enquiry[]  @relation("assigned")
+  followUps  FollowUp[]
+}
+
+/// A client (keyed by email, account or not) and the employee who looks after them.
+model ClientCard {
+  email     String   @id
+  managerId String?
+  /// comma-separated, e.g. "vip,honeymoon,corporate"
+  tags      String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// What the team noted or sent about a client, outside any one request.
+model ClientNote {
+  id        String   @id @default(cuid())
+  email     String
+  /// staff email
+  author    String
+  /// note | email | whatsapp
+  kind      String   @default("note")
+  subject   String?
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+}
+
+/// A reminder for an employee to do something for a client by a date.
+model FollowUp {
+  id        String    @id @default(cuid())
+  email     String
+  enquiryId String?
+  staffId   String
+  staff     Staff     @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  title     String
+  dueAt     DateTime
+  doneAt    DateTime?
+  createdBy String
+  createdAt DateTime  @default(now())
+
+  @@index([staffId, doneAt, dueAt])
+  @@index([email])
 }

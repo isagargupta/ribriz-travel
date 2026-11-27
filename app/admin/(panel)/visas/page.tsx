@@ -1,3 +1,4 @@
+import { requireStaff } from "@/lib/staff";
 import Link from "next/link";
 import { saveVisaProduct } from "../../actions";
 import { prisma } from "@/lib/db";
@@ -40,6 +41,7 @@ function ProductForm({ p }: { p?: Awaited<ReturnType<typeof prisma.visaProduct.f
 
 /** The visa catalogue (what's sold, at what price) and the applications in progress. */
 export default async function VisasAdmin() {
+  await requireStaff("catalogue");
   const [products, apps] = await Promise.all([
     prisma.visaProduct.findMany({ orderBy: [{ order: "asc" }, { name: "asc" }] }),
     prisma.enquiry.findMany({ where: { type: "visa", details: { contains: "\"stage\"" } }, orderBy: { createdAt: "desc" }, take: 40, include: { payments: { where: { status: { in: ["paid", "partially_refunded"] } } } } }),

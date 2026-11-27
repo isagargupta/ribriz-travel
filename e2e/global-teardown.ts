@@ -39,6 +39,12 @@ export default async function teardown() {
     await prisma.travellerProfile.deleteMany({ where: { customerId: c.id } });
     await prisma.customer.delete({ where: { id: c.id } });
   }
+  // the team tests: test employees (their follow-ups go with them) and client records for the test emails
+  const clientEmails = [TEST_EMAIL, FRIEND_EMAIL];
+  await prisma.followUp.deleteMany({ where: { email: { in: clientEmails } } });
+  await prisma.clientNote.deleteMany({ where: { email: { in: clientEmails } } });
+  await prisma.clientCard.deleteMany({ where: { email: { in: clientEmails } } });
+  await prisma.staff.deleteMany({ where: { email: { startsWith: "e2e-" } } });
   await prisma.docCounter.deleteMany({ where: { key: { startsWith: "test:" } } });
   await prisma.rateHit.deleteMany({ where: { OR: [{ key: { contains: ":local" } }, { key: { contains: "::1" } }, { key: { contains: "127.0.0.1" } }] } });
   await prisma.$disconnect();

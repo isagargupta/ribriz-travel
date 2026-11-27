@@ -1,3 +1,4 @@
+import { requireStaff } from "@/lib/staff";
 import Link from "next/link";
 import { COMPANY } from "@/lib/company";
 import { inr } from "@/lib/gst-rules";
@@ -7,6 +8,7 @@ const thisMonth = () => new Date(Date.now() + 5.5 * 3600e3).toISOString().slice(
 
 /** Every GST invoice and credit note for a month, with totals and a CSV for the accountant (GSTR-1). */
 export default async function InvoicesPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
+  await requireStaff("money");
   const { month: m } = await searchParams;
   const month = m && /^\d{4}-\d{2}$/.test(m) ? m : thisMonth();
   const rows = await invoicesForMonth(month);

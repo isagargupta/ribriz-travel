@@ -1,0 +1,80 @@
+/* ================================================================
+   Staff workspace: My desk, Clients, Team. Prefix dk-.
+   ================================================================ */
+.dk { --ink: #0b1240; --mute: #6b7199; --hair: #e6e9f7; --soft: #f6f7fd; --blue: #2457e6; --blue-2: #e9efff; --ok: #0a8f6a; --ok-2: #e3f8f0; --amber: #b45f06; --amber-2: #fff3e0; --red: #c8341b; --red-2: #ffece7; color: var(--ink) }
+.dk-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 20px }
+.dk-head h1 { margin: 0; font-size: 28px; letter-spacing: -.02em }
+.dk-head p { margin: 4px 0 0; color: var(--mute) }
+.dk-seg { display: inline-flex; padding: 4px; border-radius: 12px; background: #fff; border: 1px solid var(--hair) }
+.dk-seg a { padding: 7px 14px; border-radius: 9px; font-size: 14px; font-weight: 700; color: var(--mute); text-decoration: none }
+.dk-seg a.on { background: var(--ink); color: #fff }
+.dk-kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; margin-bottom: 22px }
+.dk-kpi { padding: 16px; border-radius: 16px; background: #fff; border: 1px solid var(--hair); text-decoration: none; color: inherit; transition: box-shadow .2s, transform .2s }
+a.dk-kpi:hover { transform: translateY(-2px); box-shadow: 0 14px 28px -20px rgba(11, 18, 64, .5) }
+.dk-kpi small { display: block; font-size: 12.5px; color: var(--mute); font-weight: 600 }
+.dk-kpi b { display: block; margin-top: 4px; font-size: 26px; letter-spacing: -.02em }
+.dk-kpi.hot b { color: var(--red) } .dk-kpi.warn b { color: var(--amber) } .dk-kpi.good b { color: var(--ok) }
+.dk-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr); gap: 18px; align-items: start }
+.dk-col { display: grid; gap: 18px; min-width: 0 }
+.dk-card { border-radius: 18px; background: #fff; border: 1px solid var(--hair); overflow: hidden }
+.dk-card > header { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--hair) }
+.dk-card > header h2 { margin: 0; font-size: 16px } .dk-card > header span { font-size: 13px; color: var(--mute) }
+.dk-empty { padding: 22px 18px; color: var(--mute); font-size: 14px }
+.dk-list { list-style: none; margin: 0; padding: 0 }
+.dk-list > li { padding: 14px 18px; border-bottom: 1px solid var(--hair) }
+.dk-list > li:last-child { border-bottom: 0 }
+.dk-work { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 12px; align-items: start }
+.dk-dot { width: 10px; height: 10px; margin-top: 6px; border-radius: 50% }
+.dk-dot.urgent { background: var(--red); box-shadow: 0 0 0 4px var(--red-2) } .dk-dot.today { background: var(--amber); box-shadow: 0 0 0 4px var(--amber-2) } .dk-dot.soon { background: var(--blue) } .dk-dot.fyi { background: #c5cae6 }
+.dk-work-main b a { color: var(--ink); text-decoration: none } .dk-work-main b a:hover { color: var(--blue) }
+.dk-meta { font-size: 13px; color: var(--mute) }
+.dk-next { margin: 6px 0 0; font-size: 14px } .dk-next strong { color: var(--blue) }
+.dk-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px }
+.dk-chip { white-space: nowrap; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--soft); color: #3a4170 }
+.dk-chip.red { background: var(--red-2); color: var(--red) } .dk-chip.amber { background: var(--amber-2); color: var(--amber) } .dk-chip.blue { background: var(--blue-2); color: var(--blue) } .dk-chip.green { background: var(--ok-2); color: var(--ok) }
+.dk-acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end }
+.dk-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 10px; border: 1px solid var(--hair); background: #fff; font: inherit; font-size: 13px; font-weight: 700; color: var(--ink); text-decoration: none; cursor: pointer; white-space: nowrap }
+.dk-btn:hover { border-color: #c9d1f3 } .dk-btn.primary { background: var(--blue); border-color: var(--blue); color: #fff } .dk-btn.ghost { border-color: transparent; background: none; color: var(--mute) }
+.dk-in { font: inherit; font-size: 13.5px; padding: 7px 10px; border-radius: 10px; border: 1px solid var(--hair); background: #fff; color: var(--ink); min-width: 0 }
+.dk-inline { display: flex; gap: 6px; flex-wrap: wrap; align-items: center }
+.dk-fu { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center }
+.dk-fu b { font-size: 14px } .dk-fu .dk-meta a { color: var(--mute) }
+.dk-bucket { padding: 8px 18px; font-size: 11.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; background: var(--soft); color: var(--mute) }
+.dk-bucket.overdue { color: var(--red) } .dk-bucket.today { color: var(--amber) }
+.dk-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 14px }
+.dk-row a { color: var(--ink); font-weight: 600; text-decoration: none } .dk-row a:hover { color: var(--blue) }
+.dk-feed li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; font-size: 13.5px }
+.dk-feed i { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--soft); font-style: normal; font-size: 13px }
+.dk-feed i.money { background: var(--ok-2) }
+/* clients */
+.dk-search { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap } .dk-search input { flex: 1; min-width: 220px; padding: 11px 14px; border-radius: 12px; border: 1px solid var(--hair); font: inherit; font-size: 15px }
+.dk-table { width: 100%; border-collapse: collapse; font-size: 14px; background: #fff; border-radius: 16px; overflow: hidden; border: 1px solid var(--hair) }
+.dk-table th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--mute); padding: 10px 14px; background: var(--soft); border-bottom: 1px solid var(--hair) }
+.dk-table td { padding: 12px 14px; border-bottom: 1px solid var(--hair); vertical-align: middle }
+.dk-table tr:last-child td { border-bottom: 0 } .dk-table tbody tr:hover { background: #fafbff }
+.dk-table a { color: var(--ink); font-weight: 700; text-decoration: none } .dk-table a:hover { color: var(--blue) }
+.dk-avatar { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #2457e6, #7b4dff); color: #fff; font-weight: 800; font-size: 14px; flex: none }
+.dk-who { display: flex; gap: 10px; align-items: center } .dk-who small { display: block; color: var(--mute); font-size: 12.5px }
+.dk-client-head { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; padding: 20px; border-radius: 20px; background: #fff; border: 1px solid var(--hair); margin-bottom: 18px }
+.dk-client-head .dk-avatar { width: 56px; height: 56px; font-size: 22px }
+.dk-client-head h1 { margin: 0; font-size: 24px } .dk-client-head p { margin: 2px 0 0; color: var(--mute); font-size: 14px }
+.dk-client-head .dk-contact { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto }
+.dk-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px }
+.dk-tl { list-style: none; margin: 0; padding: 0 18px }
+.dk-tl li { position: relative; padding: 12px 0 12px 22px; border-left: 2px solid var(--hair); font-size: 14px }
+.dk-tl li::before { content: ""; position: absolute; left: -6px; top: 17px; width: 10px; height: 10px; border-radius: 50%; background: #c5cae6 }
+.dk-tl li.email::before { background: var(--blue) } .dk-tl li.money::before { background: var(--ok) } .dk-tl li.note::before { background: var(--amber) }
+.dk-tl small { display: block; color: var(--mute); font-size: 12px }
+.dk-tl p { margin: 2px 0 0; white-space: pre-wrap }
+.dk-form { display: grid; gap: 8px; padding: 14px 18px; border-top: 1px solid var(--hair); background: #fcfcff }
+.dk-form textarea { font: inherit; font-size: 14px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--hair); min-height: 70px; resize: vertical }
+.dk-tags { display: flex; gap: 6px; flex-wrap: wrap }
+/* team */
+.dk-team td .dk-in { width: 100% }
+.dk-bar { height: 6px; border-radius: 3px; background: var(--soft); overflow: hidden; min-width: 80px } .dk-bar i { display: block; height: 100%; background: var(--blue) }
+@media (max-width: 1100px) { .dk-kpis { grid-template-columns: repeat(3, 1fr) } .dk-grid { grid-template-columns: 1fr } .dk-stats { grid-template-columns: repeat(2, 1fr) } }
+@media (max-width: 620px) { .dk-kpis { grid-template-columns: repeat(2, 1fr) } .dk-work { grid-template-columns: 10px minmax(0, 1fr) } .dk-work .dk-acts { grid-column: 2; justify-content: flex-start } .dk-table .hide-sm { display: none } }
+.adm-group { display: block; margin: 14px 12px 4px; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #7b82b8 }
+.dk-staff-form .dk-in[name=name] { flex: 1; min-width: 140px } .dk-staff-form .dk-in[name=email] { flex: 1.3; min-width: 180px }
+@media (max-width: 900px) { .adm-group { display: none } }
+.dk-who small { font-weight: 500 }

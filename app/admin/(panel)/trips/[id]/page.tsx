@@ -1,3 +1,4 @@
+import { requireStaff } from "@/lib/staff";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Departures from "@/components/admin/Departures";
@@ -7,6 +8,7 @@ import { listImages } from "@/lib/images";
 import { copyTrip, deleteTrip } from "../../../actions";
 
 export default async function EditTrip({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ created?: string }> }) {
+  await requireStaff("catalogue");
   const [{ id }, sp] = await Promise.all([params, searchParams]);
   const trip = await prisma.trip.findUnique({ where: { id } });
   if (!trip) notFound();

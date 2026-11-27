@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { prisma } from "./db";
 import { visaChecklist } from "./documents";
 import { rankWork, type WorkItem } from "./inbox-rules";
@@ -46,3 +47,11 @@ export async function inbox(now = new Date()): Promise<InboxRow[]> {
 export async function urgentCount() {
   return (await inbox()).filter((r) => r.work.level === "urgent" || r.work.level === "today").length;
 }
+
+/** The inbox, loaded once per request (the menu counts and the page share it). */
+export const inboxNow = cache(async () => {
+  // new requests get an owner first, so every count and list agrees
+  const { assignUnassigned } = await import("./assignment");
+  await assignUnassigned().catch((e) => console.error("assignment failed", e));
+  return inbox();
+});

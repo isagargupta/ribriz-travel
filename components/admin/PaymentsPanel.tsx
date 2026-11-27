@@ -6,7 +6,7 @@ export interface AdminPayment { id: string; kind: string; amount: number; status
 const inr = (n: number) => "₹" + n.toLocaleString("en-IN");
 
 /** Payments on a booking, with refunds through Razorpay. */
-export default function PaymentsPanel({ payments, total }: { payments: AdminPayment[]; total: number }) {
+export default function PaymentsPanel({ payments, total, canRefund = true }: { payments: AdminPayment[]; total: number; canRefund?: boolean }) {
   const [state, act, busy] = useActionState<RefundState, FormData>(refundAction, undefined);
   const [open, setOpen] = useState<string | null>(null);
   const done = payments.filter((p) => p.status === "paid" || p.status === "partially_refunded" || p.status === "refunded");
@@ -20,7 +20,7 @@ export default function PaymentsPanel({ payments, total }: { payments: AdminPaym
           <li key={p.id}>
             <span>{p.kind} · {inr(p.amount)}{p.method ? ` · ${p.method}` : ""}{p.paidAt ? ` · ${new Date(p.paidAt).toLocaleDateString("en-IN")}` : ""}{p.refunded ? ` · ${inr(p.refunded)} refunded` : ""}</span>
             <code>{p.paymentId}</code>
-            {p.status !== "refunded" && <button className="link-btn" onClick={() => setOpen(open === p.id ? null : p.id)}>Refund</button>}
+            {canRefund && p.status !== "refunded" && <button className="link-btn" onClick={() => setOpen(open === p.id ? null : p.id)}>Refund</button>}
             {open === p.id && (
               <form action={act} className="oa-book" style={{ gridColumn: "1 / -1" }}>
                 <input type="hidden" name="paymentId" value={p.id} />

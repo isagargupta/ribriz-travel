@@ -1,3 +1,4 @@
+import { requireStaff } from "@/lib/staff";
 import Link from "next/link";
 import { funnel } from "@/lib/funnel";
 import { fmt } from "@/lib/pricing";
@@ -6,6 +7,7 @@ const pct = (a: number, b: number) => (b ? `${Math.round((a / b) * 1000) / 10}%`
 
 /** Where visitors drop off, which sources and trips sell, and what people search for. */
 export default async function FunnelPage({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
+  await requireStaff("reports");
   const days = [7, 30, 90].includes(Number((await searchParams).days)) ? Number((await searchParams).days) : 30;
   const f = await funnel(days);
   const top = Math.max(1, f.steps[0].n);

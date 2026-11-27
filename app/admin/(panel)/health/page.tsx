@@ -1,9 +1,11 @@
+import { requireStaff } from "@/lib/staff";
 import { runChecks } from "@/lib/health";
 
 export const dynamic = "force-dynamic";
 
 /** Every system the business depends on, checked live. The daily job emails the team when any fail. */
 export default async function HealthPage() {
+  await requireStaff("reports");
   const checks = await runChecks();
   const bad = checks.filter((c) => !c.ok);
   return (

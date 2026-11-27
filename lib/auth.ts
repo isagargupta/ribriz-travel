@@ -37,8 +37,11 @@ export async function currentAdmin(): Promise<string | null> {
   const p = readToken((await cookies()).get(COOKIE)?.value);
   if (!p) return null;
   const who = Buffer.from(p, "base64url").toString();
-  // an emailed admin who was removed from ADMIN_EMAILS loses access at once
-  if (who !== "password" && !adminEmails().includes(who)) return null;
+  // an emailed admin who was removed (from ADMIN_EMAILS or deactivated in Team) loses access at once
+  if (who !== "password" && !adminEmails().includes(who)) {
+    const { prisma } = await import("./db");
+    if (!(await prisma.staff.findFirst({ where: { email: who, active: true }, select: { id: true } }))) return null;
+  }
   if (who === "password" && !passwordLoginEnabled()) return null;
   return who;
 }

@@ -1,3 +1,4 @@
+import { requireStaff } from "@/lib/staff";
 import Link from "next/link";
 import Stars from "@/components/Stars";
 import { prisma } from "@/lib/db";
@@ -6,6 +7,7 @@ import { moderateReview } from "../../actions";
 const TABS = ["pending", "published", "rejected"] as const;
 
 export default async function Reviews({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+  await requireStaff("catalogue");
   const { status = "pending" } = await searchParams;
   const tab = (TABS as readonly string[]).includes(status) ? status : "pending";
   const [list, trips] = await Promise.all([

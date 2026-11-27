@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { fmt } from "@/lib/pricing";
-import { creditNoteAction, deleteEnquiry, issueInvoiceAction, setBillingAction, setVisaStageAction, updateEnquiry, uploadIssuedVisaAction } from "../../actions";
+import { creditNoteAction, reassignAction, deleteEnquiry, issueInvoiceAction, setBillingAction, setVisaStageAction, updateEnquiry, uploadIssuedVisaAction } from "../../actions";
 import { STAGES } from "@/lib/visa-service-rules";
 import { DOC_TITLE, inr, type DocKind } from "@/lib/gst-rules";
 import OffersPanel from "@/components/admin/OffersPanel";
@@ -9,6 +9,8 @@ import PaymentsPanel from "@/components/admin/PaymentsPanel";
 import { inrFor } from "@/lib/fx";
 import { detailLines } from "@/lib/service-fields";
 import { payUrl } from "@/lib/payments";
+import { requireStaff, staffCan } from "@/lib/staff";
+import { clientKey } from "@/lib/staff-rules";
 
 const SERVICE_TYPES = ["custom", "visa", "forex", "insurance", "flight", "hotel"];
 
@@ -24,13 +26,19 @@ const FILTERS = ["all", "new", "contacted", "booked", "closed"];
 const TYPE_LABELS: Record<string, string> = { hold: "48-hour price hold", enquiry: "Question about a trip", custom: "Custom trip request", visa: "Visa application help", forex: "Forex order", insurance: "Travel insurance", flight: "Flight booking", hotel: "Hotel booking" };
 
 export default async function Enquiries({ searchParams }: { searchParams: Promise<{ status?: string; q?: string }> }) {
+  const me = await requireStaff("work");
   const { status = "all", q } = await searchParams;
-  const where = q ? { ref: q.trim().toUpperCase() } : FILTERS.includes(status) && status !== "all" ? { status } : {};
+  const seeAll = staffCan(me, "seeAll");
+  // agents see their own work and the shared queue; looking up a reference shows that one request
+  const mineOnly = seeAll || q ? {} : { OR: [{ assigneeId: me.id }, { assigneeId: null }] };
+  const where = q ? { ref: q.trim().toUpperCase() } : { ...(FILTERS.includes(status) && status !== "all" ? { status } : {}), ...mineOnly };
   const list = await prisma.enquiry.findMany({
     where, orderBy: { createdAt: "desc" }, take: 200,
     include: { invoices: { orderBy: { issuedAt: "asc" } }, payments: { orderBy: { createdAt: "asc" } }, offers: { orderBy: { createdAt: "asc" } }, messages: { orderBy: { createdAt: "desc" }, take: 10 }, mission: { select: { id: true, documents: { orderBy: { createdAt: "desc" }, select: { id: true, kind: true, fileName: true, status: true, findings: true, applicant: true } } } } },
   });
   const wa = (phone: string) => phone.replace(/[^\d]/g, "");
+  const staff = await prisma.staff.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true } });
+  const nameOf = new Map(staff.map((s) => [s.id, s.name]));
   const hints = new Map(await Promise.all(list.filter((e) => e.type === "forex").map(async (e) => [e.id, await forexHint(e.details)] as const)));
 
   return (
@@ -50,6 +58,18 @@ export default async function Enquiries({ searchParams }: { searchParams: Promis
                   <div style={{ fontSize: 14 }}>
                     <span style={{ userSelect: "all" }}>{e.phone}</span> · <span style={{ userSelect: "all" }}>{e.email}</span>
                     {" · "}<a href={`https://wa.me/${wa(e.phone)}`} target="_blank" rel="noopener noreferrer">WhatsApp</a>
+                  </div>
+                  <div className="dk-inline" style={{ marginTop: 6, fontSize: 13 }}>
+                    <span className={`dk-chip ${e.assigneeId ? "blue" : "amber"}`}>{e.assigneeId ? `Handled by ${nameOf.get(e.assigneeId) ?? "former staff"}` : "Unassigned"}</span>
+                    <Link href={`/admin/clients/${clientKey(e.email)}`} className="dk-chip">Client page →</Link>
+                    {staffCan(me, "reassign") && (
+                      <form action={reassignAction} className="dk-inline">
+                        <input type="hidden" name="id" value={e.id} />
+                        <select className="dk-in" name="staffId" defaultValue={e.assigneeId ?? ""} aria-label="Assign to"><option value="">Unassigned</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+                        <label className="dk-meta"><input type="checkbox" name="client" /> make client&apos;s agent</label>
+                        <button className="dk-btn">Assign</button>
+                      </form>
+                    )}
                   </div>
                 </div>
                 <div style={{ textAlign: "right", fontSize: 14 }}>
@@ -131,7 +151,7 @@ export default async function Enquiries({ searchParams }: { searchParams: Promis
                         <input className="in" name="address" defaultValue={e.billingAddress ?? ""} placeholder="Billing address" style={{ flex: 1, minWidth: 200 }} />
                         <button className="btn sm" type="submit">Save GST details</button>
                       </form>
-                      {e.payments.some((p) => p.status === "paid" || p.status === "partially_refunded") && (
+                      {staffCan(me, "money") && e.payments.some((p) => p.status === "paid" || p.status === "partially_refunded") && (
                         <form action={issueInvoiceAction} style={{ marginTop: 6, display: "flex", gap: 8, alignItems: "center" }}>
                           <input type="hidden" name="id" value={e.id} />
                           <button className="btn sm blue" type="submit">Issue invoice now for the amount paid</button>
@@ -139,7 +159,7 @@ export default async function Enquiries({ searchParams }: { searchParams: Promis
                         </form>
                       )}
                     </>
-                  ) : (
+                  ) : staffCan(me, "money") && (
                     <form action={creditNoteAction} style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
                       <input type="hidden" name="invoiceId" value={e.invoices.find((iv) => iv.kind === "invoice")!.id} />
                       <input className="in" name="amount" inputMode="decimal" placeholder="Credit ₹" style={{ width: 110 }} />
@@ -150,7 +170,7 @@ export default async function Enquiries({ searchParams }: { searchParams: Promis
                   )}
                 </div>
               )}
-              <PaymentsPanel total={e.quotedTotal ?? 0} payments={e.payments.map((p) => ({ id: p.id, kind: p.kind, amount: p.amount, status: p.status, method: p.method, paymentId: p.paymentId, paidAt: p.paidAt?.toISOString() ?? null, refunded: p.refundedAmount }))} />
+              <PaymentsPanel canRefund={staffCan(me, "money")} total={e.quotedTotal ?? 0} payments={e.payments.map((p) => ({ id: p.id, kind: p.kind, amount: p.amount, status: p.status, method: p.method, paymentId: p.paymentId, paidAt: p.paidAt?.toISOString() ?? null, refunded: p.refundedAmount }))} />
               {e.messages.length > 0 && (
                 <ul className="ib-hist" style={{ marginTop: 10 }}>
                   {e.messages.map((m) => (
@@ -174,10 +194,12 @@ export default async function Enquiries({ searchParams }: { searchParams: Promis
                 <label className="chk" style={{ fontSize: 13 }} title="Sends the customer an email when the status changes"><input type="checkbox" name="notify" defaultChecked /> Email customer</label>
                 <button className="btn blue" type="submit">Save</button>
               </form>
-              <form action={deleteEnquiry} style={{ marginTop: 8 }}>
-                <input type="hidden" name="id" value={e.id} />
-                <button className="btn sm danger" type="submit">Delete enquiry</button>
-              </form>
+              {staffCan(me, "deleteRecords") && (
+                <form action={deleteEnquiry} style={{ marginTop: 8 }}>
+                  <input type="hidden" name="id" value={e.id} />
+                  <button className="btn sm danger" type="submit">Delete enquiry</button>
+                </form>
+              )}
             </div>
           ))}
         </div>

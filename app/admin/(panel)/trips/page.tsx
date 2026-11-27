@@ -1,9 +1,11 @@
+import { requireStaff } from "@/lib/staff";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { KINDS, fmt } from "@/lib/pricing";
 import { togglePublished } from "../../actions";
 
 export default async function AdminTrips({ searchParams }: { searchParams: Promise<{ saved?: string; deleted?: string }> }) {
+  await requireStaff("catalogue");
   const sp = await searchParams;
   const trips = await prisma.trip.findMany({ orderBy: { createdAt: "desc" }, include: { _count: { select: { enquiries: true } } } });
   return (

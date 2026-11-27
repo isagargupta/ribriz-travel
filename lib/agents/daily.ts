@@ -27,7 +27,9 @@ export async function daily(now = new Date(), origin?: string) {
   const visa = now.getUTCDay() === 1 ? await part("visaSync", () => syncVisaData()) : {};
   // detection, emails and the morning trip push; split into parallel slices as travellers grow
   const agents = await part("agents", () => runAgents({ origin }));
+  // the team: give new requests an owner, then each employee's morning list
+  const team = await part("team", async () => { const { assignUnassigned, staffMorning } = await import("../assignment"); return { assigned: await assignUnassigned(), staffEmails: await staffMorning(now) }; });
   // last: check every system and email the team if anything is failing
   const health = await part("health", async () => (await import("../health")).dailyHealth());
-  return { ...cleanup, ...visa, ...agents, ...health };
+  return { ...cleanup, ...visa, ...agents, ...team, ...health };
 }

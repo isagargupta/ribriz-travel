@@ -1,4 +1,5 @@
 "use server";
+import { requireStaff } from "@/lib/staff";
 import { randomBytes } from "node:crypto";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { after } from "next/server";
@@ -19,7 +20,7 @@ async function syncMissionFromEnquiry(id: string, status: string) {
 }
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { adminEmails, currentAdmin, endSession, passwordLoginEnabled, passwordMatches, requireAdmin, startSession } from "@/lib/auth";
+import { currentAdmin, endSession, passwordLoginEnabled, passwordMatches, requireAdmin, startSession } from "@/lib/auth";
 import { sendLoginCode, verifyLoginCode } from "@/lib/otp";
 import { BOARDS, KINDS, isoDate } from "@/lib/pricing";
 import { setEnquiryStatus } from "@/lib/bookings";
@@ -49,7 +50,8 @@ export async function login(_: { error?: string } | undefined, fd: FormData) {
 export async function requestAdminCode(rawEmail: string) {
   const email = String(rawEmail).trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return { ok: false, error: "Enter a valid email address." };
-  if (!adminEmails().includes(email)) {
+  const { isStaffEmail } = await import("@/lib/staff");
+  if (!(await isStaffEmail(email))) {
     await new Promise((r) => setTimeout(r, 600));
     return { ok: true };
   }
@@ -58,7 +60,8 @@ export async function requestAdminCode(rawEmail: string) {
 
 export async function verifyAdminCode(rawEmail: string, code: string) {
   const email = String(rawEmail).trim().toLowerCase();
-  if (!adminEmails().includes(email)) return { ok: false, error: "That code isn't right." };
+  const { isStaffEmail } = await import("@/lib/staff");
+  if (!(await isStaffEmail(email))) return { ok: false, error: "That code isn't right." };
   const r = await verifyLoginCode(email, "admin", String(code).trim());
   if (!r.ok) return r;
   await startSession(email);
@@ -103,7 +106,7 @@ export async function updateEnquiry(fd: FormData) {
 }
 
 export async function deleteEnquiry(fd: FormData) {
-  await requireAdmin();
+  await requireStaff("deleteRecords");
   const id = String(fd.get("id"));
   // payment records are financial records: a request with real payments can be closed, not deleted
   if (await prisma.payment.count({ where: { enquiryId: id, status: { not: "created" } } })) return;
@@ -129,7 +132,7 @@ async function saveUpload(file: File) {
 export type TripFormState = { error?: string } | undefined;
 
 export async function saveTrip(_: TripFormState, fd: FormData): Promise<TripFormState> {
-  await requireAdmin();
+  await requireStaff("catalogue");
   const id = String(fd.get("id") ?? "");
   const s = (k: string) => String(fd.get(k) ?? "").trim();
   const n = (k: string) => Number(s(k));
@@ -185,14 +188,14 @@ export async function saveTrip(_: TripFormState, fd: FormData): Promise<TripForm
 }
 
 export async function deleteTrip(fd: FormData) {
-  await requireAdmin();
+  await requireStaff("catalogue");
   await prisma.trip.delete({ where: { id: String(fd.get("id")) } });
   refreshSite();
   redirect("/admin/trips?deleted=1");
 }
 
 export async function togglePublished(fd: FormData) {
-  await requireAdmin();
+  await requireStaff("catalogue");
   const id = String(fd.get("id"));
   const t = await prisma.trip.findUnique({ where: { id }, select: { published: true } });
   if (t) await prisma.trip.update({ where: { id }, data: { published: !t.published } });
@@ -200,7 +203,7 @@ export async function togglePublished(fd: FormData) {
 }
 
 export async function deleteSubscriber(fd: FormData) {
-  await requireAdmin();
+  await requireStaff("deleteRecords");
   await prisma.subscriber.delete({ where: { id: String(fd.get("id")) } });
   revalidatePath("/admin/subscribers");
 }
@@ -209,7 +212,7 @@ export async function deleteSubscriber(fd: FormData) {
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function addDeparture(fd: FormData) {
-  await requireAdmin();
+  await requireStaff("catalogue");
   const tripId = String(fd.get("tripId"));
   const date = String(fd.get("date"));
   if (!DATE_RE.test(date)) return;
@@ -223,7 +226,7 @@ export async function addDeparture(fd: FormData) {
 }
 
 export async function updateDeparture(fd: FormData) {
-  await requireAdmin();
+  await requireStaff("catalogue");
   const id = String(fd.get("id"));
   const seats = String(fd.get("seats") ?? "").trim();
   await prisma.departure.update({
@@ -238,14 +241,14 @@ export async function updateDeparture(fd: FormData) {
 }
 
 export async function deleteDeparture(fd: FormData) {
-  await requireAdmin();
+  await requireStaff("catalogue");
   await prisma.departure.delete({ where: { id: String(fd.get("id")) } });
   refreshSite();
 }
 
 /** Fill the calendar: one departure every N days for the next M months (existing dates are kept). */
 export async function generateDepartures(fd: FormData) {
-  await requireAdmin();
+  await requireStaff("catalogue");
   const tripId = String(fd.get("tripId"));
   const t = await prisma.trip.findUnique({ where: { id: tripId } });
   if (!t) return;
@@ -264,7 +267,7 @@ export async function generateDepartures(fd: FormData) {
 
 /** "Run agents now" on the dashboard: same work as the daily run, on demand. */
 export async function runAgentsNow() {
-  await requireAdmin();
+  await requireStaff("reports");
   const { runAgents } = await import("@/lib/agents/run");
   const h = await headers();
   await runAgents({ origin: `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}` });
@@ -338,7 +341,7 @@ export async function sendReplyAction(i: { enquiryId: string; channel: "email" |
 
 /* ---------- reviews ---------- */
 export async function moderateReview(fd: FormData) {
-  await requireAdmin();
+  await requireStaff("catalogue");
   const status = String(fd.get("status"));
   if (!["published", "rejected", "pending"].includes(status)) return;
   const { setReviewStatus } = await import("@/lib/reviews");
@@ -349,7 +352,7 @@ export async function moderateReview(fd: FormData) {
 /* ---------- payments ---------- */
 export type RefundState = { ok?: string; error?: string } | undefined;
 export async function refundAction(_: RefundState, fd: FormData): Promise<RefundState> {
-  await requireAdmin();
+  await requireStaff("money");
   const { refund, PayError, RazorpayError } = await import("@/lib/payments");
   const amount = Number(String(fd.get("amount") ?? "").replace(/[^\d]/g, ""));
   if (!(amount > 0)) return { error: "Enter an amount in rupees." };
@@ -367,7 +370,7 @@ export async function refundAction(_: RefundState, fd: FormData): Promise<Refund
 
 /** Issue the tax invoice now for what's been paid (normally automatic once fully paid). */
 export async function issueInvoiceAction(fd: FormData) {
-  await requireAdmin();
+  await requireStaff("money");
   const { issueInvoice, emailInvoice, InvoiceError } = await import("@/lib/invoices");
   try {
     const inv = await issueInvoice(String(fd.get("id")));
@@ -378,7 +381,7 @@ export async function issueInvoiceAction(fd: FormData) {
 
 /** A credit note against an invoice (price reduction, cancellation charge waived…). Refunds make one automatically. */
 export async function creditNoteAction(fd: FormData) {
-  await requireAdmin();
+  await requireStaff("money");
   const amount = Number(String(fd.get("amount") ?? "").replace(/[^\d.]/g, ""));
   const reason = String(fd.get("reason") ?? "").trim();
   if (!amount || !reason) return;
@@ -405,7 +408,7 @@ export async function setBillingAction(fd: FormData) {
 
 /** Adds a season of departures: a date range, on chosen weekdays or every N days, with one price change and seat count. */
 export async function addSeason(fd: FormData) {
-  await requireAdmin();
+  await requireStaff("catalogue");
   const { seasonDates } = await import("@/lib/season-rules");
   const tripId = String(fd.get("tripId"));
   const from = String(fd.get("from")), to = String(fd.get("to"));
@@ -424,7 +427,7 @@ export async function addSeason(fd: FormData) {
 
 /** One change to every departure in a date range: price, surcharge, seats, open/close or delete (dates with bookings are kept). */
 export async function bulkDepartures(fd: FormData) {
-  await requireAdmin();
+  await requireStaff("catalogue");
   const { applyBulk } = await import("@/lib/season-rules");
   const tripId = String(fd.get("tripId"));
   const from = String(fd.get("from")), to = String(fd.get("to"));
@@ -446,7 +449,7 @@ export async function bulkDepartures(fd: FormData) {
 
 /** Copies a trip (details, photos, itinerary) as an unpublished draft, optionally with its future dates. */
 export async function copyTrip(fd: FormData) {
-  await requireAdmin();
+  await requireStaff("catalogue");
   const t = await prisma.trip.findUnique({ where: { id: String(fd.get("id")) }, include: { departures: { where: { date: { gte: isoDate(new Date()) } } } } });
   if (!t) return;
   let slug = `${t.slug}-copy`;
@@ -474,7 +477,7 @@ function parseDocs(raw: string) {
 
 /** Create or update a visa in the catalogue. Ticking "verified" records that the team checked the fee and rules today. */
 export async function saveVisaProduct(fd: FormData) {
-  await requireAdmin();
+  await requireStaff("catalogue");
   const id = String(fd.get("id") ?? "");
   const num = (k: string) => { const v = String(fd.get(k) ?? "").trim(); return v === "" ? null : Math.max(0, Math.round(Number(v))); };
   const kind = String(fd.get("kind") ?? "evisa");
@@ -529,4 +532,133 @@ export async function uploadIssuedVisaAction(fd: FormData) {
   await prisma.travelDoc.create({ data: { missionId: e.missionId, applicant: Math.max(0, Number(fd.get("applicant")) || 0), kind: "visa_issued", fileKey: key, fileName: file.name.slice(0, 120) || "visa.pdf", mime: file.type, size: file.size, status: "ok", deleteAfter: new Date(Date.now() + 400 * 864e5) } });
   if (fd.get("approve") === "on") { const { setStage } = await import("@/lib/visa-service"); await setStage(e.id, "approved"); }
   revalidatePath("/admin/enquiries");
+}
+
+/* ---------- team: assignment, follow-ups, client notes, staff ---------- */
+
+/** An employee takes a request from the shared queue (and the client, if they have no agent yet). */
+export async function claimAction(fd: FormData) {
+  const me = await requireStaff("work");
+  const id = String(fd.get("id"));
+  const e = await prisma.enquiry.findUnique({ where: { id } });
+  if (!e || e.assigneeId) return;
+  const { reassign } = await import("@/lib/assignment");
+  const card = await prisma.clientCard.findUnique({ where: { email: e.email.toLowerCase() } });
+  await reassign(id, me.id, me.email, !card?.managerId);
+  revalidatePath("/admin", "layout");
+}
+
+/** A manager gives a request to someone (optionally making them the client's agent). */
+export async function reassignAction(fd: FormData) {
+  const me = await requireStaff("reassign");
+  const to = String(fd.get("staffId") ?? "") || null;
+  const { reassign } = await import("@/lib/assignment");
+  await reassign(String(fd.get("id")), to, me.email, fd.get("client") === "on");
+  revalidatePath("/admin", "layout");
+}
+
+export async function setClientManagerAction(fd: FormData) {
+  const me = await requireStaff("reassign");
+  const { setClientManager } = await import("@/lib/assignment");
+  await setClientManager(String(fd.get("email")), String(fd.get("staffId") ?? "") || null, me.email, true);
+  revalidatePath("/admin", "layout");
+}
+
+export async function handOverAction(fd: FormData) {
+  const me = await requireStaff("reassign");
+  const from = String(fd.get("from")), to = String(fd.get("to"));
+  if (!from || !to || from === to) return;
+  const { handOver } = await import("@/lib/assignment");
+  await handOver(from, to, me.email);
+  revalidatePath("/admin", "layout");
+}
+
+export async function addFollowUpAction(fd: FormData) {
+  const me = await requireStaff("work");
+  const { quickDue } = await import("@/lib/staff-rules");
+  const pick = String(fd.get("when") ?? "tomorrow");
+  const custom = String(fd.get("date") ?? "");
+  const dueAt = /^\d{4}-\d{2}-\d{2}$/.test(custom) ? new Date(`${custom}T10:00:00+05:30`) : quickDue(new Date(), (["2h", "tomorrow", "3d", "week"].includes(pick) ? pick : "tomorrow") as "tomorrow");
+  const title = String(fd.get("title") ?? "").trim().slice(0, 200);
+  const email = String(fd.get("email") ?? "").trim().toLowerCase();
+  if (!title || !email) return;
+  const staffId = String(fd.get("staffId") ?? "") || me.id;
+  await prisma.followUp.create({ data: { email, enquiryId: String(fd.get("enquiryId") ?? "") || null, staffId, title, dueAt, createdBy: me.email } });
+  revalidatePath("/admin", "layout");
+}
+
+export async function doneFollowUpAction(fd: FormData) {
+  await requireStaff("work");
+  await prisma.followUp.update({ where: { id: String(fd.get("id")) }, data: { doneAt: new Date() } });
+  revalidatePath("/admin", "layout");
+}
+
+export async function snoozeFollowUpAction(fd: FormData) {
+  await requireStaff("work");
+  const { quickDue } = await import("@/lib/staff-rules");
+  await prisma.followUp.update({ where: { id: String(fd.get("id")) }, data: { dueAt: quickDue(new Date(), fd.get("when") === "week" ? "week" : "tomorrow") } });
+  revalidatePath("/admin", "layout");
+}
+
+export async function addClientNoteAction(fd: FormData) {
+  const me = await requireStaff("work");
+  const body = String(fd.get("body") ?? "").trim().slice(0, 4000);
+  const email = String(fd.get("email") ?? "").trim().toLowerCase();
+  if (!body || !email) return;
+  await prisma.clientNote.create({ data: { email, author: me.email, body } });
+  revalidatePath("/admin/clients", "layout");
+}
+
+export async function setClientTagsAction(fd: FormData) {
+  await requireStaff("work");
+  const email = String(fd.get("email") ?? "").trim().toLowerCase();
+  const tags = String(fd.get("tags") ?? "").split(",").map((t) => t.trim().toLowerCase().replace(/[^a-z0-9 -]/g, "")).filter(Boolean).slice(0, 10).join(",");
+  await prisma.clientCard.upsert({ where: { email }, create: { email, tags }, update: { tags } });
+  revalidatePath("/admin/clients", "layout");
+}
+
+export type ClientMailState = { ok?: boolean; error?: string } | undefined;
+/** Email a client from their page. Replies come straight back to the employee who wrote. */
+export async function emailClientAction(_: ClientMailState, fd: FormData): Promise<ClientMailState> {
+  const me = await requireStaff("work");
+  const email = String(fd.get("email") ?? "").trim().toLowerCase();
+  const subject = String(fd.get("subject") ?? "").trim().slice(0, 140);
+  const body = String(fd.get("body") ?? "").trim().slice(0, 8000);
+  if (!email || !subject || body.length < 5) return { error: "Add a subject and a message." };
+  const { sendEmail } = await import("@/lib/email");
+  const { teamMessageEmail } = await import("@/lib/email-templates");
+  const site = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.ribriztravel.com").replace(/\/$/, "");
+  const replyTo = me.email.endsWith(".local") ? undefined : me.email;
+  const r = await sendEmail({ to: email, ...(replyTo ? { replyTo } : {}), ...teamMessageEmail({ subject, body, ref: "", hubUrl: `${site}/me` }) });
+  if (!r.ok) return { error: `Not sent: ${r.error}` };
+  await prisma.clientNote.create({ data: { email, author: me.email, kind: "email", subject, body } });
+  revalidatePath("/admin/clients", "layout");
+  return { ok: true };
+}
+
+export type StaffFormState = { ok?: boolean; error?: string } | undefined;
+/** Owner: add an employee or change their role, availability for new clients, or access. */
+export async function saveStaffAction(_: StaffFormState, fd: FormData): Promise<StaffFormState> {
+  const me = await requireStaff("team");
+  const id = String(fd.get("id") ?? "");
+  const email = String(fd.get("email") ?? "").trim().toLowerCase();
+  const name = String(fd.get("name") ?? "").trim().slice(0, 80);
+  const role = String(fd.get("role") ?? "agent");
+  if (!["owner", "manager", "agent"].includes(role)) return { error: "Pick a role." };
+  const data = { name, role, active: fd.get("active") === "on", takesNew: fd.get("takesNew") === "on" };
+  if (id) {
+    if (id === me.id && (role !== "owner" || !data.active)) return { error: "You can't remove your own owner access." };
+    await prisma.staff.update({ where: { id }, data });
+  } else {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) || name.length < 2) return { error: "Add a name and a valid email." };
+    if (await prisma.staff.findUnique({ where: { email } })) return { error: "That email is already on the team." };
+    await prisma.staff.create({ data: { ...data, email, active: true } });
+    if (process.env.E2E !== "1") {
+      const { sendEmail } = await import("@/lib/email");
+      const site = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.ribriztravel.com").replace(/\/$/, "");
+      await sendEmail({ to: email, subject: "You've been added to the Ribriz team", html: `<p>Hi ${name.split(" ")[0]},</p><p>${me.name} added you to Ribriz Travel's admin as ${role}. Sign in with this email address (we send you a one-time code):</p><p><a href="${site}/admin/login">${site}/admin/login</a></p>`, text: `${me.name} added you to Ribriz Travel's admin as ${role}. Sign in with this email: ${site}/admin/login` }).catch(() => {});
+    }
+  }
+  revalidatePath("/admin/team");
+  return { ok: true };
 }
