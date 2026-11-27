@@ -655,8 +655,7 @@ export async function saveStaffAction(_: StaffFormState, fd: FormData): Promise<
     await prisma.staff.create({ data: { ...data, email, active: true } });
     if (process.env.E2E !== "1") {
       const { sendEmail } = await import("@/lib/email");
-      const site = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.ribriztravel.com").replace(/\/$/, "");
-      await sendEmail({ to: email, subject: "You've been added to the Ribriz team", html: `<p>Hi ${name.split(" ")[0]},</p><p>${me.name} added you to Ribriz Travel's admin as ${role}. Sign in with this email address (we send you a one-time code):</p><p><a href="${site}/admin/login">${site}/admin/login</a></p>`, text: `${me.name} added you to Ribriz Travel's admin as ${role}. Sign in with this email: ${site}/admin/login` }).catch(() => {});
+      await sendEmail({ to: email, subject: "You've been added to the Ribriz team", html: `<p>Hi ${name.split(" ")[0]},</p><p>${me.name} added you to Ribriz Travel's admin as ${role}. Sign in with this email address (we send you a one-time code):</p><p><a href="${(await import("@/lib/host-rules")).workspaceLink("/admin/login")}">${(await import("@/lib/host-rules")).workspaceLink("/admin/login")}</a></p>`, text: `${me.name} added you to Ribriz Travel's admin as ${role}. Sign in with this email: ${(await import("@/lib/host-rules")).workspaceLink("/admin/login")}` }).catch(() => {});
     }
   }
   revalidatePath("/admin/team");

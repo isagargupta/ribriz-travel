@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "./db";
 import { pickAssignee } from "./staff-rules";
+import { workspaceLink } from "./host-rules";
 
 const OPEN = ["new", "contacted"];
 const esc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
@@ -46,7 +47,6 @@ async function notifyAssignees(got: Map<string, { ref: string; name: string; typ
   if (!got.size || process.env.E2E === "1") return;
   const { sendEmail } = await import("./email");
   const { TYPE_LABELS } = await import("./inbox");
-  const site = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.ribriztravel.com").replace(/\/$/, "");
   const staff = await prisma.staff.findMany({ where: { id: { in: [...got.keys()] } } });
   for (const s of staff) {
     if (s.email.endsWith(".local")) continue;
@@ -54,8 +54,8 @@ async function notifyAssignees(got: Map<string, { ref: string; name: string; typ
     const lines = list.map((e) => `• ${e.ref} · ${esc(e.name)} · ${TYPE_LABELS[e.type] ?? e.type}${e.tripTitle ? ` · ${e.tripTitle}` : ""}`);
     await sendEmail({
       to: s.email, subject: `${list.length} new client request${list.length > 1 ? "s" : ""} for you`,
-      html: `<p>Hi ${esc(s.name.split(" ")[0])},</p><p>These are now yours:</p><p>${lines.join("<br>")}</p><p><a href="${site}/admin">Open My desk</a></p>`,
-      text: `These are now yours:\n${lines.join("\n")}\n\nOpen My desk: ${site}/admin`,
+      html: `<p>Hi ${esc(s.name.split(" ")[0])},</p><p>These are now yours:</p><p>${lines.join("<br>")}</p><p><a href="${workspaceLink()}">Open My desk</a></p>`,
+      text: `These are now yours:\n${lines.join("\n")}\n\nOpen My desk: ${workspaceLink()}`,
     }).catch(() => {});
   }
 }
@@ -100,15 +100,14 @@ export async function staffMorning(now = new Date()) {
     ]);
     if ((!fus.length && !waiting.length) || s.email.endsWith(".local") || process.env.E2E === "1") continue;
     const { sendEmail } = await import("./email");
-    const site = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.ribriztravel.com").replace(/\/$/, "");
     const when = (d: Date) => (d < now ? "overdue" : d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" }));
     const f = fus.map((x) => `• ${x.title} (${when(x.dueAt)})`);
     const w = waiting.map((e) => `• ${e.ref} · ${e.name}`);
     const text = [f.length ? `Follow-ups today:\n${f.join("\n")}` : "", w.length ? `Waiting over a day for a reply:\n${w.join("\n")}` : ""].filter(Boolean).join("\n\n");
     await sendEmail({
       to: s.email, subject: `Your day: ${[fus.length && `${fus.length} follow-up${fus.length > 1 ? "s" : ""}`, waiting.length && `${waiting.length} waiting for a reply`].filter(Boolean).join(", ")}`,
-      html: `<p>Good morning ${esc(s.name.split(" ")[0])},</p>${esc(text).split("\n\n").map((b) => `<p>${b.replace(/\n/g, "<br>")}</p>`).join("")}<p><a href="${site}/admin">Open My desk</a></p>`,
-      text: `${text}\n\nOpen My desk: ${site}/admin`,
+      html: `<p>Good morning ${esc(s.name.split(" ")[0])},</p>${esc(text).split("\n\n").map((b) => `<p>${b.replace(/\n/g, "<br>")}</p>`).join("")}<p><a href="${workspaceLink()}">Open My desk</a></p>`,
+      text: `${text}\n\nOpen My desk: ${workspaceLink()}`,
     }).then(() => sent++).catch(() => {});
   }
   return sent;

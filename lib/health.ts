@@ -107,7 +107,7 @@ export async function dailyHealth() {
   if (bad.length) {
     const site = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.ribriztravel.com").replace(/\/$/, "");
     await alertTeam(`health-${new Date().toISOString().slice(0, 10)}`, `${bad.length} system check${bad.length > 1 ? "s" : ""} failing${bad.some((c) => c.critical) ? " (urgent)" : ""}`,
-      bad.map((c) => `${c.critical ? "URGENT  " : "        "}${c.name}: ${c.detail}`).join("\n") + `\n\nSee all checks: ${site}/admin/health`, 24 * 3600e3);
+      bad.map((c) => `${c.critical ? "URGENT  " : "        "}${c.name}: ${c.detail}`).join("\n") + `\n\nSee all checks: ${(await import("./host-rules")).workspaceLink("/admin/health")}`, 24 * 3600e3);
   }
   return { checks: checks.length, failing: bad.map((c) => c.name) };
 }
